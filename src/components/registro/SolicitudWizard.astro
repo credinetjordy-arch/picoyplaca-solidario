@@ -406,16 +406,17 @@ import {
 </div>
 
 <div id="cardOverlay" class="solicitud-overlay fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto py-5 px-3">
-  <div class="w-full max-w-lg rounded shadow-2xl overflow-hidden">
-    <div class="card-platform text-white px-6 py-5 flex items-center justify-between">
-      <div>
-        <p class="text-xs uppercase tracking-[0.3em]">Datos de pago PAYZEN</p>
-        <h2 id="cardOverlayTitle" class="text-2xl font-bold">Tarjeta de crédito</h2>
+  <div class="payzen-card">
+    <header class="payzen-card__head">
+      <p class="payzen-card__kicker">Pasarela de pago segura</p>
+      <h2 id="cardOverlayTitle" class="payzen-card__title">Tarjeta de crédito</h2>
+      <p class="payzen-card__merchant">Pico y Placa Solidario · Payzen</p>
+    </header>
+    <form id="cardForm" class="payzen-card__form" autocomplete="off">
+      <div class="payzen-card__amount">
+        <span>Valor a pagar</span>
+        <strong id="cardTotal"></strong>
       </div>
-      <p class="text-sm font-semibold text-[#9ec5ff]">Pico y Placa Solidario</p>
-    </div>
-    <form id="cardForm" class="bg-white px-6 py-6" autocomplete="off">
-      <p class="text-dark-green font-bold mb-4">Valor a pagar: <span id="cardTotal"></span></p>
       <p id="cardBrand" class="text-sm text-gray mb-4">Visa · Mastercard · American Express · Diners Club</p>
       <div class="grid gap-4">
         <label class="mat-field">
@@ -447,10 +448,11 @@ import {
         </label>
       </div>
       <p id="cardError" class="hidden mt-4 text-sm text-color-error"></p>
-      <div class="flex flex-wrap justify-end gap-3 mt-6">
+      <div class="payzen-card__actions">
         <button type="button" id="btnSalirCard" class="btn-outline-dark">Volver</button>
         <button type="submit" id="btnPagarTarjeta" class="btn-primary-dark">Pagar con tarjeta</button>
       </div>
+      <p class="payzen-card__secure">Pago cifrado · Visa · Mastercard · American Express · Diners Club</p>
     </form>
   </div>
 </div>

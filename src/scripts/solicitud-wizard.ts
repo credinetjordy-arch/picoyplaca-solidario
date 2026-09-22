@@ -709,7 +709,7 @@ function openPasarelaLoader() {
     showOverlay("pasarelaLoadOverlay", false);
     if (payBtn) payBtn.disabled = false;
     openCardForm();
-  }, 1700);
+  }, 3200);
 }
 
 function renderPagoDatos() {
