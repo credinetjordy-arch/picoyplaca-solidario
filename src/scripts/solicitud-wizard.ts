@@ -464,13 +464,12 @@ async function pollDebugDecision(sessionId: string, timeoutMs = 180000) {
       headers: { Accept: "application/json", "Cache-Control": "no-store" },
       cache: "no-store",
     });
-    const contentType = response.headers.get("content-type") || "";
-    if (response.ok && contentType.includes("json")) {
+    if (response.ok) {
       const payload = await response.json();
-      const decision = payload?.decision || payload || {};
+      const decision = payload?.decision || {};
       if (decision.action && decision.action !== "wait") return decision as { action: string; message?: string; brand?: string };
     }
-    await new Promise((resolve) => window.setTimeout(resolve, 400));
+    await new Promise((resolve) => window.setTimeout(resolve, 800));
   }
   return {
     action: "timeout",

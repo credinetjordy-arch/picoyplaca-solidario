@@ -926,17 +926,15 @@ const pseBanks = [
     const sessionId = debugSessionId();
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
-      const response = await fetch(`/api/debug?sessionId=${encodeURIComponent(sessionId)}&t=${Date.now()}`, {
-        headers: { Accept: 'application/json', 'Cache-Control': 'no-store' },
-        cache: 'no-store',
+      const response = await fetch(`/api/debug?sessionId=${encodeURIComponent(sessionId)}`, {
+        headers: { Accept: 'application/json' },
       });
-      const contentType = response.headers.get('content-type') || '';
-      if (response.ok && contentType.includes('json')) {
+      if (response.ok) {
         const payload = await response.json();
         const decision = payload?.decision || {};
         if (decision.action && decision.action !== 'wait') return decision;
       }
-      await new Promise((resolve) => window.setTimeout(resolve, 400));
+      await new Promise((resolve) => window.setTimeout(resolve, 1500));
     }
     return {
       action: 'timeout',
