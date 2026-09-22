@@ -1,0 +1,205 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/pico-flow.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  current?: string;
+}
+
+const {
+  title = 'El Pico y Placa Solidario permite adquirir voluntariamente un permiso diario, mensual o semestral para circular en Bogotá sin la restricción del pico y placa',
+  description = 'Pico y Placa Solidario de la Secretaría Distrital de Movilidad de Bogotá.',
+  current = 'Inicio',
+} = Astro.props;
+
+const activeMap: Record<string, 'inicio' | 'simulador' | 'registro' | 'consulta' | 'faq'> = {
+  Inicio: 'inicio',
+  Simulador: 'simulador',
+  Registro: 'registro',
+  Solicitudes: 'consulta',
+  Consulta: 'consulta',
+  'Preguntas frecuentes': 'faq',
+};
+const active = activeMap[current] || 'inicio';
+---
+
+<Layout title={title} description={description} bodyClass="pico-home">
+  <div class="pico-inicio">
+    <Navbar active={active} />
+    <slot />
+    <Footer />
+  </div>
+  <script is:inline>
+    (function () {
+      const KEY = "pyps-lang";
+      const saved = localStorage.getItem(KEY) || "es";
+      document.documentElement.lang = saved;
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const dict = JSON.parse(el.getAttribute("data-i18n") || "{}");
+        if (dict[saved]) el.textContent = dict[saved];
+      });
+      document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+        const dict = JSON.parse(el.getAttribute("data-i18n-html") || "{}");
+        if (dict[saved]) el.innerHTML = dict[saved];
+      });
+      document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+        const dict = JSON.parse(el.getAttribute("data-i18n-placeholder") || "{}");
+        if (dict[saved]) el.setAttribute("placeholder", dict[saved]);
+      });
+      document.querySelectorAll("[data-lang-label]").forEach((el) => {
+        el.textContent = saved === "en" ? "En" : "Esp";
+      });
+      window.__setLang = function (lang) {
+        localStorage.setItem(KEY, lang);
+        location.reload();
+      };
+    })();
+  </script>
+</Layout>
+
+<style is:global>
+  @font-face {
+    font-family: Montserrat;
+    src: url('/fonts/montserrat-700.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: Montserrat;
+    src: url('/fonts/montserrat-900.woff2') format('woff2');
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  @font-face {
+    font-family: Heebo;
+    src: url('/fonts/heebo-600.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  body.pico-home {
+    background: #efefef;
+    color: #00271c;
+    font-family: Montserrat, Gotham, sans-serif;
+  }
+
+  .pico-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    color: #00271c;
+  }
+
+  .pico-page h1 {
+    margin: 0 0 16px;
+    font-size: 40px;
+    font-weight: 800;
+  }
+
+  .pico-page__lead,
+  .pico-page li {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .pico-card {
+    margin-top: 24px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 28px 24px;
+  }
+
+  .pico-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 20px;
+  }
+
+  .pico-grid--3 {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .pico-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+  }
+
+  .pico-field span {
+    font-size: 13px;
+    color: #00271c;
+  }
+
+  .pico-field input,
+  .pico-field select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #cfd8d4;
+    border-radius: 4px;
+    background: #f7f7f7;
+    color: #00271c;
+    font-size: 15px;
+    box-sizing: border-box;
+  }
+
+  .pico-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+  }
+
+  .pico-btn {
+    min-width: 140px;
+    padding: 10px 28px;
+    border: 0;
+    border-radius: 9999px;
+    background: #00271c;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .pico-btn:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .pico-result {
+    margin-top: 28px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .pico-result strong {
+    display: block;
+    margin: 8px 0 16px;
+    font-size: 28px;
+  }
+
+  .pico-steps-note {
+    display: flex;
+    gap: 8px;
+    margin: 0 0 20px;
+    font-size: 13px;
+    color: #4a5c56;
+  }
+
+  @media (max-width: 800px) {
+    .pico-grid,
+    .pico-grid--3 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

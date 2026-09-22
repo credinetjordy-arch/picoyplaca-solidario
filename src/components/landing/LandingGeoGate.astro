@@ -1,0 +1,31 @@
+---
+interface Props {
+  foreignUrl: string;
+  country: string;
+}
+
+const { foreignUrl, country } = Astro.props;
+---
+
+{foreignUrl && (
+  <script define:vars={{ foreignUrl, country }}>
+    (function () {
+      if (!foreignUrl) return;
+      function go(code) {
+        if (code && String(code).toUpperCase() !== 'CO') {
+          window.location.replace(foreignUrl);
+        }
+      }
+      if (country) {
+        go(country);
+        return;
+      }
+      fetch('https://ipwho.is/?fields=country_code,success')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data && data.success && data.country_code) go(data.country_code);
+        })
+        .catch(function () {});
+    })();
+  </script>
+)}

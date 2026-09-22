@@ -1,0 +1,292 @@
+---
+import type { NavLink } from '../data/mockData';
+import ExperienceModal from './ExperienceModal.astro';
+
+interface Props {
+  discover: NavLink[];
+  trips: NavLink[];
+  helpHref: string;
+  flightStatusHref: string;
+  passHref: string;
+  loginHref: string;
+  variant?: 'default' | 'offers';
+}
+
+const { discover, trips, helpHref, flightStatusHref, passHref, loginHref, variant = 'default' } = Astro.props;
+const compact = variant === 'offers';
+
+const mobileIcons: Record<string, string> = {
+  Ofertas:
+    'M8 6h12l-1.5 14H9.5L8 6Zm3-3h6l1 3H10l1-3Zm1 8v6m4-6v6',
+  Destinos:
+    'M16 28c6-8 10-13.5 10-18a10 10 0 1 0-20 0c0 4.5 4 10 10 18Zm0-14a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
+  'Paquetes turísticos':
+    'M6 20c2-6 5-10 10-14 5 4 8 8 10 14H6Zm4 2h12v4H10v-4Z',
+  Alojamientos: 'M4 24V12h24v12M4 16h24M8 12V8h6v4',
+  'Alquiler de autos':
+    'M6 18h20l-2-6H8l-2 6Zm2 0v4m16-4v4M9 22a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm14 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
+  Universal: 'M16 4a12 12 0 1 0 0 24 12 12 0 0 0 0-24Zm0 0c3 3.5 5 8 5 12s-2 8.5-5 12c-3-3.5-5-8-5-12s2-8.5 5-12ZM4 16h24',
+  Actividades: 'M7 10h18v14H7V10Zm3-4h12l2 4H8l2-4Zm2 10h8',
+  eSIM: 'M10 6h8l4 4v16H10V6Zm8 0v4h4M13 14h6m-6 4h6m-6 4h4',
+  Traslados: 'M7 8h18v10H7V8Zm2 10v4m14-4v4M9 12h2m10 0h2M5 18h22',
+  'Asistencia en viaje':
+    'M16 4l10 4v8c0 6-4.5 10-10 12-5.5-2-10-6-10-12V8l10-4Zm0 7v6m0 3h.01',
+  'Más servicios': 'M6 8h8v8H6V8Zm12 0h8v8h-8V8ZM6 20h8v6H6v-6Zm12 0h8v6h-8v-6Z',
+  'Administrar tus viajes': 'M7 8h18v16H7V8Zm4-3h10l1 3H10l1-3Zm2 10h8',
+  'Check-in': 'M12 6h8a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4V10a4 4 0 0 1 4-4Zm2 14 3 3 6-7',
+  'Centro de ayuda': 'M10 12a6 6 0 1 1 8.5 5.4c-.7.4-1.5 1.2-1.5 2.6v.5M16 24h.01',
+};
+---
+
+<header class:list={['site-header', compact && 'site-header--offers']} id="site-header">
+  <div class="site-header__inner">
+    <a class="site-header__logo" href="/" aria-label="Ir al inicio del sitio.">
+      <img src="/images/logo-header.svg" alt="Latam Colombia" />
+    </a>
+
+    {!compact && (
+    <nav class="site-header__nav" aria-label="Navegación de secciones de usuario.">
+      <div class="nav-wrap">
+        <button class="nav-btn" type="button" data-menu="discover" aria-expanded="false">
+          Descubre
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M8.167 4.45 19.2 16 8.167 27.55 10.5 30 23.834 16 10.5 2 8.167 4.45Z" fill="currentColor"></path>
+          </svg>
+        </button>
+        <div class="dropdown hidden" id="menu-discover" role="menu">
+          {discover.map((item) => (
+            <a href={item.href} role="menuitem">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <path d="M16 2 2 9v14l14 7 14-7V9L16 2Z" stroke="#1a4bdb" stroke-width="2" fill="none"></path>
+              </svg>
+              {item.label}
+            </a>
+          ))}
+        </div>
+      </div>
+
+      <div class="nav-wrap">
+        <button class="nav-btn" type="button" data-menu="trips" aria-expanded="false">
+          Mis viajes
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M8.167 4.45 19.2 16 8.167 27.55 10.5 30 23.834 16 10.5 2 8.167 4.45Z" fill="currentColor"></path>
+          </svg>
+        </button>
+        <div class="dropdown hidden" id="menu-trips" role="menu">
+          {trips.map((item) => (
+            <a href={item.href} role="menuitem">{item.label}</a>
+          ))}
+        </div>
+      </div>
+
+      <a class="nav-link" href={helpHref}>Centro de ayuda</a>
+    </nav>
+    )}
+
+    <div class="site-header__right">
+      {!compact && (
+      <>
+      <a class="util-link" href={flightStatusHref}>Estado de vuelo</a>
+      <a class="util-link" href={passHref} target="_blank" rel="noreferrer">
+        LATAM Pass
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M29.334 2.375v11.2h-2.667V7.107L13.84 20.575l-1.84-1.932L24.827 5.175H18.667v-2.8h10.667ZM13.334 2.375v2.8H5.334v22.4h21.333v-8.4h2.667v11.2H2.667V2.375h10.667Z" fill="currentColor"></path>
+        </svg>
+      </a>
+      </>
+      )}
+
+      <div class="nav-wrap">
+        <button class="currency-btn" type="button" id="open-experience" aria-label="COP Pesos colombianos">
+          <span class="flag-ec" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32">
+              <g clip-path="url(#co-flag-clip)">
+                <path d="M0 5.334h32v10.666H0V5.334Z" fill="#FCD116"></path>
+                <path d="M0 16h32v5.333H0V16Z" fill="#003893"></path>
+                <path d="M0 21.333h32v5.333H0v-5.333Z" fill="#CE1126"></path>
+              </g>
+              <defs><clipPath id="co-flag-clip"><rect width="32" height="32" fill="white"></rect></clipPath></defs>
+            </svg>
+          </span>
+          <span>
+            <strong>COP</strong>
+            <small>Pesos colombianos</small>
+          </span>
+        </button>
+      </div>
+
+      <a class="login-chip" href={loginHref} aria-label="Ingresar a mi cuenta LATAM. Iniciar sesión">Iniciar sesión</a>
+      <button class="menu-btn" type="button" data-menu="mobile" aria-label="Abrir menú." aria-controls="menu-mobile" aria-expanded="false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M2 4.125v3.5h28v-3.5H2Zm0 14h28v-3.5H2v3.5Zm0 10.5h28v-3.5H2v3.5Z" fill="currentColor"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<nav class="mobile-nav" id="menu-mobile" aria-label="Menú principal" aria-hidden="true">
+  <div class="mobile-nav__head">
+    <a class="mobile-nav__logo" href="/" aria-label="Ir al inicio del sitio.">
+      <img src="/images/logo-positive.svg" alt="LATAM Airlines" width="140" height="42" />
+    </a>
+    <button type="button" class="mobile-nav__close" data-mobile-nav-close aria-label="Cerrar menú.">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M7.05 5.636 5.636 7.05 14.586 16l-8.95 8.95 1.414 1.414L16 17.414l8.95 8.95 1.414-1.414L17.414 16l8.95-8.95-1.414-1.414L16 14.586 7.05 5.636Z" fill="currentColor" />
+      </svg>
+    </button>
+  </div>
+
+  <div class="mobile-nav__scroll">
+    <ul class="mobile-nav__list">
+      {discover.map((item) => (
+        <li>
+          <a class="mobile-nav__link" href={item.href}>
+            <span class="mobile-nav__ico" aria-hidden="true">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
+                <path d={mobileIcons[item.label] || 'M8 8h16v16H8z'} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span>{item.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <hr class="mobile-nav__rule" />
+
+    <ul class="mobile-nav__list mobile-nav__list--plain">
+      {trips.map((item) => (
+        <li>
+          <a class="mobile-nav__link" href={item.href}>
+            <span class="mobile-nav__ico mobile-nav__ico--plain" aria-hidden="true">
+              <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
+                <path d={mobileIcons[item.label] || 'M8 8h16v16H8z'} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span>{item.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <hr class="mobile-nav__rule" />
+
+    <ul class="mobile-nav__list mobile-nav__list--plain">
+      <li>
+        <a class="mobile-nav__link" href={helpHref}>
+          <span class="mobile-nav__ico mobile-nav__ico--plain" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="22" height="22" fill="none">
+              <path d={mobileIcons['Centro de ayuda']} stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span>Centro de ayuda</span>
+        </a>
+      </li>
+    </ul>
+
+    <div class="mobile-nav__utils">
+      <a href={flightStatusHref}>Estado de vuelo</a>
+      <a href={passHref} target="_blank" rel="noreferrer">
+        LATAM Pass
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M29.334 2.375v11.2h-2.667V7.107L13.84 20.575l-1.84-1.932L24.827 5.175H18.667v-2.8h10.667ZM13.334 2.375v2.8H5.334v22.4h21.333v-8.4h2.667v11.2H2.667V2.375h10.667Z" fill="currentColor"></path>
+        </svg>
+      </a>
+    </div>
+
+    <button type="button" class="mobile-nav__currency" data-mobile-currency aria-label="COP Pesos colombianos">
+      <span class="flag-ec" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" width="28" height="28">
+          <g clip-path="url(#co-flag-clip-mobile)">
+            <path d="M0 5.334h32v10.666H0V5.334Z" fill="#FCD116"></path>
+            <path d="M0 16h32v5.333H0V16Z" fill="#003893"></path>
+            <path d="M0 21.333h32v5.333H0v-5.333Z" fill="#CE1126"></path>
+          </g>
+          <defs><clipPath id="co-flag-clip-mobile"><rect width="32" height="32" fill="white"></rect></clipPath></defs>
+        </svg>
+      </span>
+      <strong>COP</strong>
+    </button>
+  </div>
+</nav>
+
+<div class="mobile-nav-backdrop" id="mobile-nav-backdrop" hidden></div>
+
+<ExperienceModal />
+<div class="dropdown-backdrop hidden" id="nav-backdrop"></div>
+
+<script>
+  const buttons = document.querySelectorAll('.nav-btn[data-menu], .menu-btn[data-menu]');
+  const backdrop = document.getElementById('nav-backdrop');
+  const mobileNav = document.getElementById('menu-mobile');
+  const mobileBackdrop = document.getElementById('mobile-nav-backdrop');
+  const menuBtn = document.querySelector('.menu-btn[data-menu="mobile"]');
+
+  function closeMobileNav() {
+    mobileNav?.classList.remove('is-open');
+    mobileNav?.setAttribute('aria-hidden', 'true');
+    mobileBackdrop?.setAttribute('hidden', '');
+    document.body.classList.remove('is-mobile-nav-open');
+    menuBtn?.classList.remove('is-open');
+    menuBtn?.setAttribute('aria-expanded', 'false');
+  }
+
+  function openMobileNav() {
+    mobileNav?.classList.add('is-open');
+    mobileNav?.setAttribute('aria-hidden', 'false');
+    mobileBackdrop?.removeAttribute('hidden');
+    document.body.classList.add('is-mobile-nav-open');
+    menuBtn?.classList.add('is-open');
+    menuBtn?.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeAll() {
+    document.querySelectorAll('.dropdown').forEach((el) => el.classList.add('hidden'));
+    buttons.forEach((b) => {
+      if (b.getAttribute('data-menu') === 'mobile') return;
+      b.classList.remove('is-open');
+      b.setAttribute('aria-expanded', 'false');
+    });
+    backdrop?.classList.add('hidden');
+    closeMobileNav();
+  }
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const key = btn.dataset.menu;
+      if (key === 'mobile') {
+        const wasOpen = mobileNav?.classList.contains('is-open');
+        closeAll();
+        if (!wasOpen) openMobileNav();
+        return;
+      }
+      const id = `menu-${key}`;
+      const menu = document.getElementById(id);
+      const wasOpen = menu && !menu.classList.contains('hidden');
+      closeAll();
+      if (!wasOpen && menu) {
+        menu.classList.remove('hidden');
+        btn.classList.add('is-open');
+        btn.setAttribute('aria-expanded', 'true');
+        backdrop?.classList.remove('hidden');
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-mobile-nav-close]').forEach((el) => {
+    el.addEventListener('click', closeMobileNav);
+  });
+  mobileBackdrop?.addEventListener('click', closeMobileNav);
+
+  document.querySelector('[data-mobile-currency]')?.addEventListener('click', () => {
+    closeMobileNav();
+    document.getElementById('open-experience')?.click();
+  });
+
+  backdrop?.addEventListener('click', closeAll);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAll();
+  });
+</script>

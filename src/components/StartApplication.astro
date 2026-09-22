@@ -1,0 +1,75 @@
+---
+import RecaptchaBox from "./RecaptchaBox.astro";
+import { documentTypes } from "../data/picoMock";
+import { translations } from "../data/picoI18n";
+
+const es = translations.es.start;
+const en = translations.en.start;
+---
+
+<section class="bg-dark-green m-auto flex flex-col self-center text-center items-center bg-image py-16 px-4">
+  <div class="mt-[2%]">
+    <div id="scrollDestino" class="flex justify-center">
+      <svg width="70" height="70" viewBox="0 0 64 64" fill="none">
+        <rect x="16" y="10" width="32" height="44" rx="3" stroke="#88F456" stroke-width="3"></rect>
+        <path d="M24 24h16M24 32h16M24 40h10" stroke="#88F456" stroke-width="3"></path>
+      </svg>
+    </div>
+    <h2 class="text-white text-4xl font-bold mt-4" data-i18n={JSON.stringify({ es: es.title, en: en.title })}>{es.title}</h2>
+    <p class="text-white max-w-md mx-auto mt-3 mb-8" data-i18n={JSON.stringify({ es: es.subtitle, en: en.subtitle })}>{es.subtitle}</p>
+  </div>
+
+  <form id="startForm" class="bg-white rounded-2xl w-full max-w-4xl px-8 py-8 text-left shadow-xl">
+    <label class="flex text-base font-medium text-dark-green mb-1">
+      <b data-i18n={JSON.stringify({ es: es.docType, en: en.docType })}>{es.docType}</b>:
+    </label>
+    <select name="tipoDocumento" id="tipoDocumento" class="mt-1 block w-full py-2 px-3 border bg-white rounded-md border-dark-green text-dark-green mb-4">
+      <option value="" data-i18n={JSON.stringify({ es: es.select, en: en.select })}>{es.select}</option>
+      {
+        documentTypes.map((type) => (
+          <option value={type.id} data-i18n={JSON.stringify({ es: type.es, en: type.en })}>
+            {type.es}
+          </option>
+        ))
+      }
+    </select>
+
+    <label class="text-base flex font-medium text-dark-green mb-1">
+      <b data-i18n={JSON.stringify({ es: es.docNumber, en: en.docNumber })}>{es.docNumber}</b>:
+    </label>
+    <input type="text" name="numeroDocumento" id="numeroDocumento" class="mt-1 block w-full py-2 px-3 border border-dark-green bg-white rounded-md text-dark-green uppercase mb-6" />
+
+    <div class="flex justify-center mb-4">
+      <RecaptchaBox />
+    </div>
+
+    <div class="flex justify-end">
+      <button type="submit" id="startBtn" disabled class="rounded-full p-[8px] font-bold text-white" style="opacity:0.5;background-color:var(--dark-green);border:1px solid var(--dark-green);">
+        <span data-i18n={JSON.stringify({ es: es.cta, en: en.cta })}>{es.cta}</span>
+      </button>
+    </div>
+  </form>
+</section>
+
+<script is:inline>
+  const form = document.getElementById("startForm");
+  const btn = document.getElementById("startBtn");
+  function sync() {
+    const tipo = document.getElementById("tipoDocumento").value;
+    const numero = document.getElementById("numeroDocumento").value.trim();
+    const captcha = form.querySelector(".js-captcha")?.checked;
+    const ok = Boolean(tipo && numero && captcha);
+    btn.disabled = !ok;
+    btn.style.opacity = ok ? "1" : "0.5";
+  }
+  form?.addEventListener("input", sync);
+  form?.addEventListener("change", sync);
+  form?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const tipo = document.getElementById("tipoDocumento").value;
+    const numero = document.getElementById("numeroDocumento").value.trim();
+    if (!tipo || !numero) return;
+    sessionStorage.setItem("pyps-doc", JSON.stringify({ tipoDocumento: tipo, numeroDocumento: numero }));
+    location.href = "/Registro";
+  });
+</script>

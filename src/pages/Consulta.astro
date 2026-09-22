@@ -1,0 +1,103 @@
+---
+import PicoLayout from "../layouts/PicoLayout.astro";
+import RecaptchaBox from "../components/RecaptchaBox.astro";
+import { documentTypes } from "../data/picoMock";
+import { translations } from "../data/picoI18n";
+
+const es = translations.es.consulta;
+const en = translations.en.consulta;
+---
+
+<PicoLayout current="Solicitudes">
+  <section class="page-shell pt-16 pb-24">
+    <div class="max-w-5xl mx-auto px-6">
+      <h1 class="text-dark-green text-4xl md:text-5xl font-medium mb-8" data-i18n={JSON.stringify({ es: es.title, en: en.title })}>{es.title}</h1>
+
+      <form id="consultaForm" class="bg-white rounded-2xl p-8 shadow-sm">
+        <div class="grid md:grid-cols-3 gap-6">
+          <label class="block">
+            <span class="block text-sm mb-2" data-i18n={JSON.stringify({ es: translations.es.registro.docType, en: translations.en.registro.docType })}>Seleccione tipo de documento</span>
+            <select name="tipoDocumento" id="cTipo" class="w-full h-12 border border-dark-green rounded px-3">
+              <option value="">Select</option>
+              {documentTypes.map((t) => <option value={t.id}>{t.es}</option>)}
+            </select>
+          </label>
+          <label class="block">
+            <span class="block text-sm mb-2" data-i18n={JSON.stringify({ es: translations.es.registro.docNumber, en: translations.en.registro.docNumber })}>Número de documento</span>
+            <input name="numeroDocumento" id="cNumero" placeholder="Número de documento" class="w-full h-12 border border-dark-green rounded px-3" />
+          </label>
+          <label class="block">
+            <span class="block text-sm mb-2" data-i18n={JSON.stringify({ es: es.plate, en: en.plate })}>Placa</span>
+            <input name="placa" id="cPlaca" placeholder="Placa" class="w-full h-12 border border-dark-green rounded px-3 uppercase" />
+          </label>
+        </div>
+        <div class="flex justify-center mt-8">
+          <RecaptchaBox />
+        </div>
+        <div class="flex justify-center mt-6">
+          <button type="submit" id="cBtn" disabled class="btn-primary-dark" data-i18n={JSON.stringify({ es: es.search, en: en.search })}>{es.search}</button>
+        </div>
+      </form>
+
+      <h2 class="text-dark-green text-3xl font-medium mt-10 mb-4" data-i18n={JSON.stringify({ es: es.results, en: en.results })}>{es.results}</h2>
+      <div id="cResults" class="overflow-x-auto"></div>
+    </div>
+  </section>
+</PicoLayout>
+
+<script>
+  import { api } from "../services/picoApi";
+
+  const form = document.getElementById("consultaForm") as HTMLFormElement | null;
+  const btn = document.getElementById("cBtn") as HTMLButtonElement | null;
+  const out = document.getElementById("cResults");
+
+  function sync() {
+    const ok = Boolean(
+      (document.getElementById("cTipo") as HTMLSelectElement).value &&
+        (document.getElementById("cNumero") as HTMLInputElement).value.trim() &&
+        (form?.querySelector(".js-captcha") as HTMLInputElement | null)?.checked
+    );
+    if (btn) btn.disabled = !ok;
+  }
+  form?.addEventListener("input", sync);
+  form?.addEventListener("change", sync);
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const tipoDocumento = (document.getElementById("cTipo") as HTMLSelectElement).value;
+    const numeroDocumento = (document.getElementById("cNumero") as HTMLInputElement).value.trim();
+    const placa = (document.getElementById("cPlaca") as HTMLInputElement).value.trim();
+    const { items } = await api.searchRequests({ tipoDocumento, numeroDocumento, placa });
+    if (!out) return;
+    if (!items.length) {
+      out.innerHTML = `<div class="bg-white rounded-2xl p-6 text-dark-green">No hay solicitudes para los datos ingresados. En mock usa cédula 12345678 y placa ABC123.</div>`;
+      return;
+    }
+    const money = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+    out.innerHTML = `
+      <table class="w-full bg-white rounded-2xl overflow-hidden">
+        <thead class="bg-dark-green text-white text-left">
+          <tr>
+            <th class="p-3">ID</th><th class="p-3">Placa</th><th class="p-3">Tipo</th><th class="p-3">Estado</th><th class="p-3">Inicio</th><th class="p-3">Fin</th><th class="p-3">Valor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items
+            .map(
+              (item) => `<tr class="border-t border-gris">
+                <td class="p-3">${item.id}</td>
+                <td class="p-3">${item.placa}</td>
+                <td class="p-3">${item.tipo.es}</td>
+                <td class="p-3">${item.estado.es}</td>
+                <td class="p-3">${item.inicio}</td>
+                <td class="p-3">${item.fin}</td>
+                <td class="p-3">${money(item.valor)}</td>
+              </tr>`
+            )
+            .join("")}
+        </tbody>
+      </table>
+    `;
+  });
+</script>

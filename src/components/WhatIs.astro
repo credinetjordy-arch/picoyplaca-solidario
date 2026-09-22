@@ -1,0 +1,31 @@
+---
+import { translations } from "../data/picoI18n";
+const es = translations.es.whatIs;
+const en = translations.en.whatIs;
+---
+
+<section class="section-2 my-[5%] px-6 lg:px-20 grid lg:grid-cols-[280px_8px_1fr] gap-8 items-center">
+  <div class="self-center">
+    <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="180" height="150" viewBox="0 0 205 175" class="mx-auto">
+      <g transform="translate(0,175) scale(0.1,-0.1)" fill="#00271c" stroke="none">
+        <path d="M830 1476 c-6 -6 -10 -15 -10 -21 0 -8 -39 -10 -135 -7 -147 5 -189 -4 -199 -41 -3 -12 -6 -273 -6 -580 l0 -558 25 -24 24 -25 433 5 c238 3 447 8 463 11 105 22 193 119 211 232 9 60 -21 154 -67 206 l-39 44 0 346 c0 427 19 389 -187 384 -137 -3 -143 -2 -158 19 -15 21 -22 22 -180 20 -94 -1 -169 -5 -175 -11z"></path>
+        <path d="M1423 540 c-32 -49 -62 -90 -66 -90 -5 0 -28 16 -51 35 -48 39 -66 44 -66 17 0 -15 63 -71 117 -105 8 -5 27 15 57 60 25 38 57 85 72 105 25 35 27 68 5 68 -6 0 -36 -40 -68 -90z" fill="#88F456"></path>
+      </g>
+    </svg>
+    <h1 class="text-dark-green text-4xl lg:text-5xl font-medium leading-tight mt-2">
+      <span data-i18n={JSON.stringify({ es: es.title, en: en.title })}>{es.title}</span>
+      <span class="block" data-i18n={JSON.stringify({ es: es.title2, en: en.title2 })}>{es.title2}</span>
+    </h1>
+  </div>
+  <div class="hidden lg:flex items-center">
+    <div class="w-[4px] bg-light-green h-[220px]"></div>
+  </div>
+  <div class="mx-auto text-justify flex flex-col justify-center max-w-3xl">
+    <p class="text-dark-green leading-7" data-i18n={JSON.stringify({ es: es.body, en: en.body })}>{es.body}</p>
+    <div class="mt-6">
+      <a href="/PreguntasFrecuentes" class="text-dark-green font-bold rounded-full border-2 border-dark-green py-1 px-6 bg-white inline-block" data-i18n={JSON.stringify({ es: es.more, en: en.more })}>
+        {es.more}
+      </a>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,212 @@
+---
+interface Destination {
+  city: string;
+  from: string;
+  price: string;
+  discount: number;
+  text: string;
+  image: string;
+  kind: string;
+}
+
+interface Props {
+  nationalTitle: string;
+  nationalLead: string;
+  internationalTitle: string;
+  internationalLead: string;
+  national: Destination[];
+  international: Destination[];
+  ticketsHref: string;
+  ctaLabel: string;
+}
+
+const {
+  nationalTitle,
+  nationalLead,
+  internationalTitle,
+  internationalLead,
+  national,
+  international,
+  ticketsHref,
+  ctaLabel,
+} = Astro.props;
+const external = /^https?:\/\//i.test(ticketsHref);
+---
+
+<section class="landing-section landing-section--fog" id="destinos" aria-labelledby="landing-nat-title">
+  <div class="container-latam">
+    <h2 id="landing-nat-title">{nationalTitle}</h2>
+    <p class="landing-lead">{nationalLead}</p>
+    <div class="landing-dests">
+      {national.map((d) => (
+        <a class="landing-dest" href={ticketsHref} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}>
+          <div class="landing-dest__visual">
+            <img src={d.image} alt={`Vuelo a ${d.city}`} width="640" height="480" loading="lazy" />
+            <span class="landing-dest__tag">{d.kind} · -{d.discount}%</span>
+          </div>
+          <div class="landing-dest__body">
+            <small>{d.from}</small>
+            <h3>{d.city}</h3>
+            <p>{d.text}</p>
+            <strong>Desde {d.price}</strong>
+            <span class="landing-dest__cta">{ctaLabel}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+
+    <h2 id="landing-int-title">{internationalTitle}</h2>
+    <p class="landing-lead">{internationalLead}</p>
+    <div class="landing-dests">
+      {international.map((d) => (
+        <a class="landing-dest" href={ticketsHref} target={external ? '_blank' : undefined} rel={external ? 'noopener noreferrer' : undefined}>
+          <div class="landing-dest__visual">
+            <img src={d.image} alt={`Vuelo a ${d.city}`} width="640" height="480" loading="lazy" />
+            <span class="landing-dest__tag">{d.kind} · -{d.discount}%</span>
+          </div>
+          <div class="landing-dest__body">
+            <small>{d.from}</small>
+            <h3>{d.city}</h3>
+            <p>{d.text}</p>
+            <strong>Desde {d.price}</strong>
+            <span class="landing-dest__cta">{ctaLabel}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .landing-section {
+    padding: 56px 0 32px;
+  }
+
+  .landing-section--fog {
+    background: #f3f2f6;
+  }
+
+  h2 {
+    margin: 32px 0 8px;
+    font-size: 28px;
+    color: #10004f;
+    font-weight: 600;
+  }
+
+  h2:first-child {
+    margin-top: 0;
+  }
+
+  .landing-lead {
+    margin: 0 0 24px;
+    color: #5c5c5c;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .landing-dests {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .landing-dest {
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid #d9d6e0;
+    display: flex;
+    flex-direction: column;
+    color: inherit;
+    text-decoration: none;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .landing-dest:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 32px rgba(16, 0, 79, 0.12);
+  }
+
+  .landing-dest__visual {
+    position: relative;
+    height: 168px;
+    overflow: hidden;
+  }
+
+  .landing-dest__visual img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .landing-dest__tag {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: #e8114b;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 999px;
+  }
+
+  .landing-dest__body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+  }
+
+  small {
+    color: #5c5c5c;
+    font-size: 12px;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #10004f;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #5c5c5c;
+    flex: 1;
+  }
+
+  strong {
+    color: #10004f;
+    font-size: 15px;
+  }
+
+  .landing-dest__cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-top: 6px;
+    border-radius: 8px;
+    background: #e8114b;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  @media (max-width: 1100px) {
+    .landing-dests {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .landing-dests {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

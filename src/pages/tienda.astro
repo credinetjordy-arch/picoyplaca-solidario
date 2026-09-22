@@ -1,0 +1,34 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import PicoHeader from '../components/pico/PicoHeader.astro';
+import StoreBoard from '../components/store/StoreBoard.astro';
+---
+
+<Layout title="Complementos | Pico y Placa Solidario" bodyClass="is-store-page pico-home">
+  <PicoHeader current="Registro" />
+  <div class="store-scroll">
+    <main class="store-main">
+      <StoreBoard />
+    </main>
+    <footer class="pax-page-footer">
+      <div class="pax-page-footer__left">
+        <img class="pax-page-footer__latam" src="/images/logo-positive.svg" alt="LATAM Airlines" width="105" height="32" />
+        <p>© 2026 LATAM Airlines Colombia</p>
+      </div>
+      <div class="pax-page-footer__right">
+        <span>Certificado por:</span>
+        <a
+          class="pax-page-footer__pci"
+          href="https://www.pcisecuritystandards.org/"
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          title="PCI"
+        >
+          <img src="/images/pci.svg" alt="PCI DSS" width="40" height="40" />
+        </a>
+      </div>
+    </footer>
+  </div>
+</Layout>

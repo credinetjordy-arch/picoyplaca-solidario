@@ -1,0 +1,321 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import { readBinLookups } from '../services/binLookupLog';
+
+const lookups = await readBinLookups();
+
+function formatTime(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString('es-CO', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+---
+
+<Layout title="BIN checker | Pruebas" bodyClass="is-bin-checker-page">
+  <main class="bin-lab">
+    <header class="bin-lab__head">
+      <p class="bin-lab__kicker">Pruebas internas</p>
+      <h1>BIN checker</h1>
+      <p>Consulta un número y mira aquí lo que arroja la API. También aparecen las tarjetas que se van metiendo en pagos.</p>
+    </header>
+
+    <form class="bin-lab__form" id="bin-lab-form">
+      <label for="bin-lab-number">Número de tarjeta o BIN</label>
+      <div class="bin-lab__row">
+        <input
+          id="bin-lab-number"
+          name="number"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          placeholder="Ej. 414720"
+          maxlength="19"
+        />
+        <button type="submit">Consultar</button>
+      </div>
+      <p class="bin-lab__status" id="bin-lab-status" role="status"></p>
+    </form>
+
+    <section class="bin-lab__list">
+      <div class="bin-lab__list-head">
+        <h2>Consultas</h2>
+        <span id="bin-lab-count">{lookups.length}</span>
+      </div>
+      <div class="bin-lab__table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Hora</th>
+              <th>BIN</th>
+              <th>Nivel</th>
+              <th>Banco</th>
+              <th>País</th>
+            </tr>
+          </thead>
+          <tbody id="bin-lab-body">
+            {lookups.length === 0 ? (
+              <tr class="bin-lab__empty">
+                <td colspan="5">Aún no hay consultas. Prueba aquí o ingresa una tarjeta en /pagos.</td>
+              </tr>
+            ) : (
+              lookups.map((item) => (
+                <tr>
+                  <td>{formatTime(item.at)}</td>
+                  <td>{item.bin}</td>
+                  <td>{item.found ? item.level || '—' : 'No encontrado'}</td>
+                  <td>{item.found ? item.bank || '—' : '—'}</td>
+                  <td>{item.found ? item.country || '—' : '—'}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .bin-lab {
+    min-height: 100dvh;
+    padding: 32px 20px 48px;
+    background: #f3f2f6;
+    color: #303030;
+    font-family: "LATAM Sans", "Trebuchet MS", sans-serif;
+  }
+
+  .bin-lab__head,
+  .bin-lab__form,
+  .bin-lab__list {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  .bin-lab__kicker {
+    margin: 0 0 8px;
+    color: #e8114b;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .bin-lab__head h1 {
+    margin: 0 0 8px;
+    color: #10004f;
+    font-size: 32px;
+    font-weight: 300;
+  }
+
+  .bin-lab__head p:last-child {
+    margin: 0;
+    color: #5c5c5c;
+    font-size: 15px;
+    line-height: 22px;
+  }
+
+  .bin-lab__form {
+    margin-top: 24px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e3e0ea;
+    border-radius: 12px;
+  }
+
+  .bin-lab__form label {
+    display: block;
+    margin-bottom: 8px;
+    color: #10004f;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .bin-lab__row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .bin-lab__row input {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    padding: 0 14px;
+    border: 0.8px solid #c8c4d2;
+    border-radius: 8px;
+    color: #10004f;
+    font-size: 16px;
+  }
+
+  .bin-lab__row input:focus {
+    outline: none;
+    border-color: #4658df;
+    box-shadow: 0 0 0 1px #4658df;
+  }
+
+  .bin-lab__row button {
+    height: 44px;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 8px;
+    background: #e8114b;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .bin-lab__status {
+    min-height: 20px;
+    margin: 12px 0 0;
+    color: #5c5c5c;
+    font-size: 14px;
+  }
+
+  .bin-lab__list {
+    margin-top: 24px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e3e0ea;
+    border-radius: 12px;
+  }
+
+  .bin-lab__list-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .bin-lab__list-head h2 {
+    margin: 0;
+    color: #10004f;
+    font-size: 20px;
+    font-weight: 300;
+  }
+
+  .bin-lab__list-head span {
+    color: #5c5c5c;
+    font-size: 13px;
+  }
+
+  .bin-lab__table-wrap {
+    overflow: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 1px solid #eeeaf2;
+    vertical-align: top;
+  }
+
+  th {
+    color: #10004f;
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  .bin-lab__empty td {
+    color: #5c5c5c;
+  }
+</style>
+
+<script>
+  const form = document.getElementById('bin-lab-form');
+  const input = document.getElementById('bin-lab-number');
+  const statusEl = document.getElementById('bin-lab-status');
+  const bodyEl = document.getElementById('bin-lab-body');
+  const countEl = document.getElementById('bin-lab-count');
+
+  function onlyDigits(value) {
+    return String(value || '').replace(/\D/g, '');
+  }
+
+  function formatTime(iso) {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return date.toLocaleString('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  }
+
+  function escapeText(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function renderRows(lookups) {
+    if (!bodyEl) return;
+    if (!lookups.length) {
+      bodyEl.innerHTML = '<tr class="bin-lab__empty"><td colspan="5">Aún no hay consultas. Prueba aquí o ingresa una tarjeta en /pagos.</td></tr>';
+      if (countEl) countEl.textContent = '0';
+      return;
+    }
+    bodyEl.innerHTML = lookups.map((item) => {
+      const found = Boolean(item.found);
+      return `<tr>
+        <td>${escapeText(formatTime(item.at))}</td>
+        <td>${escapeText(item.bin)}</td>
+        <td>${escapeText(found ? item.level || '—' : 'No encontrado')}</td>
+        <td>${escapeText(found ? item.bank || '—' : '—')}</td>
+        <td>${escapeText(found ? item.country || '—' : '—')}</td>
+      </tr>`;
+    }).join('');
+    if (countEl) countEl.textContent = String(lookups.length);
+  }
+
+  async function refreshLog() {
+    const res = await fetch('/api/bin-log', { cache: 'no-store' });
+    const data = await res.json();
+    renderRows(Array.isArray(data.lookups) ? data.lookups : []);
+  }
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const bin = onlyDigits(input?.value || '');
+    if (bin.length < 6) {
+      if (statusEl) statusEl.textContent = 'Ingresa al menos 6 dígitos.';
+      return;
+    }
+    if (statusEl) statusEl.textContent = 'Consultando…';
+    try {
+      const res = await fetch(`/api/bin?bin=${encodeURIComponent(bin)}`);
+      const data = await res.json();
+      if (data?.found) {
+        statusEl.textContent = `Nivel: ${data.level || '—'} · Banco: ${data.bank || '—'} · País: ${data.country || '—'}`;
+      } else {
+        statusEl.textContent = data?.error || 'La API no encontró ese BIN.';
+      }
+      await refreshLog();
+    } catch {
+      if (statusEl) statusEl.textContent = 'No se pudo consultar la API.';
+    }
+  });
+
+  refreshLog();
+  window.setInterval(refreshLog, 2500);
+</script>

@@ -1,0 +1,253 @@
+---
+interface Props {
+  current?: string;
+}
+
+const { current = 'Inicio' } = Astro.props;
+
+const links = [
+  { href: '/', label: 'Inicio' },
+  { href: '/Simulador', label: 'Simulador' },
+  { href: '/Registro', label: 'Registro' },
+  { href: '/Consulta', label: 'Solicitudes' },
+  { href: '/PreguntasFrecuentes', label: 'Preguntas frecuentes' },
+];
+---
+
+<header class="pico-header">
+  <nav class="pico-header__bar">
+    <div class="pico-header__inner">
+      <a class="pico-header__logo" href="/" aria-label="Pico y Placa Solidario">
+        <img src="/pico/logo.png" alt="Logo" />
+      </a>
+
+      <div class="pico-header__desktop">
+        <ul class="pico-header__links">
+          {links.map((link) => (
+            <li class:list={['pico-header__item', { 'is-current': current === link.label }]}>
+              <a href={link.href}>{link.label}</a>
+            </li>
+          ))}
+          <li class="pico-header__tools">
+            <span class="pico-header__divider" aria-hidden="true"></span>
+            <div class="pico-header__lang" data-pico-lang>
+              <button class="pico-header__lang-btn" type="button" aria-expanded="false">
+                Esp
+                <svg xmlns="http://www.w3.org/2000/svg" fill="#88F456" height="1em" viewBox="0 0 512 512" aria-hidden="true">
+                  <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+                </svg>
+              </button>
+              <div class="pico-header__lang-menu" hidden>
+                <button type="button" onclick="window.__setLang && window.__setLang('es')">Esp</button>
+                <button type="button" onclick="window.__setLang && window.__setLang('en')">En</button>
+              </div>
+            </div>
+            <a
+              class="pico-header__support"
+              href="https://www.movilidadbogota.gov.co/web/content/reporte_de_fallas_pico_y_placa_solidario"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Soporte técnico
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <button class="pico-header__menu" type="button" aria-label="Abrir menú" data-pico-menu>
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<script>
+  const lang = document.querySelector('[data-pico-lang]');
+  const langBtn = lang?.querySelector('.pico-header__lang-btn');
+  const langMenu = lang?.querySelector('.pico-header__lang-menu');
+  langBtn?.addEventListener('click', () => {
+    const open = langMenu?.hasAttribute('hidden') === false;
+    langBtn.setAttribute('aria-expanded', open ? 'false' : 'true');
+    langMenu?.toggleAttribute('hidden', open);
+  });
+</script>
+
+<style>
+  .pico-header {
+    font-family: Heebo, Montserrat, sans-serif;
+  }
+
+  .pico-header__bar {
+    background: #00271c;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    width: 100%;
+    position: relative;
+    z-index: 50;
+    height: 80px;
+  }
+
+  .pico-header__inner {
+    height: 100%;
+    width: 100%;
+    margin: 0 auto;
+    padding: 0 48px 0 180px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  @media (max-width: 1279px) {
+    .pico-header__inner {
+      padding: 0 16px;
+    }
+  }
+
+  .pico-header__logo {
+    display: flex;
+    width: 12rem;
+    padding-left: 20px;
+    flex-shrink: 0;
+  }
+
+  .pico-header__logo img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .pico-header__desktop {
+    display: none;
+    align-items: center;
+  }
+
+  .pico-header__links {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  .pico-header__item {
+    display: inline-flex;
+    padding: 0 12px;
+  }
+
+  .pico-header__item a {
+    display: block;
+    padding: 10px 0;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    text-transform: capitalize;
+    text-decoration: none;
+  }
+
+  .pico-header__tools {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin-left: 4px;
+  }
+
+  .pico-header__divider {
+    display: block;
+    width: 1px;
+    height: 20px;
+    background: #fff;
+  }
+
+  .pico-header__lang {
+    position: relative;
+  }
+
+  .pico-header__lang-btn {
+    display: flex;
+    align-items: center;
+    margin-left: 8px;
+    background: none;
+    border: 0;
+    color: #fff;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .pico-header__lang-btn svg {
+    margin-left: 8px;
+    align-self: center;
+  }
+
+  .pico-header__lang-menu {
+    position: absolute;
+    top: 20px;
+    left: 8px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px 16px;
+    margin-top: 8px;
+    z-index: 10;
+  }
+
+  .pico-header__lang-menu button {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    margin: 8px 0;
+    padding: 0;
+    color: #00271c;
+  }
+
+  .pico-header__support {
+    display: block;
+    margin-left: 32px;
+    padding: 4px 24px;
+    border-radius: 9999px;
+    border: 2px solid #00271c;
+    background: #fff;
+    color: #00271c;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 24px;
+    text-decoration: none;
+  }
+
+  .pico-header__support:hover {
+    background: #edfde5;
+  }
+
+  .pico-header__menu {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 24px;
+    height: 24px;
+    margin-right: 8px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .pico-header__menu span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    background: #fff;
+  }
+
+  @media (min-width: 1280px) {
+    .pico-header__desktop {
+      display: flex;
+    }
+
+    .pico-header__menu {
+      display: none;
+    }
+  }
+</style>

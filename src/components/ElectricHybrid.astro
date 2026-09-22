@@ -1,0 +1,28 @@
+---
+import { translations } from "../data/picoI18n";
+import { footerLinks } from "../data/picoMock";
+const es = translations.es.electric;
+const en = translations.en.electric;
+---
+
+<section class="section-3 my-[5%] px-6 lg:px-20 grid lg:grid-cols-[280px_1fr_auto] gap-8 items-center">
+  <div>
+    <svg viewBox="0 0 200 180" class="w-40 mr-8">
+      <path d="M20 110h160l-18-42H70L50 110z" fill="#00271c"></path>
+      <circle cx="60" cy="118" r="16" fill="#00271c" stroke="#88F456" stroke-width="4"></circle>
+      <circle cx="150" cy="118" r="16" fill="#00271c" stroke="#88F456" stroke-width="4"></circle>
+      <path d="M78 68h52l10 24H70z" fill="#88F456"></path>
+    </svg>
+    <h2 class="text-dark-green text-4xl lg:text-5xl leading-tight">
+      <span data-i18n={JSON.stringify({ es: es.title1, en: en.title1 })}>{es.title1}</span>
+      <span class="block" data-i18n={JSON.stringify({ es: es.title2, en: en.title2 })}>{es.title2}</span>
+      <span data-i18n={JSON.stringify({ es: es.title3, en: en.title3 })}>{es.title3}</span>
+    </h2>
+  </div>
+  <p class="text-dark-green text-justify leading-7 max-w-3xl" data-i18n={JSON.stringify({ es: es.body, en: en.body })}>{es.body}</p>
+  <div>
+    <a href={footerLinks.excepted} target="_blank" rel="noopener noreferrer" class="text-dark-green font-bold rounded-full border-2 border-dark-green py-1 px-6 bg-white inline-block" data-i18n={JSON.stringify({ es: es.cta, en: en.cta })}>
+      {es.cta}
+    </a>
+  </div>
+</section>

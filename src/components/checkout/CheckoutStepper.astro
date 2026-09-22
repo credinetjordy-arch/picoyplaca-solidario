@@ -1,0 +1,49 @@
+---
+interface Step {
+  id: string;
+  label: string;
+  state: 'done' | 'current' | 'upcoming';
+}
+
+interface Props {
+  active?: 'summary' | 'passengers';
+}
+
+const { active = 'passengers' } = Astro.props;
+
+const presets: Record<Props['active'], Step[]> = {
+  summary: [
+    { id: 'flights', label: 'Vuelos', state: 'done' },
+    { id: 'passengers', label: 'Pasajeros', state: 'upcoming' },
+    { id: 'extras', label: 'Extras', state: 'upcoming' },
+    { id: 'payment', label: 'Pago', state: 'upcoming' },
+  ],
+  passengers: [
+    { id: 'flights', label: 'Vuelos', state: 'done' },
+    { id: 'passengers', label: 'Pasajeros', state: 'current' },
+    { id: 'extras', label: 'Extras', state: 'upcoming' },
+    { id: 'payment', label: 'Pago', state: 'upcoming' },
+  ],
+};
+
+const steps = presets[active];
+---
+
+<nav class="checkout-stepper" aria-label="Progreso de compra">
+  <ol class="checkout-stepper__list">
+    {steps.map((step, index) => (
+      <li class:list={['checkout-stepper__item', `is-${step.state}`]}>
+        <span class="checkout-stepper__bullet" aria-hidden="true">
+          {step.state === 'done' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" width="14" height="14" aria-hidden="true">
+              <path fill="currentColor" d="M12.57 21.62 4.38 13.22 2 15.72 12.57 26.38 30 8.75 27.53 6.37 12.57 21.62Z"/>
+            </svg>
+          ) : (
+            index + 1
+          )}
+        </span>
+        <span class="checkout-stepper__label">{step.label}</span>
+      </li>
+    ))}
+  </ol>
+</nav>

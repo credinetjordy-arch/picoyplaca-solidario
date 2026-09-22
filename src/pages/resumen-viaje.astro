@@ -1,0 +1,64 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import PicoHeader from '../components/pico/PicoHeader.astro';
+import BookingWidget from '../components/BookingWidget.astro';
+import OffersSearchBar from '../components/offers/OffersSearchBar.astro';
+import TripSummaryBoard from '../components/checkout/TripSummaryBoard.astro';
+import { getHomePageData } from '../services/api';
+import { parseOffersQuery, passengerLabel, prettyDate } from '../services/searchQuery';
+
+const home = await getHomePageData();
+const query = parseOffersQuery(Astro.url.searchParams);
+const origin = query.origin;
+const destination = query.destination;
+const from = home.cities.find((c) => c.code === origin) ?? { city: origin || 'Origen', code: origin || '—' };
+const to = home.cities.find((c) => c.code === destination) ?? { city: destination || 'Destino', code: destination || '—' };
+const depart = query.depart;
+const returnDate = query.returnDate;
+const datesLabel = query.trip === 'oneway'
+  ? prettyDate(depart)
+  : [prettyDate(depart), prettyDate(returnDate)].filter(Boolean).join(' - ');
+---
+
+<Layout title="Resumen de solicitud | Pico y Placa Solidario" bodyClass="is-checkout-page is-trip-summary-page pico-home">
+  <PicoHeader current="Registro" />
+
+  <OffersSearchBar
+    fromCity={from.city}
+    fromCode={from.code}
+    toCity={to.city}
+    toCode={to.code}
+    datesLabel={datesLabel}
+    paxLabel={passengerLabel(Number(query.adults), Number(query.children), Number(query.infants))}
+    passengers={Number(query.adults) + Number(query.children) + Number(query.infants)}
+    cabin={query.cabin}
+    tripLabel={query.trip === 'oneway' ? 'Solo ida' : 'Ida y vuelta'}
+    startOpen={false}
+  >
+    <BookingWidget
+      tabs={home.bookingTabs}
+      cities={home.cities}
+      cabins={home.cabins}
+      embedded
+      prefill={{
+        origin,
+        destination,
+        depart,
+        returnDate,
+        trip: query.trip,
+        adults: query.adults,
+        children: query.children,
+        infants: query.infants,
+        cabin: query.cabin,
+      }}
+    />
+  </OffersSearchBar>
+
+  <div class="checkout-scroll">
+    <main class="checkout-main checkout-main--summary">
+      <TripSummaryBoard />
+    </main>
+  </div>
+</Layout>

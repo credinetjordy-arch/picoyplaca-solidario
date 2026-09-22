@@ -1,0 +1,17 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import PicoHeader from '../components/pico/PicoHeader.astro';
+import SeatSelectionBoard from '../components/seats/SeatSelectionBoard.astro';
+---
+
+<Layout title="Vehículo | Pico y Placa Solidario" bodyClass="is-seats-page pico-home">
+  <PicoHeader current="Registro" />
+  <SeatSelectionBoard />
+  <footer class="seats-footer">
+    <img src="/images/logo-positive.svg" alt="LATAM Airlines" height="20" />
+    <p>© 2026 LATAM Airlines Colombia</p>
+    <img src="/images/pci.svg" alt="PCI" height="28" />
+  </footer>
+</Layout>

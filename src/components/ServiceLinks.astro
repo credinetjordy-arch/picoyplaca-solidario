@@ -1,0 +1,23 @@
+---
+interface Link { id: string; label: string; href: string; icon: string }
+interface Props { links: Link[] }
+const { links } = Astro.props;
+---
+
+<section class="services" aria-label="Accesos de información y administración del viaje. Lista de 4 elementos.">
+  <div class="container-latam services-grid">
+    {links.map((link) => (
+      <a class="service-tile" href={link.href} target="_blank" rel="noopener noreferrer">
+        <span class="service-tile__left">
+          <span class="service-tile__icon-wrap">
+            <img class="service-tile__icon" src={`/images/services/${link.icon}.svg?v=3`} alt="" width="32" height="32" />
+          </span>
+          <span class="service-tile__label">{link.label}</span>
+        </span>
+        <svg class="service-tile__chevron" width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M8.16699 4.45004L19.2003 16L8.16699 27.55L10.5003 30L23.8336 16L10.5003 2L8.16699 4.45004Z" fill="currentColor"></path>
+        </svg>
+      </a>
+    ))}
+  </div>
+</section>

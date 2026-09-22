@@ -1,0 +1,332 @@
+:root {
+  --dark-green: #00271c;
+  --deep-green: #07241c;
+  --light-green: #88f456;
+  --color-primario: #88f456;
+  --color-activo: #00271c;
+  --color-error: #b34545;
+  --color-disabled: #879691;
+  --gris: #efefef;
+  --gray: #606060;
+  --blanco: #fff;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Gotham, Montserrat, sans-serif;
+  color: #000;
+  background: #fff;
+}
+
+.font-heebo {
+  font-family: Heebo, Gotham, sans-serif;
+}
+
+.triangle-down,
+.triangle-down2 {
+  width: 0;
+  height: 0;
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 16px solid #00271c;
+  position: absolute;
+  left: 50%;
+  bottom: -16px;
+  transform: translateX(-50%);
+}
+
+.bg-image {
+  background-image: url("/images/fondo-llamado-accion.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+.image-banner {
+  background-image: url("/images/banner-principal.jpg");
+  background-size: cover;
+  background-position: center;
+  min-height: 720px;
+}
+
+.recaptcha-box {
+  width: 304px;
+  height: 78px;
+  border: 1px solid #d3d3d3;
+  border-radius: 3px;
+  background: #f9f9f9;
+  box-shadow: 0 0 4px 1px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 0 16px;
+}
+
+.recaptcha-box input {
+  width: 24px;
+  height: 24px;
+  accent-color: #1a73e8;
+}
+
+.page-shell {
+  background: #ededed;
+  min-height: calc(100vh - 80px);
+}
+
+.mat-field {
+  position: relative;
+}
+
+.mat-field input,
+.mat-field select {
+  width: 100%;
+  height: 56px;
+  border: 1px solid #00271c;
+  border-radius: 4px;
+  background: #fff;
+  padding: 18px 12px 0;
+  color: #00271c;
+  outline: none;
+  appearance: none;
+}
+
+.mat-field textarea {
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid #00271c;
+  border-radius: 4px;
+  background: #fff;
+  padding: 24px 12px 8px;
+  color: #00271c;
+  outline: none;
+  resize: vertical;
+}
+
+.mat-field span {
+  position: absolute;
+  left: 12px;
+  top: 8px;
+  font-size: 12px;
+  color: #606060;
+  pointer-events: none;
+}
+
+.btn-outline-dark {
+  background: #fff;
+  color: #00271c;
+  border: 2px solid #00271c;
+  border-radius: 9999px;
+  font-weight: 700;
+  padding: 8px 24px;
+}
+
+.solicitud-overlay {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.solicitud-overlay.hidden {
+  display: none !important;
+}
+
+.solicitud-overlay:not(.hidden) {
+  display: flex;
+}
+
+body.pico-home .text-gray {
+  color: #606060;
+}
+
+.solicitud-dialog {
+  width: min(1368px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.solicitud-dialog-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.solicitud-dialog-footer {
+  flex-shrink: 0;
+  border-top: 1px solid #e6e6e6;
+  background: #fff;
+}
+
+#pagoOverlay.solicitud-overlay:not(.hidden),
+#pseOverlay.solicitud-overlay:not(.hidden),
+#cardOverlay.solicitud-overlay:not(.hidden) {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pyps-stepper {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  gap: 8px;
+}
+
+.pyps-stepper::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: 6%;
+  right: 6%;
+  height: 2px;
+  background: #d6d6d6;
+}
+
+.pyps-stepper li {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  color: #606060;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pyps-stepper li span {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid #cfcfcf;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #606060;
+}
+
+.pyps-stepper li.active {
+  color: #00271c;
+}
+
+.pyps-stepper li.active span {
+  border-color: #00271c;
+  background: #00271c;
+  color: #fff;
+}
+
+.pyps-stepper li.done span {
+  border-color: #88f456;
+  background: #88f456;
+  color: #00271c;
+}
+
+.pyps-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pyps-table th {
+  background: #00271c;
+  color: #fff;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 13px;
+}
+
+.pyps-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 14px;
+}
+
+.pse-platform {
+  background: linear-gradient(180deg, #0b3d2e 0%, #06261c 100%);
+}
+
+.card-platform {
+  background: linear-gradient(180deg, #123c7a 0%, #0b274d 100%);
+}
+
+.payment-choice {
+  border: 1px solid #00271c;
+  border-radius: 8px;
+  padding: 14px 16px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #00271c;
+  background: #fff;
+}
+
+.payment-choice small {
+  color: #606060;
+  font-size: 12px;
+}
+
+.payment-choice:has(input:checked) {
+  background: #edfde5;
+  box-shadow: inset 0 0 0 2px #00271c;
+}
+
+.btn-primary-dark {
+  background: #00271c;
+  color: #fff;
+  border-radius: 9999px;
+  font-weight: 700;
+  padding: 10px 28px;
+}
+
+.btn-primary-dark:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1279px) {
+  .navbar-desktop {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .navbar-mobil,
+  .mobile-title,
+  .soport-tec-mobile {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .pico-inicio .section-2 {
+    display: grid;
+    grid-template-columns: 280px 8px minmax(0, 1fr);
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .pico-inicio .section-2 > :last-child {
+    min-width: 0;
+    width: 100%;
+    max-width: 48rem;
+  }
+
+  .pico-inicio .section-3 {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2rem;
+  }
+
+  .pico-inicio .section-3 > p {
+    min-width: 0;
+    width: 100%;
+    max-width: 48rem;
+  }
+}

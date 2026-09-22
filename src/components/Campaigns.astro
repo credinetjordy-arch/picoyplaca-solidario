@@ -1,0 +1,23 @@
+---
+interface Campaign { kicker: string; title: string; cta: string; image: string; href: string }
+interface Props { campaigns: Campaign[] }
+const { campaigns } = Astro.props;
+---
+
+<section class="section" style="padding-top:0">
+  <div class="container-latam">
+    <h2 style="margin-bottom:20px">¡No te lo pierdas!</h2>
+    <div class="campaigns">
+      {campaigns.map((c) => (
+        <a class="campaign" href={c.href}>
+          <img src={c.image} alt={c.title} />
+          <div class="campaign__body">
+            <h5>{c.kicker}</h5>
+            <p>{c.title}</p>
+            <span class="cta-red">{c.cta}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>

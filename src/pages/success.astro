@@ -1,0 +1,42 @@
+---
+export const prerender = false;
+
+import PicoLayout from '../layouts/PicoLayout.astro';
+---
+
+<PicoLayout current="Registro" title="Módulo de sensibilización | Pico y Placa Solidario">
+  <main class="pico-page">
+    <h1>Módulo de sensibilización</h1>
+    <p class="pico-page__lead">
+      Tu pago fue aprobado. Valida tu compromiso con Bogotá y cierra el trámite. Este módulo se realiza una vez al año. Al presionar <b>Cerrar</b> das por finalizada la solicitud del permiso.
+    </p>
+
+    <form class="pico-card" action="/" method="get" data-sensibilizacion>
+      <p><b>Compensación social voluntaria</b></p>
+      <label class="pico-choice">
+        <input type="radio" name="compensacion" value="donacion" required />
+        Realizar una donación en dinero
+      </label>
+      <label class="pico-choice">
+        <input type="radio" name="compensacion" value="reciclar" />
+        Reciclar
+      </label>
+      <label class="pico-choice">
+        <input type="radio" name="compensacion" value="ninguna" />
+        No deseo realizar compensación
+      </label>
+      <div class="pico-actions">
+        <button class="pico-btn" type="submit">Cerrar</button>
+      </div>
+    </form>
+  </main>
+</PicoLayout>
+
+<style>
+  .pico-choice {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 12px 0;
+  }
+</style>

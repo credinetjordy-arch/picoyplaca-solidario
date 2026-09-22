@@ -1,0 +1,42 @@
+---
+import { translations } from "../data/picoI18n";
+import { footerLinks } from "../data/picoMock";
+const es = translations.es.steps;
+const en = translations.en.steps;
+---
+
+<section class="flex justify-center bg-[#EDEDED] p-5 items-center py-16">
+  <div class="flex flex-col md:flex-row gap-8 justify-center w-full max-w-4xl">
+    <article class="bg-white w-full max-w-[22rem] h-[25rem] rounded-3xl flex flex-col items-center justify-between mx-auto">
+      <div class="bg-dark-green w-full h-[45%] rounded-t-3xl relative flex items-start justify-center">
+        <img src="/icons/paso-natural.svg" alt="" class="w-[6rem] m-auto mt-5" />
+        <div class="triangle-down"></div>
+      </div>
+      <div class="text-center px-6">
+        <h2 class="text-xl font-bold" data-i18n={JSON.stringify({ es: es.title, en: en.title })}>{es.title}</h2>
+        <p class="text-center" data-i18n={JSON.stringify({ es: es.natural, en: en.natural })}>{es.natural}</p>
+      </div>
+      <div class="mb-8">
+        <a href={footerLinks.pdfNatural} target="_blank" rel="noopener noreferrer" class="text-dark-green font-bold rounded-full border-2 border-dark-green py-1 px-6 bg-white" data-i18n={JSON.stringify({ es: es.begin, en: en.begin })}>
+          {es.begin}
+        </a>
+      </div>
+    </article>
+
+    <article class="bg-white w-full max-w-[22rem] h-[25rem] rounded-3xl flex flex-col items-center justify-between mx-auto">
+      <div class="bg-dark-green w-full h-[45%] rounded-t-3xl relative flex items-start justify-center">
+        <img src="/icons/paso-juridico.svg" alt="" class="w-[6rem] m-auto mt-5" />
+        <div class="triangle-down2"></div>
+      </div>
+      <div class="text-center px-6">
+        <h2 class="text-xl font-bold" data-i18n={JSON.stringify({ es: es.title, en: en.title })}>{es.title}</h2>
+        <p class="text-center" data-i18n={JSON.stringify({ es: es.legal, en: en.legal })}>{es.legal}</p>
+      </div>
+      <div class="mb-8">
+        <a href={footerLinks.pdfLegal} target="_blank" rel="noopener noreferrer" class="text-dark-green font-bold rounded-full border-2 border-dark-green py-1 px-6 bg-white" data-i18n={JSON.stringify({ es: es.begin, en: en.begin })}>
+          {es.begin}
+        </a>
+      </div>
+    </article>
+  </div>
+</section>

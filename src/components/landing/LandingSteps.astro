@@ -1,0 +1,83 @@
+---
+interface Step {
+  n: string;
+  title: string;
+  text: string;
+}
+
+interface Props {
+  steps: Step[];
+}
+
+const { steps } = Astro.props;
+---
+
+<section class="landing-section" aria-labelledby="landing-steps-title">
+  <div class="container-latam">
+    <h2 id="landing-steps-title">Cómo reservar tus boletos</h2>
+    <ol class="landing-steps">
+      {steps.map((step) => (
+        <li>
+          <span>{step.n}</span>
+          <h3>{step.title}</h3>
+          <p>{step.text}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<style>
+  .landing-section {
+    padding: 24px 0 56px;
+    background: #fff;
+  }
+
+  h2 {
+    margin: 0 0 28px;
+    font-size: 28px;
+    color: #10004f;
+    font-weight: 600;
+  }
+
+  .landing-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+
+  li {
+    position: relative;
+  }
+
+  span {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #e8114b;
+    margin-bottom: 8px;
+  }
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    color: #10004f;
+  }
+
+  p {
+    margin: 0;
+    color: #5c5c5c;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 800px) {
+    .landing-steps {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

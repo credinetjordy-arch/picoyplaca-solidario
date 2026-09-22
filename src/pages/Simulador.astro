@@ -1,0 +1,213 @@
+---
+import PicoLayout from "../layouts/PicoLayout.astro";
+import {
+  cylinderOptions,
+  durationOptions,
+  fuelOptions,
+  modelOptions,
+  municipalityOptions,
+  valuationOptions,
+} from "../data/picoMock";
+import { translations } from "../data/picoI18n";
+
+const es = translations.es.simulator;
+const en = translations.en.simulator;
+---
+
+<PicoLayout current="Simulador">
+  <section class="page-shell pt-16 pb-24">
+    <div class="max-w-5xl mx-auto px-6">
+      <h1 class="text-dark-green text-4xl md:text-5xl font-medium mb-6" data-i18n={JSON.stringify({ es: es.title, en: en.title })}>
+        {es.title}
+      </h1>
+      <p class="text-dark-green mb-4 max-w-4xl" data-i18n={JSON.stringify({ es: es.intro, en: en.intro })}>{es.intro}</p>
+      <p class="text-sm text-gray mb-8 max-w-4xl" data-i18n={JSON.stringify({ es: es.lookupHint, en: en.lookupHint })}>{es.lookupHint}</p>
+
+      <form id="simForm" class="bg-white rounded-2xl p-8 grid md:grid-cols-2 gap-6 shadow-sm">
+        <label class="mat-field md:col-span-2">
+          <input name="placa" id="simPlaca" class="uppercase" maxlength="7" />
+          <span data-i18n={JSON.stringify({ es: es.plate, en: en.plate })}>{es.plate}</span>
+        </label>
+        <div class="md:col-span-2 -mt-2">
+          <button type="button" id="lookupBtn" class="text-dark-green font-bold rounded-full border-2 border-dark-green py-1 px-6 bg-white">
+            <span data-i18n={JSON.stringify({ es: es.lookup, en: en.lookup })}>{es.lookup}</span>
+          </button>
+          <p id="lookupMsg" class="text-sm mt-3"></p>
+        </div>
+        <label class="mat-field">
+          <select name="duration" required>
+            <option value=""></option>
+            {durationOptions.map((o) => <option value={o.id}>{o.es}</option>)}
+          </select>
+          <span data-i18n={JSON.stringify({ es: es.duration + " *", en: en.duration + " *" })}>{es.duration} *</span>
+        </label>
+        <label class="mat-field">
+          <select name="cylinder" id="simCylinder" required>
+            <option value=""></option>
+            {cylinderOptions.map((o) => <option value={o.id}>{o.es}</option>)}
+          </select>
+          <span data-i18n={JSON.stringify({ es: es.cylinder + " *", en: en.cylinder + " *" })}>{es.cylinder} *</span>
+        </label>
+        <label class="mat-field">
+          <select name="fuel" required>
+            <option value=""></option>
+            {fuelOptions.map((o) => <option value={o.id}>{o.es}</option>)}
+          </select>
+          <span data-i18n={JSON.stringify({ es: es.fuel + " *", en: en.fuel + " *" })}>{es.fuel} *</span>
+        </label>
+        <label class="mat-field">
+          <select name="model" id="simModel">
+            <option value=""></option>
+            {modelOptions.map((o) => (
+              <option value={o.id} data-cylinders={o.cylinders.join(",")}>{o.es}</option>
+            ))}
+          </select>
+          <span data-i18n={JSON.stringify({ es: es.model, en: en.model })}>{es.model}</span>
+        </label>
+        <label class="mat-field">
+          <select name="valuation" required>
+            <option value=""></option>
+            {valuationOptions.map((o) => <option value={o.id}>{o.es}</option>)}
+          </select>
+          <span data-i18n={JSON.stringify({ es: es.valuation + " *", en: en.valuation + " *" })}>{es.valuation} *</span>
+        </label>
+        <label class="mat-field">
+          <select name="municipality" required>
+            <option value=""></option>
+            {municipalityOptions.map((o) => <option value={o.id}>{o.es}</option>)}
+          </select>
+          <span data-i18n={JSON.stringify({ es: es.municipality + " *", en: en.municipality + " *" })}>{es.municipality} *</span>
+        </label>
+      </form>
+
+      <div class="flex justify-center mt-8">
+        <button type="submit" form="simForm" class="btn-primary-dark" data-i18n={JSON.stringify({ es: es.simulate, en: en.simulate })}>
+          {es.simulate}
+        </button>
+      </div>
+
+      <div id="simResult" class="hidden max-w-xl mx-auto mt-10 bg-white rounded-2xl p-8 text-center">
+        <h2 class="text-dark-green text-2xl font-bold mb-6" data-i18n={JSON.stringify({ es: es.resultTitle, en: en.resultTitle })}>{es.resultTitle}</h2>
+        <p id="simBaseLabel" class="text-dark-green"></p>
+        <p id="simBase" class="text-2xl font-bold text-dark-green mb-4"></p>
+        <p class="text-dark-green" data-i18n={JSON.stringify({ es: es.impact, en: en.impact })}>{es.impact}</p>
+        <p id="simImpact" class="text-2xl font-bold text-dark-green mb-4"></p>
+        <p class="text-dark-green" data-i18n={JSON.stringify({ es: es.valuation, en: en.valuation })}>{es.valuation}</p>
+        <p id="simValuation" class="text-2xl font-bold text-dark-green mb-4"></p>
+        <p class="text-dark-green" data-i18n={JSON.stringify({ es: es.municipality, en: en.municipality })}>{es.municipality}</p>
+        <p id="simMunicipality" class="text-2xl font-bold text-dark-green mb-4"></p>
+        <p id="simValueLabel" class="text-dark-green mt-2"></p>
+        <p id="simValue" class="text-4xl font-black text-dark-green"></p>
+        <button type="button" id="simAgain" class="inline-block mt-6 text-dark-green font-bold rounded-full border-2 border-dark-green py-2 px-6" data-i18n={JSON.stringify({ es: es.again, en: en.again })}>
+          {es.again}
+        </button>
+      </div>
+    </div>
+  </section>
+</PicoLayout>
+
+<script>
+  import { api } from "../services/picoApi";
+
+  const form = document.getElementById("simForm") as HTMLFormElement | null;
+  const cylinderSelect = document.getElementById("simCylinder") as HTMLSelectElement | null;
+  const modelSelect = document.getElementById("simModel") as HTMLSelectElement | null;
+  const money = (n: number) =>
+    new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);
+
+  function lang() {
+    return document.documentElement.lang === "en" ? "en" : "es";
+  }
+
+  function filterModels() {
+    if (!modelSelect || !cylinderSelect) return;
+    const cylinder = cylinderSelect.value;
+    const current = modelSelect.value;
+    Array.from(modelSelect.options).forEach((option) => {
+      if (!option.value) return;
+      const allowed = (option.dataset.cylinders || "").split(",");
+      option.hidden = Boolean(cylinder) && !allowed.includes(cylinder);
+    });
+    const selected = modelSelect.selectedOptions[0];
+    if (selected?.hidden) modelSelect.value = "";
+    else if (current) modelSelect.value = current;
+  }
+
+  function setSelect(name: string, value: string) {
+    const el = form?.elements.namedItem(name) as HTMLSelectElement | null;
+    if (el) el.value = value;
+  }
+
+  cylinderSelect?.addEventListener("change", filterModels);
+
+  document.getElementById("lookupBtn")?.addEventListener("click", async () => {
+    const placa = String((document.getElementById("simPlaca") as HTMLInputElement | null)?.value || "");
+    const msg = document.getElementById("lookupMsg");
+    const data = await api.lookupRunt(placa);
+    if (!data.found || !data.vehicle) {
+      if (msg) {
+        msg.className = "text-sm mt-3 text-color-error";
+        msg.textContent = data.error || "Placa no encontrada en el RUNT.";
+      }
+      return;
+    }
+    const vehicle = data.vehicle;
+    setSelect("cylinder", vehicle.cylinder);
+    filterModels();
+    setSelect("fuel", vehicle.fuel);
+    setSelect("model", vehicle.model);
+    setSelect("valuation", vehicle.valuation);
+    setSelect("municipality", vehicle.municipality);
+    if (msg) {
+      msg.className = "text-sm mt-3 text-dark-green";
+      msg.textContent = `RUNT: ${vehicle.marca} ${vehicle.linea} ${vehicle.modeloAnio} · ${vehicle.cilindrajeCc} cc. El valor usa este cilindraje.`;
+    }
+  });
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const result = await api.simulate({
+      duration: String(data.get("duration") || ""),
+      cylinder: String(data.get("cylinder") || ""),
+      fuel: String(data.get("fuel") || ""),
+      model: String(data.get("model") || "3"),
+      valuation: String(data.get("valuation") || ""),
+      municipality: String(data.get("municipality") || ""),
+    });
+    const english = lang() === "en";
+    const durationLabel = english ? String(result.breakdown.durationEn) : String(result.breakdown.duration);
+    const baseLabel = document.getElementById("simBaseLabel");
+    const valueLabel = document.getElementById("simValueLabel");
+    if (baseLabel) {
+      baseLabel.textContent = english
+        ? `Base value for ${durationLabel}`
+        : `Valor base para ${durationLabel}`;
+    }
+    if (valueLabel) {
+      valueLabel.textContent = english
+        ? `Simulated differential rate for ${durationLabel}`
+        : `Tarifa diferencial simulada para ${durationLabel}`;
+    }
+    const box = document.getElementById("simResult");
+    const value = document.getElementById("simValue");
+    const base = document.getElementById("simBase");
+    const impact = document.getElementById("simImpact");
+    const valuation = document.getElementById("simValuation");
+    const municipality = document.getElementById("simMunicipality");
+    if (box && value && base && impact && valuation && municipality) {
+      base.textContent = money(Number(result.breakdown.base));
+      impact.textContent = english ? String(result.breakdown.environmentalEn) : String(result.breakdown.environmental);
+      valuation.textContent = english ? String(result.breakdown.valuationEn) : String(result.breakdown.valuation);
+      municipality.textContent = english ? String(result.breakdown.municipalityEn) : String(result.breakdown.municipality);
+      value.textContent = money(result.value);
+      box.classList.remove("hidden");
+      box.scrollIntoView({ behavior: "smooth" });
+    }
+  });
+
+  document.getElementById("simAgain")?.addEventListener("click", () => {
+    document.getElementById("simResult")?.classList.add("hidden");
+    form?.scrollIntoView({ behavior: "smooth" });
+  });
+</script>

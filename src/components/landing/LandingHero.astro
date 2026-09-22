@@ -1,0 +1,156 @@
+---
+import LandingTicketButton from './LandingTicketButton.astro';
+
+interface Props {
+  badge: string;
+  discount: string;
+  kicker: string;
+  title: string;
+  text: string;
+  primaryCta: string;
+  image: string;
+  imageAlt: string;
+  ticketsHref: string;
+}
+
+const { badge, discount, kicker, title, text, primaryCta, image, imageAlt, ticketsHref } = Astro.props;
+---
+
+<section class="landing-hero" aria-labelledby="landing-hero-title">
+  <a class="landing-hero__media" href={ticketsHref} aria-label={primaryCta}>
+    <img src={image} alt={imageAlt} width="1600" height="900" fetchpriority="high" />
+  </a>
+  <div class="landing-hero__shade" aria-hidden="true"></div>
+  <div class="container-latam landing-hero__inner">
+    <p class="landing-hero__badge">{badge} · Hasta {discount} dcto.</p>
+    <p class="landing-hero__kicker">{kicker}</p>
+    <h1 id="landing-hero-title">{title}</h1>
+    <p class="landing-hero__text">{text}</p>
+    <div class="landing-hero__offer" aria-hidden="true">
+      <strong>{discount}</strong>
+      <span>de descuento en vuelos nacionales e internacionales</span>
+    </div>
+    <div class="landing-hero__actions">
+      <LandingTicketButton href={ticketsHref} label={primaryCta} variant="primary" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .landing-hero {
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+    min-height: 640px;
+    display: flex;
+    align-items: flex-end;
+    padding: 48px 0 72px;
+  }
+
+  .landing-hero__media {
+    position: absolute;
+    inset: 0;
+  }
+
+  .landing-hero__media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .landing-hero__shade {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(16, 0, 79, 0.88) 0%, rgba(16, 0, 79, 0.55) 48%, rgba(16, 0, 79, 0.2) 100%),
+      linear-gradient(180deg, rgba(16, 0, 79, 0.15) 0%, rgba(16, 0, 79, 0.72) 100%);
+    pointer-events: none;
+  }
+
+  .landing-hero__inner {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+  }
+
+  .landing-hero__badge {
+    display: inline-block;
+    margin: 0 0 14px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #e8114b;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .landing-hero__kicker {
+    margin: 0 0 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffd4e0;
+  }
+
+  h1 {
+    margin: 0 0 14px;
+    font-size: clamp(32px, 5vw, 52px);
+    line-height: 1.08;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .landing-hero__text {
+    margin: 0 0 20px;
+    font-size: 18px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.92);
+  }
+
+  .landing-hero__offer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 24px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .landing-hero__offer strong {
+    font-size: 40px;
+    line-height: 1;
+    color: #fff;
+  }
+
+  .landing-hero__offer span {
+    font-size: 14px;
+    line-height: 1.3;
+    max-width: 220px;
+  }
+
+  .landing-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  @media (max-width: 720px) {
+    .landing-hero {
+      min-height: 560px;
+      padding: 32px 0 56px;
+    }
+
+    .landing-hero__actions :global(.landing-btn) {
+      width: 100%;
+    }
+
+    .landing-hero__offer {
+      width: 100%;
+    }
+  }
+</style>

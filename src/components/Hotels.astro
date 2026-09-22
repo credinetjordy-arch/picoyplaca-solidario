@@ -1,0 +1,27 @@
+---
+interface Hotel { city: string; image: string; price: number; unit: string; people: string; href: string }
+interface Props { hotels: Hotel[] }
+const { hotels } = Astro.props;
+---
+
+<section class="section" style="padding-top:0">
+  <div class="container-latam">
+    <h2 style="margin-bottom:20px">Reserva tu alojamiento</h2>
+    <div class="hotels">
+      {hotels.map((h) => (
+        <a class="hotel-card" href={h.href} style={`background-image:url('${h.image}')`}>
+          <div>
+            <strong>{h.city}</strong>
+            <p>COP {Math.round(h.price).toLocaleString('es-CO')} · {h.unit} · {h.people}</p>
+          </div>
+        </a>
+      ))}
+      <a class="hotel-more" href="/alojamientos">
+        <h3>¿Más opciones?</h3>
+        <p>El alojamiento ideal para tu viaje espera por ti.</p>
+        <strong>Ver más hoteles</strong>
+        <small>Powered by Booking.com</small>
+      </a>
+    </div>
+  </div>
+</section>

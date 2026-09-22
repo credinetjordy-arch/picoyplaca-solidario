@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 24" role="img" aria-label="Diners Club">
+  <path d="M22.2 2.2a10.8 10.8 0 0 1 0 19.6 11.5 11.5 0 0 0 0-19.6z" fill="#004A97"/>
+  <circle cx="14.5" cy="12" r="9.6" fill="#fff"/>
+  <circle cx="14.5" cy="12" r="9.6" fill="none" stroke="#00A0E2" stroke-width="1.2"/>
+  <path d="M14.5 4.6c-2.05 1.55-3.35 4.15-3.35 7.4s1.3 5.85 3.35 7.4c2.05-1.55 3.35-4.15 3.35-7.4S16.55 6.15 14.5 4.6z" fill="#00A0E2"/>
+  <path d="M14.5 4.6c2.05 1.55 3.35 4.15 3.35 7.4s-1.3 5.85-3.35 7.4V4.6z" fill="#0077C8"/>
+</svg>

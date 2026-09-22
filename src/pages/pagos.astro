@@ -1,0 +1,209 @@
+---
+export const prerender = false;
+
+import Layout from '../layouts/Layout.astro';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import PaymentBoard from '../components/checkout/PaymentBoard.astro';
+import '../styles/pico-flow.css';
+---
+
+<Layout title="Pago | Pico y Placa Solidario" bodyClass="is-pagos-page pico-home">
+  <Navbar active="registro" />
+  <div class="pagos-scroll">
+    <main class="pagos-main">
+      <PaymentBoard />
+    </main>
+  </div>
+  <Footer />
+</Layout>
+
+<style is:global>
+  body.is-pagos-page {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 100dvh;
+    overflow: visible !important;
+    display: block !important;
+    background: #efefef;
+  }
+
+  body.is-pagos-page .pagos-scroll {
+    overflow: visible;
+    flex: none;
+    min-height: 0;
+  }
+
+  body.is-pagos-page .pagos-title,
+  body.is-pagos-page .pagos-summary__total-label,
+  body.is-pagos-page .pagos-summary__price,
+  body.is-pagos-page .pagos-section-title,
+  body.is-pagos-page .pagos-leg__title,
+  body.is-pagos-page .pagos-method__text strong,
+  body.is-pagos-page .pagos-summary__detail {
+    color: #00271c;
+    font-family: Montserrat, Gotham, sans-serif;
+  }
+
+  body.is-pagos-page .pagos-title {
+    font-weight: 800;
+  }
+
+  body.is-pagos-page .pagos-pay {
+    background: #00271c;
+  }
+
+  body.is-pagos-page .pagos-main {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body.is-pagos-page .pagos-board {
+    max-width: none;
+  }
+
+  body.is-pagos-page .pagos-lead {
+    max-width: 760px;
+    margin: 0 0 28px;
+    font-size: 15px;
+    line-height: 1.55;
+    color: #00271c;
+  }
+
+  body.is-pagos-page .pagos-summary,
+  body.is-pagos-page .pico-pay-payer {
+    background: #fff;
+    border: 0;
+    border-radius: 8px;
+    box-shadow: none;
+    padding: 28px 24px;
+  }
+
+  body.is-pagos-page .pico-pay-payer {
+    margin: 20px 0 0;
+  }
+
+  body.is-pagos-page .pico-pay-payer h2 {
+    margin: 0 0 8px;
+    color: #00271c;
+    font-size: 22px;
+    font-weight: 800;
+  }
+
+  body.is-pagos-page .pico-pay-payer p {
+    margin: 0 0 20px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #00271c;
+  }
+
+  body.is-pagos-page .pico-pay-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 20px;
+  }
+
+  body.is-pagos-page .pico-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+  }
+
+  body.is-pagos-page .pico-field span {
+    font-size: 13px;
+    color: #00271c;
+  }
+
+  body.is-pagos-page .pico-field input,
+  body.is-pagos-page .pico-field select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #cfd8d4;
+    border-radius: 4px;
+    background: #f7f7f7;
+    color: #00271c;
+    font-size: 15px;
+    box-sizing: border-box;
+  }
+
+  body.is-pagos-page .pico-payzen {
+    margin: 32px 0 0;
+    padding: 48px 16px 56px;
+    background: #000;
+  }
+
+  body.is-pagos-page .pico-payzen__card {
+    max-width: 460px;
+    margin: 0 auto;
+    background: #fff;
+    border: 10px solid #f2f2f2;
+  }
+
+  body.is-pagos-page .pico-payzen__bar {
+    height: 28px;
+    background: #00271c;
+  }
+
+  body.is-pagos-page .pico-payzen__meta {
+    margin: 0;
+    padding: 20px 22px 8px;
+  }
+
+  body.is-pagos-page .pico-payzen__meta div {
+    margin: 0 0 14px;
+  }
+
+  body.is-pagos-page .pico-payzen__meta dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111;
+  }
+
+  body.is-pagos-page .pico-payzen__meta dd {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #111;
+  }
+
+  body.is-pagos-page .pico-payzen .pagos-method {
+    border: 0;
+    box-shadow: none;
+    margin: 0;
+    padding: 0 12px 20px;
+    background: transparent;
+  }
+
+  body.is-pagos-page .pico-payzen .pagos-card-form {
+    padding: 0 10px 8px;
+    border: 0;
+  }
+
+  body.is-pagos-page .pico-pay-hide {
+    display: none !important;
+  }
+
+  body.is-pagos-page .ticket-price__was {
+    display: none;
+  }
+
+  body.is-pagos-page .pagos-actions {
+    margin-top: 28px;
+  }
+
+  body.is-pagos-page .pagos-terms {
+    color: #00271c;
+  }
+
+  body.is-pagos-page .pagos-terms a {
+    color: #00271c;
+    text-decoration: underline;
+  }
+
+  @media (max-width: 800px) {
+    body.is-pagos-page .pico-pay-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

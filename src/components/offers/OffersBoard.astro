@@ -1,0 +1,853 @@
+---
+import OffersExtras from './OffersExtras.astro';
+
+const PORCENTAJE_DESCUENTO = 0;
+
+interface Props {
+  trip: string;
+  search?: string;
+}
+
+const { trip, search = '' } = Astro.props;
+---
+
+<section class="offers-board">
+  <div class="offers-toolbar">
+    <h1 class="offers-title" id="offers-title">Elige un <strong>vuelo de ida</strong></h1>
+    <div class="offers-tools">
+      <div class="offers-sort">
+        <div class="offers-menu offers-menu--sort">
+          <button type="button" class="offers-menu__btn" id="sort-toggle" aria-expanded="false" aria-haspopup="listbox" aria-controls="menu-sort">
+            <span class="offers-sort__prefix"><span>Ordenado</span> <span>por:</span></span>
+            <b class="offers-sort__value" id="sort-label">Recomendado</b>
+            <svg class="offers-sort__chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" aria-hidden="true">
+              <path fill="currentColor" d="M27.5509 7.7749L16.001 19.3599L4.45097 7.7749L2.00098 10.2249L16.001 24.2249L30.001 10.2249L27.5509 7.7749Z"/>
+            </svg>
+          </button>
+          <div class="offers-menu__panel hidden" id="menu-sort" role="listbox" hidden>
+            <button type="button" role="option" data-sort="recommended" aria-selected="true">Recomendado</button>
+            <button type="button" role="option" data-sort="cheapest" aria-selected="false">Más baratos</button>
+            <button type="button" role="option" data-sort="fastest" aria-selected="false">Más rápidos</button>
+            <button type="button" role="option" data-sort="depart-asc" aria-selected="false">Salida más temprano</button>
+            <button type="button" role="option" data-sort="depart-desc" aria-selected="false">Salida más tarde</button>
+            <button type="button" role="option" data-sort="arrive-asc" aria-selected="false">Llegada más temprano</button>
+            <button type="button" role="option" data-sort="arrive-desc" aria-selected="false">Llegada más tarde</button>
+          </div>
+        </div>
+        {trip !== 'oneway' && (
+          <p class="offers-sort-hint">El orden aplicará para tu vuelo de ida y vuelta.</p>
+        )}
+      </div>
+    </div>
+  </div>
+
+  <div class="offers-timeout hidden" id="offers-timeout" hidden>
+    <img src="/images/girl-with-binoculars.svg" alt="" width="176" height="176" />
+    <h1>La búsqueda está tardando más de lo normal</h1>
+    <p id="offers-timeout-text">Tuvimos un problema con los resultados. Inténtalo nuevamente.</p>
+    <a class="offers-timeout__btn" href="" id="offers-timeout-retry">Reintentar búsqueda</a>
+  </div>
+
+  <p class="offers-error hidden" id="offers-error" hidden></p>
+  <p class="offers-empty hidden" id="offers-empty" hidden>
+    {search ? 'No hay vuelos para esta búsqueda. Prueba otras fechas u otra ruta.' : 'Completa origen y destino en el buscador para ver vuelos disponibles.'}
+  </p>
+  <div class="offers-list" id="offers-list"></div>
+  <OffersExtras />
+</section>
+
+<div class="itinerary-drawer" id="itinerary-drawer" hidden>
+  <div class="itinerary-drawer__backdrop" data-close-itinerary></div>
+  <aside class="itinerary-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="itinerary-title">
+    <header class="itinerary-drawer__head">
+      <h2 id="itinerary-title">Itinerario de vuelo</h2>
+      <button type="button" class="itinerary-drawer__close" data-close-itinerary aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" width="14" height="14" aria-hidden="true">
+          <path fill="currentColor" d="M25.657 8.343 17.999 16l7.658 7.657-2.343 2.343L15.656 18.343 8 25.999l-2.343-2.343L13.314 16 5.657 8.343 8 6l7.656 7.657L23.314 6l2.343 2.343Z"/>
+        </svg>
+      </button>
+    </header>
+    <div class="itinerary-drawer__body" id="itinerary-body"></div>
+  </aside>
+</div>
+
+<div class="itinerary-drawer" id="fare-drawer" hidden>
+  <div class="itinerary-drawer__backdrop" data-close-fare></div>
+  <aside class="itinerary-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="fare-title">
+    <header class="itinerary-drawer__head">
+      <h2 id="fare-title">Detalle tarifa</h2>
+      <button type="button" class="itinerary-drawer__close" data-close-fare aria-label="Cerrar">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" width="14" height="14" aria-hidden="true">
+          <path fill="currentColor" d="M25.657 8.343 17.999 16l7.658 7.657-2.343 2.343L15.656 18.343 8 25.999l-2.343-2.343L13.314 16 5.657 8.343 8 6l7.656 7.657L23.314 6l2.343 2.343Z"/>
+        </svg>
+      </button>
+    </header>
+    <div class="itinerary-drawer__body" id="fare-body"></div>
+  </aside>
+</div>
+
+<script define:vars={{ trip, search, PORCENTAJE_DESCUENTO }}>
+  const payload = { results: [], trip, from: { code: '', city: '', airport: '', country: '' }, to: { code: '', city: '', airport: '', country: '' }, depart: '', returnDate: '' };
+  const list = document.getElementById('offers-list');
+  const title = document.getElementById('offers-title');
+  const sortLabel = document.getElementById('sort-label');
+  const waiting = document.getElementById('offers-wait-screen');
+  const timeoutBox = document.getElementById('offers-timeout');
+  const errorBox = document.getElementById('offers-error');
+  const emptyBox = document.getElementById('offers-empty');
+  const state = { sort: 'recommended', stops: 'all', hours: 'all', step: 'outbound', outboundLeg: '', fare: '', outboundSelection: null };
+  const discountPct = Number(PORCENTAJE_DESCUENTO) || 0;
+
+  function show(el, on) {
+    el?.classList.toggle('hidden', !on);
+    if (on) el?.removeAttribute('hidden');
+    else el?.setAttribute('hidden', '');
+  }
+
+  function money(value) {
+    return `COP ${Math.round(Number(value) || 0).toLocaleString('es-CO')}`;
+  }
+
+  function ticketAfterDiscount(original) {
+    const base = Number(original) || 0;
+    if (!(discountPct > 0)) return Math.round(base * 100) / 100;
+    return Math.round(base * (1 - Math.min(100, discountPct) / 100) * 100) / 100;
+  }
+
+  function ticketMoney(original) {
+    const before = Number(original) || 0;
+    if (!(discountPct > 0)) return money(before);
+    const after = ticketAfterDiscount(before);
+    return `<span class="ticket-price"><span class="ticket-price__was">${money(before)}</span><span class="ticket-price__now">${money(after)}</span></span>`;
+  }
+
+  function operatorMark(op) {
+    const code = String(op.code || '').toUpperCase();
+    const name = String(op.name || '');
+    if (/latam/i.test(name) || ['LA', 'XL', 'LP', '4C', 'LU', 'JJ', 'PZ'].includes(code)) {
+      return '<img class="flight-card__mark" src="/images/latam-symbol.svg" alt="" width="8" height="13">';
+    }
+    if (code === 'DL' || /delta/i.test(name)) {
+      return '<img class="flight-card__mark flight-card__mark--delta" src="/images/airlines/delta.svg" alt="" width="13" height="13">';
+    }
+    return '';
+  }
+
+  function operatorsHtml(flight) {
+    const raw = flight.operators || [];
+    const list = raw.length
+      ? raw.map((item) => (typeof item === 'string' ? { name: item, code: '' } : item))
+      : [{ name: flight.airline || 'LATAM Airlines', code: 'LA' }];
+    const chips = list.map((op) => (
+      `<span class="flight-card__op-item">${operatorMark(op)}<span>${op.name}</span></span>`
+    )).join('<span class="flight-card__op-sep">|</span>');
+    return `<p class="flight-card__op"><span class="flight-card__op-k">Operado por</span>${chips}</p>`;
+  }
+
+  function clock12(time) {
+    const match = String(time || '').match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return time || '';
+    const hour24 = Number(match[1]);
+    if (!Number.isFinite(hour24)) return time;
+    const suffix = hour24 >= 12 ? 'p. m.' : 'a. m.';
+    const hour12 = hour24 % 12 || 12;
+    return `${hour12}:${match[2]} ${suffix}`;
+  }
+
+  function compareRecommended(a, b) {
+    const depart = String(a.depart || '').localeCompare(String(b.depart || ''));
+    if (depart) return depart;
+    const duration = (Number(a.durationMinutes) || 0) - (Number(b.durationMinutes) || 0);
+    if (duration) return duration;
+    return Number(a.price) - Number(b.price);
+  }
+
+  function uniqueOutbound(rows) {
+    const map = new Map();
+    for (const flight of rows) {
+      const key = flight.outboundLegId || flight.id;
+      const prev = map.get(key);
+      if (!prev || flight.price < prev.price) map.set(key, flight);
+    }
+    return [...map.values()].sort(compareRecommended);
+  }
+
+  function viaLatamHub(flight) {
+    const segs = flight.itinerary || [];
+    if (segs.length < 2) return false;
+    const hubs = { LIM: 1, BOG: 1, SCL: 1, GRU: 1, GIG: 1, MDE: 1, CLO: 1, MAD: 1, MIA: 1, CUN: 1, AEP: 1, EZE: 1 };
+    return segs.slice(0, -1).some((seg) => hubs[String(seg.destCode || '').toUpperCase()]);
+  }
+
+  function perkIcon(type) {
+    if (type === 'warn') return '<span class="fare-ico fare-ico--warn" aria-hidden="true">!</span>';
+    if (type === 'up') return '<span class="fare-ico fare-ico--up" aria-hidden="true">↑</span>';
+    return '<span class="fare-ico fare-ico--check" aria-hidden="true">✓</span>';
+  }
+
+  function fareGrid(flight) {
+    return (flight.fareOptions || []).map((fare) => {
+      const extra = Number(fare.extra) > 0 ? `<p class="fare-col__extra">+ ${money(fare.extra)}</p>` : '';
+      const premium = fare.theme === 'premium' ? ' fare-col--premium' : '';
+      return `
+        <article class="fare-col${premium}">
+          ${fare.theme === 'premium' ? '<span class="fare-col__pill">Cabina Premium Economy</span>' : ''}
+          <h3><i style="background:${fare.accent || '#10004f'}"></i>${fare.name}</h3>
+          <ul>${(fare.perks || []).map((perk) => `<li>${perkIcon(perk.icon)}<span>${perk.label}</span></li>`).join('')}</ul>
+          <div class="fare-col__pay">
+            <p class="fare-col__price">${ticketMoney(fare.price)}</p>
+            ${extra}
+            <small>Por pasajero Incluye tasas e impuestos</small>
+            <button class="fare-col__more" type="button" data-fare-more="${fare.id}">Más detalles</button>
+            <button class="fare-col__cta" type="button" data-fare="${fare.id}" data-leg="${flight.outboundLegId}" data-price="${(Number(fare.price) + Number(fare.extra || 0)).toFixed(2)}">Elegir</button>
+          </div>
+        </article>
+      `;
+    }).join('');
+  }
+
+  function flightSnapshot(flight) {
+    if (!flight) return null;
+    return {
+      id: flight.id,
+      outboundLegId: flight.outboundLegId || flight.id,
+      depart: flight.depart,
+      arrive: flight.arrive,
+      duration: flight.duration,
+      stops: flight.stops,
+      stopCount: flight.stopCount,
+      price: flight.price,
+      arriveNextDay: Boolean(flight.arriveNextDay),
+      airline: flight.airline,
+      flightNumber: flight.flightNumber,
+      operators: flight.operators || [],
+    };
+  }
+
+  function legSelection(legId, fareId) {
+    const flight = payload.results.find((row) => row.outboundLegId === legId || row.id === legId);
+    const fare = (flight?.fareOptions || []).find((item) => item.id === fareId);
+    return {
+      legId,
+      fareId,
+      fareName: fare?.name || '',
+      price: Number(fare?.price || flight?.price || 0) + Number(fare?.extra || 0),
+      flight: flightSnapshot(flight),
+    };
+  }
+
+  function persistCheckout(outbound, inbound) {
+    const qs = search.startsWith('?') ? search.slice(1) : search;
+    const params = new URLSearchParams(qs);
+    const data = {
+      search,
+      trip: payload.trip || trip,
+      from: payload.from,
+      to: payload.to,
+      depart: payload.depart || (params.get('depart') || params.get('outbound') || '').slice(0, 10),
+      returnDate: payload.returnDate || (params.get('return') || params.get('inbound') || '').slice(0, 10),
+      adults: Number(params.get('adults') || params.get('adt') || '1'),
+      children: Number(params.get('children') || params.get('chd') || '0'),
+      infants: Number(params.get('infants') || params.get('inf') || '0'),
+      cabin: params.get('cabin') || 'Economy',
+      outbound,
+      inbound: inbound || null,
+    };
+    sessionStorage.setItem('latam-checkout-selection', JSON.stringify(data));
+  }
+
+  function goCheckout(outbound, inbound) {
+    persistCheckout(outbound, inbound);
+    window.location.href = `/datos-pasajero${search.startsWith('?') ? search : `?${search}`}`;
+  }
+
+  function cardBadges(flight, rows) {
+    const cheapest = Math.min(...rows.map((row) => Number(row.price) || Infinity));
+    const minDur = Math.min(...rows.map((row) => Number(row.durationMinutes) || Infinity));
+    const ranked = [...rows].sort(compareRecommended);
+    const recoKeys = new Set(ranked.slice(0, 2).map((row) => row.outboundLegId || row.id));
+    const flightKey = flight.outboundLegId || flight.id;
+    const badges = [];
+    if (recoKeys.has(flightKey)) badges.push(['Recomendado', 'reco']);
+    if (Number(flight.price) === cheapest) badges.push(['Más económico', 'eco']);
+    else if (Number(flight.durationMinutes) === minDur) badges.push(['Más rápido', 'fast']);
+    return badges;
+  }
+
+  function promoHtml() {
+    return `
+      <div class="offers-pass-ad">
+        <img class="offers-pass-ad__img" src="/images/latam-pass-card.png" alt="">
+        <p>Pide tu Tarjeta LATAM Pass Bancolombia y <span>obtén hasta 6.000 millas</span></p>
+      </div>
+    `;
+  }
+
+  function cardHtml(flight, leg, rows, index = 0) {
+    const selectId = leg === 'inbound' ? flight.id : flight.outboundLegId;
+    const originCode = leg === 'inbound' ? payload.to.code : payload.from.code;
+    const destCode = leg === 'inbound' ? payload.from.code : payload.to.code;
+    const badges = cardBadges(flight, rows)
+      .map(([label, kind]) => `<span class="flight-ribbon flight-ribbon--${kind}"><span>${label}</span></span>`)
+      .join('');
+    const nextDay = flight.arriveNextDay
+      ? '<sup class="flight-card__next">+1</sup>'
+      : '';
+    const count = (flight.fareOptions || []).length;
+    return `
+      <article class="flight-card" data-id="${flight.id}" data-select="${selectId}" data-leg="${flight.outboundLegId}" data-price="${flight.price}" data-depart="${flight.depart}" data-arrive="${flight.arrive}" data-duration="${flight.durationMinutes || 0}" data-stops="${flight.stopCount ?? 0}" data-via-hub="${viaLatamHub(flight) ? 1 : 0}" data-period="${flight.period || ''}">
+        ${badges ? `<div class="flight-ribbons">${badges}</div>` : ''}
+        <div class="flight-card__row">
+          <div class="flight-card__leg flight-card__leg--out">
+            <div class="flight-card__clock"><span class="flight-card__hhmm">${clock12(flight.depart)}</span><span class="flight-card__iata">${originCode || ''}</span></div>
+          </div>
+          <div class="flight-card__path" aria-hidden="true">
+            <i class="flight-card__rail"></i>
+            <div class="flight-card__dur-box">
+              <span class="flight-card__dur-label">Duración</span>
+              <span class="flight-card__dur">${flight.duration}</span>
+            </div>
+            <i class="flight-card__rail"></i>
+          </div>
+          <div class="flight-card__leg flight-card__leg--in">
+            <div class="flight-card__clock"><span class="flight-card__hhmm">${clock12(flight.arrive)}${nextDay}</span><span class="flight-card__iata">${destCode || ''}</span></div>
+          </div>
+          <button type="button" class="flight-card__direct">${flight.stops || 'Directo'}</button>
+          ${operatorsHtml(flight)}
+          <div class="flight-card__price">
+            <span class="flight-card__price-from">Por persona desde</span>
+            <span class="flight-card__amount">${ticketMoney(flight.price)}</span>
+            <span class="flight-card__taxes">Incluye tasas e impuestos</span>
+          </div>
+        </div>
+        <div class="fare-panel hidden" data-fares="${selectId}" hidden>
+          <div class="fare-panel__bar">
+            <span>${count} Tarifas disponibles</span>
+            <button type="button" class="fare-panel__close" data-close-fares>Cerrar ×</button>
+          </div>
+          <div class="fare-grid">${fareGrid(flight)}</div>
+          ${count > 1 ? `
+          <div class="fare-carousel-nav">
+            <div class="fare-carousel-dots" role="tablist" aria-label="Tarifas disponibles">
+              ${Array.from({ length: count }, (_, i) => `<button type="button" class="fare-carousel-dot${i === 0 ? ' is-active' : ''}" data-fare-slide="${i}" aria-label="Tarifa ${i + 1}" aria-selected="${i === 0 ? 'true' : 'false'}"></button>`).join('')}
+            </div>
+            <button type="button" class="fare-carousel-next" aria-label="Siguiente tarifa">
+              <svg class="fare-carousel-next__icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" aria-hidden="true">
+                <path fill="currentColor" d="M27.5509 7.7749L16.001 19.3599L4.45097 7.7749L2.00098 10.2249L16.001 24.2249L30.001 10.2249L27.5509 7.7749Z" transform="rotate(-90 16 16)"/>
+              </svg>
+            </button>
+          </div>` : ''}
+        </div>
+      </article>
+    `;
+  }
+
+  function placePromo() {
+    const promo = list.querySelector('.offers-pass-ad');
+    const cards = [...list.querySelectorAll('.flight-card:not(.is-hidden)')];
+    if (!promo || cards.length < 2) return;
+    cards[1].after(promo);
+  }
+
+  function renderOutbound() {
+    const outbound = uniqueOutbound(payload.results);
+    title.innerHTML = 'Elige un <strong>vuelo de ida</strong>';
+    list.innerHTML = outbound.map((flight, index) => cardHtml(flight, 'outbound', outbound, index)).join('') + (outbound.length > 1 ? promoHtml() : '');
+    show(emptyBox, outbound.length === 0);
+    show(document.getElementById('offers-extras'), outbound.length > 0);
+    applyFilters();
+  }
+
+  function prettyDay(iso) {
+    if (!iso) return '';
+    const DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const d = new Date(`${iso}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return iso;
+    return `${DAYS[d.getDay()]}. ${d.getDate()} ${MONTHS[d.getMonth()]}.`;
+  }
+
+  function citiesForLeg() {
+    if (state.step === 'inbound') return { from: payload.to, to: payload.from };
+    return { from: payload.from, to: payload.to };
+  }
+
+  function itineraryOf(flight) {
+    const cities = citiesForLeg();
+    if (flight.itinerary?.length) {
+      return flight.itinerary.map((seg, index, all) => {
+        const originCity = seg.originCity || (index === 0 ? cities.from.city : seg.originCity);
+        const destCity = seg.destCity || (index === all.length - 1 ? cities.to.city : seg.destCity);
+        const originCode = seg.originCode || (index === 0 ? cities.from.code : seg.originCode);
+        const destCode = seg.destCode || (index === all.length - 1 ? cities.to.code : seg.destCode);
+        const originAirport = distinctAirport(seg.originAirport, originCity, index === 0 ? cities.from.airport : '');
+        const destAirport = distinctAirport(seg.destAirport, destCity, index === all.length - 1 ? cities.to.airport : '');
+        return { ...seg, originCity, destCity, originCode, destCode, originAirport, destAirport, operator: seg.operator || flight.airline };
+      });
+    }
+    return [{
+      flightNumber: flight.flightNumber,
+      operator: flight.airline,
+      depart: flight.depart,
+      arrive: flight.arrive,
+      duration: flight.duration,
+      durationMinutes: flight.durationMinutes,
+      originCode: cities.from.code,
+      originCity: cities.from.city,
+      originAirport: cities.from.airport,
+      destCode: cities.to.code,
+      destCity: cities.to.city,
+      destAirport: cities.to.airport,
+    }];
+  }
+
+  function distinctAirport(airport, city, fallback) {
+    const name = String(airport || '').trim();
+    const cityName = String(city || '').trim();
+    if (name && name.toLowerCase() !== cityName.toLowerCase() && !/^todos los aeropuertos$/i.test(name)) return name;
+    const next = String(fallback || '').trim();
+    if (next && next.toLowerCase() !== cityName.toLowerCase() && !/^todos los aeropuertos$/i.test(next)) return next;
+    return name;
+  }
+
+  function durationShort(mins, label) {
+    const n = Number(mins);
+    if (Number.isFinite(n) && n > 0) {
+      if (n < 60) return `${n} min`;
+      const h = Math.floor(n / 60);
+      const m = n % 60;
+      return m ? `${h} h ${m} min` : `${h} h`;
+    }
+    return String(label || '').replace(/^0 h /, '');
+  }
+
+  function flightCode(value) {
+    return String(value || '').replace(/\s+/g, '');
+  }
+
+  function flagHtml(country) {
+    if (!/ecuador/i.test(country || '')) return '';
+    return `<span class="it-flag" aria-hidden="true"><svg viewBox="0 0 16 12" width="16" height="12"><rect width="16" height="6" fill="#FFDA44"/><rect y="6" width="16" height="3" fill="#0052B4"/><rect y="9" width="16" height="3" fill="#D80027"/></svg></span>`;
+  }
+
+  const AMENITIES = `
+    <div class="it-amenities" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M5 9h14v2H5V9Zm2 3h10l-1.2 7H8.2L7 12Z" stroke="currentColor" stroke-width="1.3"/><path d="M9 9c0-2 1.3-3.5 3-3.5S15 7 15 9" stroke="currentColor" stroke-width="1.3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none"><rect x="7" y="4" width="10" height="16" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M10 18h4" stroke="currentColor" stroke-width="1.3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none"><path d="M9 7v4h6V7M10 11v6h4v-6" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 17h8" stroke="currentColor" stroke-width="1.3"/></svg>
+      <svg viewBox="0 0 24 24" fill="none"><path d="M8 10c2.5-2.5 5.5-2.5 8 0M6 8c3.8-3.5 8.2-3.5 12 0M10 13c1.2-1.1 2.8-1.1 4 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="12" cy="16" r="1.2" fill="currentColor"/></svg>
+    </div>
+  `;
+
+  function endBlock(kind, code, time, airport, city, country, extraClass = '') {
+    return `
+      <div class="it-end ${extraClass}">
+        <span class="it-end__k">${kind}</span>
+        <span class="it-end__code">${code} ${clock12(time)}</span>
+        ${airport ? `<span class="it-end__air">${airport}</span>` : ''}
+        <span class="it-end__city">${city || ''} ${flagHtml(country)}</span>
+      </div>
+    `;
+  }
+
+  function itineraryHtml(flight) {
+    const segs = itineraryOf(flight);
+    const cities = citiesForLeg();
+    const originCountry = cities.from.country || '';
+    const destCountry = cities.to.country || '';
+
+    const blocks = segs.map((seg, index) => {
+      const code = flightCode(seg.flightNumber);
+      const wait = seg.layover && index < segs.length - 1
+        ? `<div class="it-lay">Escala de ${seg.layover} en ${seg.destCity || seg.destCode}</div>`
+        : '';
+      return `
+        <div class="it-seg">
+          ${endBlock('Salida', seg.originCode, seg.depart, seg.originAirport, seg.originCity, index === 0 ? originCountry : destCountry, 'it-end--out')}
+          <div class="it-rail" aria-hidden="true">
+            <span class="it-dot"></span>
+            <span class="it-line"></span>
+            <span class="it-pin"><svg viewBox="0 0 12 16" width="12" height="16"><path fill="currentColor" d="M6 0a6 6 0 0 0-6 6c0 4.2 6 10 6 10s6-5.8 6-10a6 6 0 0 0-6-6zm0 8.4A2.4 2.4 0 1 1 6 3.6a2.4 2.4 0 0 1 0 4.8z"/></svg></span>
+          </div>
+          <div class="it-dur"><span>Duración</span><strong>${durationShort(seg.durationMinutes, seg.duration)}</strong></div>
+          <div class="it-flight">
+            <p class="it-flight__num"><img src="/images/latam-symbol.svg" alt="" width="12" height="19"> ${code}</p>
+            <p class="it-flight__op">Operado por ${seg.operator || flight.airline}</p>
+            <p class="it-flight__sold">Vendido como ${code}</p>
+            <p class="it-flight__plane">Airbus A319</p>
+            ${AMENITIES}
+          </div>
+          ${endBlock('Llegada', seg.destCode, seg.arrive, seg.destAirport, seg.destCity, index === segs.length - 1 ? destCountry : originCountry, 'it-end--in')}
+        </div>
+        ${wait}
+      `;
+    }).join('');
+
+    return `<div class="it-wrap">${blocks}</div>`;
+  }
+
+  const drawer = document.getElementById('itinerary-drawer');
+  const drawerBody = document.getElementById('itinerary-body');
+  if (drawer && drawer.parentElement !== document.body) document.body.append(drawer);
+  const fareDrawer = document.getElementById('fare-drawer');
+  const fareBody = document.getElementById('fare-body');
+  if (fareDrawer && fareDrawer.parentElement !== document.body) document.body.append(fareDrawer);
+
+  function setDrawerOpen(open) {
+    drawer?.classList.toggle('is-open', open);
+    if (open) drawer?.removeAttribute('hidden');
+    else {
+      window.setTimeout(() => drawer?.setAttribute('hidden', ''), 280);
+    }
+    document.body.classList.toggle('is-itinerary-open', open || fareDrawer?.classList.contains('is-open'));
+  }
+
+  function setFareDrawerOpen(open) {
+    fareDrawer?.classList.toggle('is-open', open);
+    if (open) fareDrawer?.removeAttribute('hidden');
+    else {
+      window.setTimeout(() => fareDrawer?.setAttribute('hidden', ''), 280);
+    }
+    document.body.classList.toggle('is-itinerary-open', open || drawer?.classList.contains('is-open'));
+  }
+
+  function fareDetailIcon(kind) {
+    const fill = 'currentColor';
+    if (kind === 'bag') return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="M20.5 8.5h-1.2V7.2c0-1.9-1.6-3.5-3.5-3.5h-.6c-1.9 0-3.5 1.6-3.5 3.5v1.3H10.5C8.6 8.5 7 10.1 7 12v12.5C7 26.4 8.6 28 10.5 28h11c1.9 0 3.5-1.6 3.5-3.5V12c0-1.9-1.6-3.5-3.5-3.5Zm-7.2-1.3c0-.9.7-1.6 1.6-1.6h.6c.9 0 1.6.7 1.6 1.6v1.3h-3.8V7.2ZM23 24.5c0 .8-.7 1.5-1.5 1.5h-11c-.8 0-1.5-.7-1.5-1.5V12c0-.8.7-1.5 1.5-1.5h11c.8 0 1.5.7 1.5 1.5v12.5Z"/></svg>';
+    if (kind === 'carry') return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="M21 7h-2.2V5.2C18.8 3.4 17.4 2 15.6 2h-.2C13.6 2 12.2 3.4 12.2 5.2V7H10c-1.7 0-3 1.3-3 3v16c0 1.7 1.3 3 3 3h11c1.7 0 3-1.3 3-3V10c0-1.7-1.3-3-3-3Zm-7.3-1.8c0-.8.6-1.4 1.4-1.4h.2c.8 0 1.4.6 1.4 1.4V7h-3V5.2ZM24 26c0 .6-.4 1-1 1H10c-.6 0-1-.4-1-1V10c0-.6.4-1 1-1h11c.6 0 1 .4 1 1v16Z"/></svg>';
+    if (kind === 'hold') return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="M24 10h-3V7.5C21 5.6 19.4 4 17.5 4h-3C12.6 4 11 5.6 11 7.5V10H8c-1.7 0-3 1.3-3 3v12c0 1.7 1.3 3 3 3h16c1.7 0 3-1.3 3-3V13c0-1.7-1.3-3-3-3Zm-11-2.5c0-.8.7-1.5 1.5-1.5h3c.8 0 1.5.7 1.5 1.5V10h-6V7.5ZM27 25c0 .6-.4 1-1 1H8c-.6 0-1-.4-1-1V13c0-.6.4-1 1-1h16c.6 0 1 .4 1 1v12Z"/></svg>';
+    if (kind === 'change') return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="M18 4h-4v24h4V4Zm-6 8.5L7.5 8 2 13.5 7.5 19 12 14.5 9.2 11.7H14v-2H9.2L12 12.5Zm8 5 4.5 4.5L30 17.5 25.5 13 21 17.5l2.8 2.8H18v2h5.8L21 19.5Z"/></svg>';
+    if (kind === 'refund') return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12h-2c0 5.5-4.5 10-10 10S6 21.5 6 16 10.5 6 16 6c3.3 0 6.2 1.6 8 4.1V7h2v7h-7v-2h3.6C21.1 9.6 18.7 8 16 8Z"/></svg>';
+    if (kind === 'seat') return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="M9 6c0-1.7 1.3-3 3-3h8c1.7 0 3 1.3 3 3v10h2v6c0 1.7-1.3 3-3 3h-1v4h-2v-4h-6v4h-2v-4h-1c-1.7 0-3-1.3-3-3v-6h2V6Zm2 0v10h10V6c0-.6-.4-1-1-1h-8c-.6 0-1 .4-1 1Zm-2 16c0 .6.4 1 1 1h12c.6 0 1-.4 1-1v-4H9v4Z"/></svg>';
+    if (kind === 'upgrade') return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="M16 4 6 14h6v14h8V14h6L16 4Z"/></svg>';
+    if (kind === 'food') return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="M9 4v10H7V4H5v10c0 2 1.3 3.7 3.2 4.2V28h2.6V18.2C12.7 17.7 14 16 14 14V4h-2v10h-2V4H9Zm13 0c-2.8 0-5 3.1-5 7v7h4v10h3V4h-2Z"/></svg>';
+    if (kind === 'board') return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="m6 16 8-6v4h12v4H14v4L6 16Z"/></svg>';
+    return '<svg viewBox="0 0 32 32" fill="none" aria-hidden="true"><path fill="currentColor" d="M16 4 4 10v2h24v-2L16 4Zm-9 10v8l-3 4h24l-3-4v-8H7Z"/></svg>';
+  }
+
+  function fareDetailRows(items, filled) {
+    return (items || []).map((item) => `
+      <div class="fare-d__row">
+        <span class="fare-d__ico${filled ? ' fare-d__ico--fill' : ''}" aria-hidden="true">${fareDetailIcon(item.icon)}</span>
+        <div class="fare-d__copy">
+          <p class="fare-d__name">${item.title}</p>
+          ${item.subtitle ? `<p class="fare-d__sub">${item.subtitle}</p>` : ''}
+          <p class="fare-d__text">${item.text}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function fareDetailHtml(fare) {
+    const details = fare.details || { includes: [], extras: [] };
+    const total = Number(fare.price) + Number(fare.extra || 0);
+    return `
+      <div class="fare-d">
+        <div class="fare-d__brand">
+          <span class="fare-d__bar" style="background:${fare.accent || '#10004f'}"></span>
+          <strong>${fare.name}</strong>
+          <span class="fare-d__price">${money(total)}</span>
+        </div>
+        <section class="fare-d__sec">
+          <h3>Esta tarifa incluye:</h3>
+          ${fareDetailRows(details.includes, true)}
+          <a class="fare-d__link" href="https://www.latamairlines.com/ec/es/experiencia/prepara-tu-viaje/equipaje" target="_blank" rel="noopener noreferrer">
+            <span class="fare-d__link-ico" aria-hidden="true">${fareDetailIcon('bag')}</span>
+            <span>Más información sobre equipaje</span>
+            <span class="fare-d__chev" aria-hidden="true">›</span>
+          </a>
+        </section>
+        <section class="fare-d__sec">
+          <h3>Extras incluidos:</h3>
+          <p class="fare-d__lead">Beneficios exclusivos de esta tarifa, no disponibles por separado</p>
+          ${fareDetailRows(details.extras, false)}
+        </section>
+      </div>
+    `;
+  }
+
+  function openItinerary(card) {
+    const flight = payload.results.find((row) => row.outboundLegId === card.dataset.leg || row.id === card.dataset.id);
+    if (!flight || !drawerBody) return;
+    setFareDrawerOpen(false);
+    drawerBody.innerHTML = itineraryHtml(flight);
+    drawer?.removeAttribute('hidden');
+    requestAnimationFrame(() => setDrawerOpen(true));
+  }
+
+  function openFareDetail(card, fareId) {
+    const flight = payload.results.find((row) => row.outboundLegId === card.dataset.leg || row.id === card.dataset.id);
+    const fare = (flight?.fareOptions || []).find((item) => item.id === fareId);
+    if (!fare || !fareBody) return;
+    setDrawerOpen(false);
+    fareBody.innerHTML = fareDetailHtml(fare);
+    fareDrawer?.removeAttribute('hidden');
+    requestAnimationFrame(() => setFareDrawerOpen(true));
+  }
+
+  drawer?.addEventListener('click', (e) => {
+    if (e.target.closest('[data-close-itinerary]')) setDrawerOpen(false);
+  });
+  fareDrawer?.addEventListener('click', (e) => {
+    if (e.target.closest('[data-close-fare]')) setFareDrawerOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    setDrawerOpen(false);
+    setFareDrawerOpen(false);
+  });
+  const sortToggle = document.getElementById('sort-toggle');
+  const sortPanel = document.getElementById('menu-sort');
+
+  function setSortOpen(open) {
+    sortPanel?.classList.toggle('hidden', !open);
+    if (open) sortPanel?.removeAttribute('hidden');
+    else sortPanel?.setAttribute('hidden', '');
+    sortToggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  sortToggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setSortOpen(sortPanel?.classList.contains('hidden'));
+  });
+  sortPanel?.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', () => setSortOpen(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setSortOpen(false);
+  });
+
+  document.querySelectorAll('[data-sort]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.sort = btn.dataset.sort;
+      sortLabel.textContent = btn.textContent.trim();
+      document.querySelectorAll('[data-sort]').forEach((option) => {
+        option.setAttribute('aria-selected', option === btn ? 'true' : 'false');
+      });
+      applyFilters();
+      setSortOpen(false);
+    });
+  });
+  document.querySelectorAll('[data-stops]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.stops = btn.dataset.stops;
+      applyFilters();
+    });
+  });
+  document.querySelectorAll('[data-hours]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      state.hours = btn.dataset.hours;
+      applyFilters();
+    });
+  });
+
+  function applyFilters() {
+    const cards = [...list.querySelectorAll('.flight-card')];
+    const visible = cards.filter((card) => {
+      const stopsOk = state.stops === 'all' || String(card.dataset.stops) === state.stops;
+      const hoursOk = state.hours === 'all' || card.dataset.period === state.hours;
+      return stopsOk && hoursOk;
+    });
+    cards.forEach((card) => card.classList.toggle('is-hidden', !visible.includes(card)));
+    visible.sort((a, b) => {
+      const price = Number(a.dataset.price) - Number(b.dataset.price);
+      const duration = Number(a.dataset.duration) - Number(b.dataset.duration);
+      const departAsc = String(a.dataset.depart || '').localeCompare(String(b.dataset.depart || ''));
+      const arriveAsc = String(a.dataset.arrive || '').localeCompare(String(b.dataset.arrive || ''));
+      if (state.sort === 'cheapest') return price || duration || departAsc;
+      if (state.sort === 'fastest') return duration || price || departAsc;
+      if (state.sort === 'depart-asc') return departAsc || price;
+      if (state.sort === 'depart-desc') return -departAsc || price;
+      if (state.sort === 'arrive-asc') return arriveAsc || price;
+      if (state.sort === 'arrive-desc') return -arriveAsc || price;
+      return departAsc || duration || price;
+    }).forEach((card) => list.append(card));
+    placePromo();
+  }
+
+  function closeFares() {
+    list.querySelectorAll('.fare-panel').forEach((el) => {
+      el.classList.add('hidden');
+      el.setAttribute('hidden', '');
+    });
+    list.querySelectorAll('.flight-card').forEach((el) => el.classList.remove('is-open'));
+  }
+
+  function syncFareCarousel(panel) {
+    const grid = panel.querySelector('.fare-grid');
+    const dots = [...panel.querySelectorAll('.fare-carousel-dot')];
+    const nextBtn = panel.querySelector('.fare-carousel-next');
+    if (!grid || !dots.length) return;
+
+    const cols = [...grid.querySelectorAll('.fare-col')];
+    const active = cols.reduce((best, col, index) => {
+      const offset = Math.abs(col.offsetLeft - grid.scrollLeft);
+      return offset < best.offset ? { index, offset } : best;
+    }, { index: 0, offset: Infinity }).index;
+
+    dots.forEach((dot, index) => {
+      const on = index === active;
+      dot.classList.toggle('is-active', on);
+      dot.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    if (nextBtn) nextBtn.disabled = active >= cols.length - 1;
+  }
+
+  function initFareCarousel(panel) {
+    const grid = panel.querySelector('.fare-grid');
+    if (!grid || grid.dataset.carouselReady === '1') return;
+    grid.dataset.carouselReady = '1';
+
+    grid.addEventListener('scroll', () => syncFareCarousel(panel), { passive: true });
+
+    panel.querySelectorAll('.fare-carousel-dot').forEach((dot) => {
+      dot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const index = Number(dot.dataset.fareSlide);
+        const col = grid.querySelectorAll('.fare-col')[index];
+        if (col) grid.scrollTo({ left: col.offsetLeft, behavior: 'smooth' });
+      });
+    });
+
+    panel.querySelector('.fare-carousel-next')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cols = [...grid.querySelectorAll('.fare-col')];
+      const active = cols.reduce((best, col, index) => {
+        const offset = Math.abs(col.offsetLeft - grid.scrollLeft);
+        return offset < best.offset ? { index, offset } : best;
+      }, { index: 0, offset: Infinity }).index;
+      const next = cols[Math.min(active + 1, cols.length - 1)];
+      if (next) grid.scrollTo({ left: next.offsetLeft, behavior: 'smooth' });
+    });
+
+    syncFareCarousel(panel);
+  }
+
+  list.addEventListener('click', (e) => {
+    if (e.target.closest('.flight-card__direct')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const card = e.target.closest('.flight-card');
+      if (card) openItinerary(card);
+      return;
+    }
+    if (e.target.closest('[data-close-fares]')) {
+      closeFares();
+      return;
+    }
+    if (e.target.closest('.fare-col__more')) {
+      e.preventDefault();
+      e.stopPropagation();
+      const more = e.target.closest('[data-fare-more]');
+      const card = e.target.closest('.flight-card');
+      if (card && more) openFareDetail(card, more.dataset.fareMore);
+      return;
+    }
+
+    const fareBtn = e.target.closest('[data-fare]');
+    if (fareBtn) {
+      const selection = legSelection(fareBtn.dataset.leg, fareBtn.dataset.fare);
+      if (payload.trip === 'roundtrip' && state.step !== 'inbound') {
+        state.outboundSelection = selection;
+        state.outboundLeg = fareBtn.dataset.leg;
+        state.fare = fareBtn.dataset.fare;
+        state.step = 'inbound';
+        showInbound();
+      } else {
+        const outbound = state.step === 'inbound' && state.outboundSelection ? state.outboundSelection : selection;
+        const inbound = state.step === 'inbound' ? selection : null;
+        goCheckout(outbound, inbound);
+      }
+      return;
+    }
+
+    if (e.target.closest('.fare-panel')) return;
+
+    const card = e.target.closest('.flight-card');
+    if (!card) return;
+    const id = card.dataset.select;
+    const panel = list.querySelector(`[data-fares="${id}"]`);
+    const already = card.classList.contains('is-open');
+    closeFares();
+    if (!already && panel) {
+      panel.classList.remove('hidden');
+      panel.removeAttribute('hidden');
+      card.classList.add('is-open');
+      initFareCarousel(panel);
+      panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
+
+  async function showInbound() {
+    title.innerHTML = 'Elige un <strong>vuelo de vuelta</strong>';
+    closeFares();
+    show(waiting, true);
+    document.body.classList.add('is-offers-waiting');
+    const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+    params.set('bound', 'return');
+    try {
+      const res = await fetch(`/api/vuelos?${params.toString()}`, { signal: AbortSignal.timeout(35000) });
+      const data = await res.json();
+      const rows = uniqueOutbound(data.results || []);
+      show(waiting, false);
+      document.body.classList.remove('is-offers-waiting');
+      if (!rows.length) {
+        window.location.href = `/datos-pasajero${search.startsWith('?') ? search : `?${search}`}`;
+        return;
+      }
+      payload.results = rows;
+      list.innerHTML = rows.map((row, index) => cardHtml(row, 'inbound', rows, index)).join('');
+      applyFilters();
+    } catch {
+      show(waiting, false);
+      document.body.classList.remove('is-offers-waiting');
+      window.location.href = `/datos-pasajero${search.startsWith('?') ? search : `?${search}`}`;
+    }
+  }
+
+  async function loadFlights() {
+    if (!search) {
+      show(waiting, false);
+      show(emptyBox, true);
+      return;
+    }
+    show(waiting, true);
+    show(emptyBox, false);
+    show(errorBox, false);
+    show(timeoutBox, false);
+    try {
+      const res = await fetch(`/api/vuelos${search}`, { signal: AbortSignal.timeout(35000) });
+      const data = await res.json();
+      payload.results = data.results || [];
+      payload.trip = data.trip || trip;
+      payload.from = data.from || payload.from;
+      payload.to = data.to || payload.to;
+      payload.depart = data.depart || payload.depart;
+      payload.returnDate = data.returnDate || payload.returnDate;
+      show(waiting, false);
+      document.body.classList.remove('is-offers-waiting');
+      if (data.error && !payload.results.length) {
+        const timeoutText = document.getElementById('offers-timeout-text');
+        const timeoutRetry = document.getElementById('offers-timeout-retry');
+        if (timeoutText) timeoutText.textContent = data.error;
+        if (timeoutRetry instanceof HTMLAnchorElement) {
+          timeoutRetry.href = `${window.location.pathname}${window.location.search}`;
+        }
+        document.body.classList.add('is-offers-timeout');
+        show(timeoutBox, true);
+        return;
+      }
+      renderOutbound();
+    } catch {
+      const timeoutRetry = document.getElementById('offers-timeout-retry');
+      if (timeoutRetry instanceof HTMLAnchorElement) {
+        timeoutRetry.href = `${window.location.pathname}${window.location.search}`;
+      }
+      show(waiting, false);
+      document.body.classList.remove('is-offers-waiting');
+      document.body.classList.add('is-offers-timeout');
+      show(timeoutBox, true);
+    }
+  }
+
+  loadFlights();
+</script>

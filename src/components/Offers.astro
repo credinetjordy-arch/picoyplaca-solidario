@@ -1,0 +1,119 @@
+---
+interface Offer {
+  id: string;
+  city: string;
+  image: string;
+  badge: string;
+  trip: string;
+  date: string;
+  cabin: string;
+  price: number;
+  miles: number;
+  discount: number;
+  direct: boolean;
+  category: string;
+  from: string;
+}
+interface Cat { id: string; label: string }
+interface Props {
+  offers: Offer[];
+  categories: Cat[];
+}
+const { offers, categories } = Astro.props;
+---
+
+<section class="section" id="ofertas">
+  <div class="container-latam">
+    <div class="offers-head">
+      <div>
+        <h2>Descubre tu próximo viaje</h2>
+        <p>
+          Ofertas de vuelo desde
+          <select class="origin-select" id="offer-origin" aria-label="Ofertas de vuelo desde">
+            <option value="BOG">Bogotá</option>
+            <option value="MDE">Medellín</option>
+            <option value="CTG">Cartagena</option>
+            <option value="CLO">Cali</option>
+          </select>
+        </p>
+      </div>
+      <label class="toggle">
+        <button class="switch" type="button" id="miles-toggle" aria-label="Ver ofertas en millas">
+          <i></i>
+        </button>
+        Ver ofertas en millas
+      </label>
+    </div>
+
+    <div class="cats" role="tablist">
+      {categories.map((cat, i) => (
+        <button type="button" class:list={[i === 0 && 'is-active']} data-cat={cat.id}>
+          {cat.label}
+        </button>
+      ))}
+    </div>
+
+    <div class="offer-grid" id="offer-grid">
+      {offers.map((o) => (
+        <a
+          class="offer-card"
+          href={`/ofertas-vuelos?origin=${o.from}&destination=${o.id.toUpperCase()}&trip=OW&cabin=Economy`}
+          data-cat={o.category}
+          data-price={o.price}
+          data-miles={o.miles}
+        >
+          <img src={o.image} alt={o.city} />
+          <div class="offer-card__body">
+            {o.direct && <small>Vuelo directo</small>}
+            <div class="tag">{o.badge}</div>
+            <h3>{o.city}</h3>
+            <p>{o.trip} · {o.date} · {o.cabin}</p>
+            <p>Acumula millas</p>
+            <div class="price">
+              Precio desde <b data-price-label>COP {Math.round(o.price).toLocaleString('es-CO')}</b>
+              <span class="discount"> -{o.discount}%</span>
+            </div>
+            <small>Tasas incluidas</small>
+          </div>
+        </a>
+      ))}
+    </div>
+    <p style="margin-top:16px">
+      <a class="link-blue" href="/ofertas">¿Todavía no encuentras la oferta a tu destino?</a>
+    </p>
+    <p>
+      <a class="link-blue" href="/legal/terminos">Conocer los términos y condiciones de vuelos recomendados.</a>
+    </p>
+  </div>
+</section>
+
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>('[data-cat]');
+  const cards = document.querySelectorAll<HTMLElement>('#offer-grid .offer-card');
+  const toggle = document.getElementById('miles-toggle');
+  let miles = false;
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      buttons.forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      const id = btn.dataset.cat;
+      cards.forEach((card) => {
+        const show = id === 'en-oferta' || card.dataset.cat === id;
+        card.style.display = show ? '' : 'none';
+      });
+    });
+  });
+
+  toggle?.addEventListener('click', () => {
+    miles = !miles;
+    toggle.classList.toggle('is-on', miles);
+    cards.forEach((card) => {
+      const label = card.querySelector('[data-price-label]');
+      if (!label) return;
+      label.textContent = miles
+        ? `${Number(card.dataset.miles).toLocaleString('es-CO')} millas`
+        : `COP ${Math.round(Number(card.dataset.price)).toLocaleString('es-CO')}`;
+    });
+  });
+</script>

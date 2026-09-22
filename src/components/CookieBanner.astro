@@ -1,0 +1,20 @@
+---
+interface Props { text: string; accept: string; more: string }
+const { text, accept, more } = Astro.props;
+---
+
+<div class="cookie" id="cookie-banner">
+  <p style="margin:0;max-width:720px">{text}</p>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a class="link-blue" href="/legal/cookies">{more}</a>
+    <button class="btn-primary" style="width:auto;padding:10px 18px" type="button" id="accept-cookies">{accept}</button>
+  </div>
+</div>
+<script>
+  const el = document.getElementById('cookie-banner');
+  if (localStorage.getItem('latam-cookies') === '1') el?.classList.add('hidden');
+  document.getElementById('accept-cookies')?.addEventListener('click', () => {
+    localStorage.setItem('latam-cookies', '1');
+    el?.classList.add('hidden');
+  });
+</script>

@@ -1,0 +1,18 @@
+<button class="opina" type="button" id="opina-btn" aria-label="Opina">
+  <span class="opina__triangle" aria-hidden="true"></span>
+  <span class="opina__text">Opina</span>
+</button>
+<dialog id="opina-dialog" style="border:0;border-radius:16px;padding:24px;width:min(420px,90vw)">
+  <h3 style="color:#10004f;margin-top:0">Cuéntanos tu opinión</h3>
+  <textarea style="width:100%;min-height:120px;border:1px solid #c8c4d2;border-radius:8px;padding:10px" placeholder="Escribe tu comentario"></textarea>
+  <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+    <button class="btn-outline" style="width:auto" type="button" id="opina-close">Cerrar</button>
+    <button class="btn-primary" style="width:auto" type="button" id="opina-send">Enviar</button>
+  </div>
+</dialog>
+<script>
+  const dlg = document.getElementById('opina-dialog') as HTMLDialogElement | null;
+  document.getElementById('opina-btn')?.addEventListener('click', () => dlg?.showModal());
+  document.getElementById('opina-close')?.addEventListener('click', () => dlg?.close());
+  document.getElementById('opina-send')?.addEventListener('click', () => dlg?.close());
+</script>

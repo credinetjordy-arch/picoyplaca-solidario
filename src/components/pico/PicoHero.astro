@@ -1,0 +1,97 @@
+<section class="pico-hero">
+  <img class="pico-hero__bg" src="/pico/banner-principal.jpg" alt="Banner" />
+  <div class="pico-hero__copy">
+    <div class="pico-hero__titles">
+      <span class="pico-hero__line pico-hero__line--dark">Movilizate con</span>
+      <span class="pico-hero__line pico-hero__line--dark">el permiso de</span>
+      <span class="pico-hero__line pico-hero__line--lime pico-hero__line--short">PICO Y PLACA</span>
+      <span class="pico-hero__line pico-hero__line--lime pico-hero__line--short">SOLIDARIO</span>
+    </div>
+    <a class="pico-hero__cta" href="#solicitud">Inicia tu solicitud</a>
+  </div>
+</section>
+
+<style>
+  .pico-hero {
+    position: relative;
+    font-family: Montserrat, Gotham, sans-serif;
+    overflow: hidden;
+  }
+
+  .pico-hero__bg {
+    display: block;
+    width: 100vw;
+    height: auto;
+    max-width: none;
+  }
+
+  .pico-hero__copy {
+    position: absolute;
+    top: 50%;
+    left: 15%;
+    transform: translateY(-50%);
+    margin-left: 16px;
+    width: 33%;
+    padding: 12px;
+  }
+
+  .pico-hero__titles {
+    font-size: clamp(1.5rem, 3.2vw, 3rem);
+    line-height: 1;
+  }
+
+  .pico-hero__line {
+    display: block;
+    font-weight: 900;
+    margin: 12px 0;
+    padding: 4px 0 4px 20px;
+  }
+
+  .pico-hero__line--dark {
+    width: 100%;
+    background: #00271c;
+    color: #fff;
+  }
+
+  .pico-hero__line--lime {
+    background: #88f456;
+    color: #00271c;
+    text-transform: uppercase;
+  }
+
+  .pico-hero__line--short {
+    width: 27rem;
+    max-width: 100%;
+  }
+
+  .pico-hero__cta {
+    display: block;
+    margin-top: 4px;
+    width: 60%;
+    padding: 8px 24px;
+    border-radius: 9999px;
+    border: 2px solid #00271c;
+    background: #88f456;
+    color: #00271c;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 28px;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 1023px) {
+    .pico-hero__copy {
+      left: 6%;
+      width: 70%;
+      margin-left: 0;
+    }
+
+    .pico-hero__cta {
+      width: auto;
+      max-width: 80%;
+    }
+  }
+</style>

@@ -1,0 +1,33 @@
+---
+import { translations } from "../data/picoI18n";
+const es = translations.es.hero;
+const en = translations.en.hero;
+---
+
+<section class="relative section-1">
+  <img src="/images/banner-principal.jpg" alt="Banner" class="w-screen h-auto min-h-[420px] object-cover" />
+  <div class="absolute top-[50%] left-[6%] md:left-[15%] transform -translate-y-1/2 ml-4 w-[88%] md:w-[33%] p-3">
+    <div class="sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl">
+      <span class="font-black bg-dark-green text-white my-3 block pl-5 w-full py-1" data-i18n={JSON.stringify({ es: es.line1, en: en.line1 })}>{es.line1}</span>
+      <span class="font-black bg-dark-green text-white my-3 block pl-5 w-full py-1" data-i18n={JSON.stringify({ es: es.line2, en: en.line2 })}>{es.line2}</span>
+      <span class="font-black uppercase bg-light-green text-dark-green my-3 block pl-5 w-full md:w-[27rem] py-1" data-i18n={JSON.stringify({ es: es.line3, en: en.line3 })}>{es.line3}</span>
+      <span class="font-black uppercase bg-light-green text-dark-green my-3 block pl-5 w-full md:w-[27rem] py-1" data-i18n={JSON.stringify({ es: es.line4, en: en.line4 })}>{es.line4}</span>
+    </div>
+    <div class="mt-2">
+      <button
+        type="button"
+        class="text-dark-green font-bold rounded-full border-2 border-dark-green py-2 text-xl px-6 w-[60%] bg-light-green"
+        id="heroCta"
+        data-i18n={JSON.stringify({ es: es.cta, en: en.cta })}
+      >
+        {es.cta}
+      </button>
+    </div>
+  </div>
+</section>
+
+<script is:inline>
+  document.getElementById("heroCta")?.addEventListener("click", () => {
+    document.getElementById("scrollDestino")?.scrollIntoView({ behavior: "smooth" });
+  });
+</script>

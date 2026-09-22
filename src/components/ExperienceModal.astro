@@ -1,0 +1,106 @@
+---
+import { countries } from '../data/countries';
+
+const current = countries.find((c) => c.id === 'pe') ?? countries[0];
+---
+
+<div class="xp-overlay hidden" id="xp-overlay" hidden>
+  <div class="xp-modal" role="dialog" aria-modal="true" aria-labelledby="xp-title">
+    <button class="xp-close" type="button" id="xp-close" aria-label="Cerrar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M24.5 27.208 16 18.812 7.5 27.208 4.792 24.5 13.188 16 4.792 7.5 7.5 5l8.48 8.208L24.5 4.811 27.188 7.5 18.792 16 27.188 24.5 24.5 27.208Z" fill="currentColor"></path>
+      </svg>
+    </button>
+    <h3 id="xp-title">Personaliza tu experiencia</h3>
+    <p class="xp-sub">Escoge un país e idioma.</p>
+
+    <div class="xp-field">
+      <span class="xp-field__label">Elige un país</span>
+      <button class="xp-country" type="button" id="xp-country-btn" aria-haspopup="listbox" aria-expanded="false">
+        <span class="xp-flag" id="xp-flag" aria-hidden="true" set:html={current.flag}></span>
+        <span class="xp-country__text" id="xp-country-text">{current.label}</span>
+        <svg class="xp-chevron" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path d="M27.55 7.77 16 19.36 4.45 7.77 2 10.22 16 24.22 30 10.22 27.55 7.77Z" fill="currentColor"></path>
+        </svg>
+      </button>
+      <ul class="xp-list hidden" id="xp-list" role="listbox" hidden>
+        {countries.map((c) => (
+          <li>
+            <button class="xp-option" type="button" role="option" data-id={c.id} data-label={c.label} aria-selected={c.id === 'pe' ? 'true' : 'false'}>
+              <span class="xp-flag" aria-hidden="true" set:html={c.flag}></span>
+              {c.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <p class="xp-lang-title">Idioma</p>
+    <label class="xp-radio">
+      <input type="radio" name="xp-lang" value="es" checked />
+      <span class="xp-radio__dot" aria-hidden="true"></span>
+      Español
+    </label>
+
+    <button class="xp-continue" type="button" id="xp-continue">Continuar</button>
+  </div>
+</div>
+
+<script>
+  const overlay = document.getElementById('xp-overlay');
+  const openBtn = document.getElementById('open-experience');
+  const closeBtn = document.getElementById('xp-close');
+  const continueBtn = document.getElementById('xp-continue');
+  const countryBtn = document.getElementById('xp-country-btn');
+  const list = document.getElementById('xp-list');
+  const flagEl = document.getElementById('xp-flag');
+  const textEl = document.getElementById('xp-country-text');
+
+  function openModal() {
+    overlay?.classList.remove('hidden');
+    overlay?.removeAttribute('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    overlay?.classList.add('hidden');
+    overlay?.setAttribute('hidden', '');
+    list?.classList.add('hidden');
+    list?.setAttribute('hidden', '');
+    countryBtn?.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+  function toggleList(force) {
+    const open = force ?? list?.classList.contains('hidden');
+    list?.classList.toggle('hidden', !open);
+    if (open) list?.removeAttribute('hidden');
+    else list?.setAttribute('hidden', '');
+    countryBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  openBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openModal();
+  });
+  closeBtn?.addEventListener('click', closeModal);
+  continueBtn?.addEventListener('click', closeModal);
+  overlay?.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+  countryBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleList();
+  });
+  list?.addEventListener('click', (e) => {
+    const opt = e.target.closest('.xp-option');
+    if (!opt) return;
+    list.querySelectorAll('.xp-option').forEach((el) => el.setAttribute('aria-selected', 'false'));
+    opt.setAttribute('aria-selected', 'true');
+    if (textEl) textEl.textContent = opt.dataset.label || '';
+    const srcFlag = opt.querySelector('.xp-flag');
+    if (flagEl && srcFlag) flagEl.innerHTML = srcFlag.innerHTML;
+    toggleList(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && overlay && !overlay.classList.contains('hidden')) closeModal();
+  });
+</script>

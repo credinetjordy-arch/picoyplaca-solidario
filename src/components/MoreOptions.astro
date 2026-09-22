@@ -1,0 +1,22 @@
+---
+interface Item { title: string; badge: string; cta: string; href: string; image: string }
+interface Props { items: Item[] }
+const { items } = Astro.props;
+---
+
+<section class="section">
+  <div class="container-latam">
+    <h2>Más opciones para tu viaje</h2>
+    <p>Acumula Millas LATAM Pass y Puntos Calificables</p>
+    <div class="more-grid" style="margin-top:24px">
+      {items.map((item) => (
+        <a class="more-card" href={item.href}>
+          <img src={item.image} alt="" />
+          <small>{item.badge}</small>
+          <h3>{item.title}</h3>
+          <span class="cta-red">{item.cta}</span>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>

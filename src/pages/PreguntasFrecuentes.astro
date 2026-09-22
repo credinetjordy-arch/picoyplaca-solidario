@@ -1,0 +1,35 @@
+---
+import PicoLayout from "../layouts/PicoLayout.astro";
+import { faqs } from "../data/picoMock";
+import { translations } from "../data/picoI18n";
+---
+
+<PicoLayout current="Preguntas frecuentes">
+  <section class="image-banner w-full">
+    <div class="flex justify-center">
+      <div class="w-[90%] mt-[10%] mb-[5%] bg-[#2b2b2b] min-h-[600px] rounded-sm overflow-hidden">
+        <div class="bg-[#3a3a3a] text-white text-sm px-4 py-2">Preguntas_frecuentes.pdf</div>
+        <div class="bg-white p-8 max-h-[560px] overflow-y-auto">
+          <h1 class="text-dark-green text-3xl font-bold mb-6" data-i18n={JSON.stringify({ es: translations.es.faq.title, en: translations.en.faq.title })}>
+            {translations.es.faq.title}
+          </h1>
+          {
+            faqs.map((faq) => (
+              <details class="border-b border-gris py-4">
+                <summary class="cursor-pointer font-semibold text-dark-green" data-i18n={JSON.stringify({ es: faq.q.es, en: faq.q.en })}>
+                  {faq.q.es}
+                </summary>
+                <p class="mt-3 text-dark-green leading-7" data-i18n={JSON.stringify({ es: faq.a.es, en: faq.a.en })}>
+                  {faq.a.es}
+                </p>
+              </details>
+            ))
+          }
+          <object data="/docs/Preguntas_frecuentes.pdf" type="application/pdf" width="100%" height="480" class="mt-8">
+            <p class="text-sm text-gray">Si el visor PDF no carga, las preguntas quedan disponibles en este listado.</p>
+          </object>
+        </div>
+      </div>
+    </div>
+  </section>
+</PicoLayout>

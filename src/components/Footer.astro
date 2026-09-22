@@ -1,0 +1,86 @@
+---
+import { footerLinks } from "../data/picoMock";
+import { translations } from "../data/picoI18n";
+
+const es = translations.es.footer;
+const en = translations.en.footer;
+---
+
+<footer class="relative bg-dark-green pt-16 mt-0">
+  <div class="max-w-6xl mx-auto px-4 -mt-8">
+    <div class="bg-white rounded-t-3xl shadow-lg p-8 md:p-12 grid md:grid-cols-2 gap-10">
+      <div class="text-dark-green text-sm leading-6">
+        <h2 class="text-lg font-bold mb-1" data-i18n={JSON.stringify({ es: es.secretary, en: en.secretary })}>{es.secretary}</h2>
+        <p>
+          <span data-i18n={JSON.stringify({ es: es.nit, en: en.nit })}>{es.nit}</span>
+          {es.nitValue}
+        </p>
+        <h4 class="font-bold mt-4" data-i18n={JSON.stringify({ es: es.hq, en: en.hq })}>{es.hq}</h4>
+        <p>
+          <strong data-i18n={JSON.stringify({ es: es.addressLabel, en: en.addressLabel })}>{es.addressLabel}</strong>
+          {es.address}
+        </p>
+        <p>
+          <strong data-i18n={JSON.stringify({ es: es.tollLabel, en: en.tollLabel })}>{es.tollLabel}</strong>
+          {es.toll}
+        </p>
+        <p>
+          <strong data-i18n={JSON.stringify({ es: es.contactLabel, en: en.contactLabel })}>{es.contactLabel}</strong>
+          {es.contact}
+        </p>
+        <p>
+          <strong data-i18n={JSON.stringify({ es: es.emailLabel, en: en.emailLabel })}>{es.emailLabel}</strong>
+          <a href={footerLinks.sdqs} class="underline" target="_blank" rel="noopener noreferrer">https://bogota.gov.co/sdqs/</a>
+        </p>
+        <p>
+          <span data-i18n={JSON.stringify({ es: es.citizen, en: en.citizen })}>{es.citizen}</span>
+          <a href={footerLinks.citizenForm} class="underline ml-1" target="_blank" rel="noopener noreferrer">{es.citizenLink}</a>
+        </p>
+        <h4 class="font-bold mt-4" data-i18n={JSON.stringify({ es: es.judicialLabel, en: en.judicialLabel })}>{es.judicialLabel}</h4>
+        <p>{es.judicial}</p>
+        <h4 class="font-bold mt-4" data-i18n={JSON.stringify({ es: es.filingLabel, en: en.filingLabel })}>{es.filingLabel}</h4>
+        <p>{es.filing}</p>
+      </div>
+      <div class="flex items-center justify-center">
+        <img src="/images/footer-mapa.jpg" alt="Sede Secretaría Distrital de Movilidad" class="w-full max-w-[25rem]" />
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto px-4 py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="flex items-center text-white text-sm flex-wrap">
+      <a href={footerLinks.facebook} class="flex items-center mr-4" target="_blank" rel="noopener noreferrer">
+        <img src="/icons/facebook.svg" alt="icono_facebook" class="mr-2 w-6" />
+        secretariamovilidadbogota
+      </a>
+      <a href={footerLinks.x} class="flex items-center mr-4" target="_blank" rel="noopener noreferrer">
+        <img src="/icons/x.svg" alt="icono_X" class="mr-2 w-6" />
+        @SectorMovilidad
+      </a>
+      <a href={footerLinks.youtube} class="flex items-center mr-4" target="_blank" rel="noopener noreferrer">
+        <img src="/icons/youtube.svg" alt="icono_youtube" class="mr-2 w-6" />
+        secretariamovilidad
+      </a>
+      <a href={footerLinks.instagram} class="flex items-center" target="_blank" rel="noopener noreferrer">
+        <img src="/icons/instagram.svg" alt="icono_instagram" class="mr-2 w-6" />
+        secretariamovilidad
+      </a>
+    </div>
+  </div>
+
+  <div class="border-t border-white/20">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div class="flex items-center">
+        <img src="/icons/marca-colombia.png" alt="logo_marca_colombia" class="w-12 mr-6" />
+        <img src="/icons/header-govco.png" alt="logo_gobierno" class="w-24" />
+      </div>
+      <div class="flex flex-wrap gap-x-5 gap-y-2 text-white text-sm">
+        <a href={footerLinks.about} target="_blank" rel="noopener noreferrer" data-i18n={JSON.stringify({ es: es.about, en: en.about })}>{es.about}</a>
+        <a href={footerLinks.sitemap} target="_blank" rel="noopener noreferrer" data-i18n={JSON.stringify({ es: es.sitemap, en: en.sitemap })}>{es.sitemap}</a>
+        <a href={footerLinks.privacy} target="_blank" rel="noopener noreferrer" data-i18n={JSON.stringify({ es: es.privacy, en: en.privacy })}>{es.privacy}</a>
+        <a href={footerLinks.app} target="_blank" rel="noopener noreferrer" data-i18n={JSON.stringify({ es: es.app, en: en.app })}>{es.app}</a>
+        <a href={footerLinks.complaints} target="_blank" rel="noopener noreferrer" data-i18n={JSON.stringify({ es: es.complaints, en: en.complaints })}>{es.complaints}</a>
+      </div>
+    </div>
+  </div>
+</footer>

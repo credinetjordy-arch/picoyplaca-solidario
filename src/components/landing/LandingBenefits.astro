@@ -1,0 +1,92 @@
+---
+interface Benefit {
+  title: string;
+  text: string;
+}
+
+interface Props {
+  benefits: Benefit[];
+}
+
+const { benefits } = Astro.props;
+---
+
+<section class="landing-section" aria-labelledby="landing-benefits-title">
+  <div class="container-latam">
+    <h2 id="landing-benefits-title">Por qué reservar ahora</h2>
+    <p class="landing-lead">Ofertas con hasta 60% dcto. en Colombia y el mundo.</p>
+    <div class="landing-benefits">
+      {benefits.map((item) => (
+        <article class="landing-benefit">
+          <h3>{item.title}</h3>
+          <p>{item.text}</p>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .landing-section {
+    padding: 56px 0;
+    background: #fff;
+  }
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    color: #10004f;
+    font-weight: 600;
+  }
+
+  .landing-lead {
+    margin: 0 0 28px;
+    color: #5c5c5c;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  .landing-benefits {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .landing-benefit {
+    border: 1px solid #d9d6e0;
+    border-radius: 12px;
+    padding: 20px;
+    background: #f3f2f6;
+    border-top: 4px solid #e8114b;
+  }
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: 17px;
+    color: #10004f;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #5c5c5c;
+  }
+
+  @media (max-width: 960px) {
+    .landing-benefits {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 560px) {
+    .landing-section {
+      padding: 40px 0;
+    }
+
+    .landing-benefits {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

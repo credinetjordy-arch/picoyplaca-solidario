@@ -1,0 +1,20 @@
+---
+const steps = [
+  { label: "Registro" },
+  { label: "Solicitud" },
+  { label: "Confirmación" },
+  { label: "Curso" },
+  { label: "Aprobación" },
+];
+---
+
+<ol class="pyps-stepper" id="solicitudStepper" aria-label="Pasos de la solicitud">
+  {
+    steps.map((step, index) => (
+      <li data-step={index} class={index === 0 ? "active" : ""}>
+        <span>{index + 1}</span>
+        <em class="not-italic text-center leading-tight">{step.label}</em>
+      </li>
+    ))
+  }
+</ol>

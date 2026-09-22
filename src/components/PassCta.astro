@@ -1,0 +1,25 @@
+---
+interface Props {
+  title: string;
+  items: string[];
+  login: string;
+  signup: string;
+}
+const { title, items, login, signup } = Astro.props;
+---
+
+<section class="section" aria-label="Crea tu cuenta y obtén beneficios LATAM Pass">
+  <div class="container-latam">
+    <div class="pass">
+      <img src="/images/pass/deco-1.svg" alt="" style="position:absolute;top:16px;right:24px;width:220px" />
+      <h2>{title}</h2>
+      <ul>
+        {items.map((item) => <li>{item}</li>)}
+      </ul>
+      <div class="pass-actions">
+        <a class="btn-white" href="/login">{login}</a>
+        <a class="btn-ghost" href="/login">{signup}</a>
+      </div>
+    </div>
+  </div>
+</section>

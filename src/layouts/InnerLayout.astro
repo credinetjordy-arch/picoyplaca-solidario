@@ -1,0 +1,22 @@
+---
+import Layout from './Layout.astro';
+import PicoHeader from '../components/pico/PicoHeader.astro';
+import PicoFooter from '../components/pico/PicoFooter.astro';
+
+interface Props {
+  title: string;
+  heading?: string;
+}
+const { title, heading = title } = Astro.props;
+---
+
+<Layout title={`${title} | Pico y Placa Solidario`} bodyClass="pico-home">
+  <PicoHeader />
+  <main class="page-main">
+    <div class="container-latam">
+      <h1>{heading}</h1>
+      <slot />
+    </div>
+  </main>
+  <PicoFooter />
+</Layout>

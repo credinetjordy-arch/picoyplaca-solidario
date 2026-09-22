@@ -1,0 +1,23 @@
+---
+interface Slide { title: string; text: string; image: string; href: string }
+interface Props { slides: Slide[] }
+const { slides } = Astro.props;
+---
+
+<section class="experience">
+  <div class="container-latam">
+    <h2>Experiencia LATAM, en todo momento</h2>
+    <p>Cuando eliges volar con nosotros te acompañamos en cada etapa.</p>
+    <div class="exp-track" id="exp-track">
+      {slides.map((s) => (
+        <a class="exp-card" href={s.href}>
+          <img src={s.image} alt={s.title} />
+          <div>
+            <h3 style="margin:0 0 8px;font-size:18px">{s.title}</h3>
+            <p style="margin:0;color:#303030">{s.text}</p>
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>

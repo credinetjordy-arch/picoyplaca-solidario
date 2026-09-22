@@ -1,0 +1,71 @@
+<section class="pico-what">
+  <div class="pico-what__icon" aria-hidden="true">
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none">
+      <path d="M20 6L9 17l-5-5" stroke="#88F456" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </div>
+  <div class="pico-what__copy">
+    <h1>¿ Qué es el<br />Pico y Placa Solidario?</h1>
+    <p>
+      El Pico y Placa Solidario permite adquirir voluntariamente un permiso diario, mensual o semestral para circular en Bogotá sin la restricción del pico y placa. La totalidad de este recaudo está destinado a la financiación, el fortalecimiento y el mejoramiento del Sistema Integrado de Transporte Público. Busca además promover la conciencia de los propietarios sobre los impactos negativos del uso ineficiente del vehículo en el medio ambiente, la seguridad vial y la movilidad.
+    </p>
+    <a class="pico-what__more" href="#solicitud">Conocer más</a>
+  </div>
+</section>
+
+<style>
+  .pico-what {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 48px;
+    align-items: center;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 72px 48px 40px;
+    background: #fff;
+  }
+
+  .pico-what__icon {
+    display: flex;
+    justify-content: center;
+  }
+
+  .pico-what h1 {
+    margin: 0 0 20px;
+    color: #00271c;
+    font-size: 48px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .pico-what p {
+    margin: 0 0 24px;
+    color: #00271c;
+    font-size: 16px;
+    line-height: 1.5;
+    max-width: 640px;
+  }
+
+  .pico-what__more {
+    display: inline-block;
+    padding: 4px 24px;
+    border: 2px solid #00271c;
+    border-radius: 9999px;
+    background: #fff;
+    color: #00271c;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  @media (max-width: 900px) {
+    .pico-what {
+      grid-template-columns: 1fr;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .pico-what h1 {
+      font-size: 32px;
+    }
+  }
+</style>

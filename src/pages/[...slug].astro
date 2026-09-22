@@ -1,0 +1,95 @@
+---
+import InnerLayout from '../layouts/InnerLayout.astro';
+
+export function getStaticPaths() {
+  const routes = [
+    'ofertas',
+    'destinos',
+    'destinos/cuenca',
+    'destinos/manta',
+    'destinos/buenos-aires',
+    'destinos/galapagos',
+    'destinos/europa',
+    'destinos/estados-unidos',
+    'destinos/argentina',
+    'paquetes',
+    'alojamientos',
+    'autos',
+    'universal',
+    'actividades',
+    'esim',
+    'traslados',
+    'asistencia',
+    'servicios',
+    'mis-viajes',
+    'check-in',
+    'ayuda',
+    'estado-de-vuelo',
+    'canje-millas',
+    'upgrade',
+    'experiencia',
+    'experiencia/prepara-tu-viaje',
+    'experiencia/embarque',
+    'experiencia/a-bordo',
+    'prepara-tu-viaje',
+    'acerca-de',
+    'wallet',
+    'prensa',
+    'sostenibilidad',
+    'corporate',
+    'empleos',
+    'inversionistas',
+    'tarjeta-latam-pass',
+    'legal/contrato',
+    'legal/cargos',
+    'legal/privacidad',
+    'legal/terminos',
+    'legal/cookies',
+    'legal/uso',
+    'legal/derechos',
+    'legal/capitulo-11',
+  ];
+  return routes.map((slug) => ({ params: { slug } }));
+}
+
+const titles: Record<string, string> = {
+  ofertas: 'Ofertas',
+  destinos: 'Destinos',
+  paquetes: 'Paquetes turísticos',
+  alojamientos: 'Alojamientos',
+  autos: 'Alquiler de autos',
+  universal: 'Universal',
+  actividades: 'Actividades',
+  esim: 'eSIM',
+  traslados: 'Traslados',
+  asistencia: 'Asistencia en viaje',
+  servicios: 'Más servicios',
+  'mis-viajes': 'Administrar tus viajes',
+  'check-in': 'Check-in',
+  ayuda: 'Centro de ayuda',
+  'estado-de-vuelo': 'Estado de vuelo',
+  'canje-millas': 'Canje de millas',
+  upgrade: 'Upgrade',
+  experiencia: 'Experiencia LATAM',
+  'prepara-tu-viaje': 'Prepara tu viaje',
+  'acerca-de': 'Acerca de LATAM',
+  wallet: 'LATAM Wallet',
+  prensa: 'Sala de prensa',
+  sostenibilidad: 'Sostenibilidad',
+  corporate: 'LATAM Corporate',
+  empleos: 'Trabaja con nosotros',
+  inversionistas: 'Relación con inversionistas',
+  'tarjeta-latam-pass': 'Tarjeta LATAM Pass',
+};
+
+const slug = Astro.params.slug || '';
+const last = slug.split('/').filter(Boolean).pop() || '';
+const title = titles[last] || last.replace(/-/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase()) || 'LATAM';
+---
+
+<InnerLayout title={title} heading={title}>
+  <p>
+    Esta sección replica la navegación de LATAM Colombia. Desde aquí puedes volver al
+    <a class="link-blue" href="/reservar">buscador</a> para cotizar vuelos, paquetes, hoteles y más.
+  </p>
+</InnerLayout>

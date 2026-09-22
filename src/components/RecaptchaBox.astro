@@ -1,0 +1,82 @@
+---
+interface Props {
+  name?: string;
+}
+const { name = "captcha" } = Astro.props;
+---
+
+<label class="recaptcha-box cursor-pointer">
+  <span class="flex items-center gap-3 text-[#222] text-sm">
+    <span class="recaptcha-check">
+      <input type="checkbox" name={name} class="js-captcha" />
+      <span class="recaptcha-spin" hidden></span>
+    </span>
+    <span data-i18n='{"es":"No soy un robot","en":"I\'m not a robot"}'>No soy un robot</span>
+  </span>
+  <span class="flex flex-col items-center text-[10px] text-[#555]">
+    <svg width="32" height="32" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r="30" fill="#1a73e8"></circle>
+      <path d="M20 32l8 8 16-18" fill="none" stroke="#fff" stroke-width="4"></path>
+    </svg>
+    reCAPTCHA
+  </span>
+</label>
+
+<style>
+  .recaptcha-check {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .recaptcha-check.is-loading input {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .recaptcha-spin {
+    position: absolute;
+    inset: 1px;
+    border: 2px solid #d3d3d3;
+    border-top-color: #1a73e8;
+    border-radius: 50%;
+    animation: recaptcha-rotate 0.7s linear infinite;
+  }
+
+  @keyframes recaptcha-rotate {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll(".recaptcha-box").forEach((box) => {
+    const wrap = box.querySelector(".recaptcha-check") as HTMLElement | null;
+    const input = box.querySelector(".js-captcha") as HTMLInputElement | null;
+    const spin = box.querySelector(".recaptcha-spin") as HTMLElement | null;
+    if (!wrap || !input || !spin || input.dataset.spinBound) return;
+    input.dataset.spinBound = "1";
+    input.addEventListener("click", () => {
+      if (!input.checked) {
+        wrap.classList.remove("is-loading");
+        spin.hidden = true;
+        return;
+      }
+      input.checked = false;
+      wrap.classList.add("is-loading");
+      spin.hidden = false;
+      window.setTimeout(() => {
+        wrap.classList.remove("is-loading");
+        spin.hidden = true;
+        input.checked = true;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }, 1100);
+    });
+  });
+</script>

@@ -1,0 +1,442 @@
+---
+import SolicitudStepper from "./SolicitudStepper.astro";
+import PasarelaScreens from "../checkout/PasarelaScreens.astro";
+import {
+  cylinderOptions,
+  departmentOptions,
+  donationPercents,
+  durationOptions,
+  estratoOptions,
+  fuelOptions,
+  localityOptions,
+  modelOptions,
+  municipalityCatalog,
+  municipalityOptions,
+  propertyTypes,
+  pseBanks,
+  valuationOptions,
+} from "../../data/picoMock";
+---
+
+<div id="solicitudOverlay" class="solicitud-overlay fixed inset-0 z-[80] hidden items-center justify-center p-3">
+  <div class="solicitud-dialog bg-white rounded shadow-2xl mx-auto" role="dialog" aria-modal="true" aria-labelledby="solicitudTitle">
+    <header class="flex items-center justify-between px-6 py-4 border-b border-[#e6e6e6] shrink-0">
+      <h2 id="solicitudTitle" class="text-dark-green text-xl md:text-2xl font-semibold">Iniciar Solicitud</h2>
+      <button type="button" id="closeWizard" class="text-2xl leading-none text-gray px-2" aria-label="Cerrar">&times;</button>
+    </header>
+
+    <div class="px-4 md:px-8 pt-6 pb-4 shrink-0">
+      <SolicitudStepper />
+    </div>
+
+    <p id="wizardBanner" class="hidden mx-6 mb-2 rounded px-4 py-2 text-sm shrink-0"></p>
+
+    <div class="solicitud-dialog-body px-4 md:px-8 py-2">
+      <section data-panel="0" class="wizard-panel">
+        <h3 class="text-dark-green text-lg font-semibold mb-4">Datos básicos de la persona</h3>
+        <div class="flex flex-wrap gap-6 mb-6">
+          <label class="flex items-center gap-2 text-dark-green">
+            <input type="radio" name="tipoPersona" value="natural" checked />
+            Persona natural
+          </label>
+          <label class="flex items-center gap-2 text-dark-green">
+            <input type="radio" name="tipoPersona" value="juridica" />
+            Persona jurídica
+          </label>
+        </div>
+
+        <div id="naturalFields">
+          <div class="grid md:grid-cols-2 gap-4">
+            <label class="mat-field">
+              <input id="primerNombre" name="pyps-primer-nombre" maxlength="50" autocomplete="off" data-lpignore="true" data-1p-ignore="true" />
+              <span>Primer nombre *</span>
+            </label>
+            <label class="mat-field">
+              <input id="segundoNombre" name="pyps-segundo-nombre" maxlength="50" autocomplete="off" data-lpignore="true" data-1p-ignore="true" />
+              <span>Segundo nombre</span>
+            </label>
+            <label class="mat-field">
+              <input id="primerApellido" name="pyps-primer-apellido" maxlength="50" autocomplete="off" data-lpignore="true" data-1p-ignore="true" />
+              <span>Primer apellido *</span>
+            </label>
+            <label class="mat-field">
+              <input id="segundoApellido" name="pyps-segundo-apellido" maxlength="50" autocomplete="off" data-lpignore="true" data-1p-ignore="true" />
+              <span>Segundo apellido</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="juridicaFields" class="hidden">
+          <div class="grid md:grid-cols-2 gap-4">
+            <label class="mat-field">
+              <input id="razonSocial" maxlength="120" />
+              <span>Razón social *</span>
+            </label>
+            <label class="mat-field">
+              <input id="nit" maxlength="20" />
+              <span>NIT *</span>
+            </label>
+            <label class="mat-field">
+              <input id="digitoVerificacion" maxlength="1" />
+              <span>Dígito de verificación *</span>
+            </label>
+            <label class="mat-field">
+              <input id="actividadEconomica" maxlength="80" />
+              <span>Actividad económica</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <label class="mat-field">
+            <input id="correoPrimario" type="email" />
+            <span>Correo electrónico primario *</span>
+          </label>
+          <label class="mat-field">
+            <input id="correoSecundario" type="email" />
+            <span>Correo electrónico secundario</span>
+          </label>
+          <label class="mat-field">
+            <input id="telefono" maxlength="15" />
+            <span>Teléfono o celular *</span>
+          </label>
+          <label class="mat-field">
+            <select id="estrato">
+              <option value=""></option>
+              {estratoOptions.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Estrato *</span>
+          </label>
+          <label class="mat-field">
+            <select id="departamentoResidencia">
+              <option value=""></option>
+              {departmentOptions.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Departamento de residencia *</span>
+          </label>
+          <label class="mat-field">
+            <select id="municipioResidencia">
+              <option value=""></option>
+              {municipalityCatalog.map((item) => (
+                <option value={item.id} data-department={item.department}>{item.es}</option>
+              ))}
+            </select>
+            <span>Municipio de residencia *</span>
+          </label>
+          <label class="mat-field" id="localidadWrap">
+            <select id="localidadResidencia">
+              <option value=""></option>
+              {localityOptions.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Localidad de residencia</span>
+          </label>
+          <label class="mat-field">
+            <input id="direccionResidencia" />
+            <span>Dirección de residencia *</span>
+          </label>
+          <label class="mat-field">
+            <select id="tipoPropiedad">
+              <option value=""></option>
+              {propertyTypes.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Tipo de propiedad *</span>
+          </label>
+        </div>
+
+        <label class="flex items-center gap-2 mt-4 text-sm text-dark-green">
+          <input type="checkbox" id="copiarCorrespondencia" />
+          Copiar dirección de correspondencia
+        </label>
+
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <label class="mat-field">
+            <select id="departamentoCorrespondencia">
+              <option value=""></option>
+              {departmentOptions.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Departamento de correspondencia *</span>
+          </label>
+          <label class="mat-field">
+            <select id="municipioCorrespondencia">
+              <option value=""></option>
+              {municipalityCatalog.map((item) => (
+                <option value={item.id} data-department={item.department}>{item.es}</option>
+              ))}
+            </select>
+            <span>Municipio de correspondencia *</span>
+          </label>
+          <label class="mat-field md:col-span-2">
+            <input id="direccionCorrespondencia" />
+            <span>Dirección de correspondencia *</span>
+          </label>
+        </div>
+
+        <label class="flex items-start gap-3 mt-6 text-sm text-dark-green">
+          <input type="checkbox" id="terminos" class="mt-1" />
+          <span>Al marcar esta casilla te comprometes a cumplir con los Términos y Condiciones de la presente medida, declarando el entendimiento y deberes que esto implica. <a href="/docs/paso-persona-natural.pdf" target="_blank" class="underline font-semibold">Ver Términos y condiciones de uso de la plataforma de Pico y Placa Solidario.</a></span>
+        </label>
+      </section>
+
+      <section data-panel="1" class="wizard-panel hidden">
+        <h3 class="text-dark-green text-lg font-semibold mb-4">Datos de la solicitud</h3>
+        <div class="grid md:grid-cols-2 gap-4">
+          <label class="mat-field">
+            <input id="placa" class="uppercase" maxlength="6" />
+            <span>Placa *</span>
+          </label>
+          <label class="mat-field">
+            <input id="confirmarPlaca" class="uppercase" maxlength="6" />
+            <span>Confirmar placa *</span>
+          </label>
+          <label class="mat-field">
+            <select id="duracionPermiso">
+              <option value=""></option>
+              {durationOptions.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Duración permiso *</span>
+          </label>
+          <label class="mat-field">
+            <input id="fechaInicio" type="date" />
+            <span>Fecha de inicio *</span>
+          </label>
+        </div>
+        <div id="runtCard" class="hidden mt-4 border border-dark-green rounded p-4 text-sm text-dark-green"></div>
+
+        <div id="manualVehicle" class="grid md:grid-cols-2 gap-4 mt-4">
+          <label class="mat-field">
+            <select id="cylinder">
+              <option value=""></option>
+              {cylinderOptions.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Tipo de cilindraje *</span>
+          </label>
+          <label class="mat-field">
+            <select id="fuel">
+              <option value=""></option>
+              {fuelOptions.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Tipo de combustible *</span>
+          </label>
+          <label class="mat-field">
+            <select id="model">
+              <option value=""></option>
+              {modelOptions.map((item) => (
+                <option value={item.id} data-cylinders={item.cylinders.join(",")}>{item.es}</option>
+              ))}
+            </select>
+            <span>Modelo *</span>
+          </label>
+          <label class="mat-field">
+            <select id="valuation">
+              <option value=""></option>
+              {valuationOptions.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Avalúo *</span>
+          </label>
+          <label class="mat-field">
+            <select id="municipality">
+              <option value=""></option>
+              {municipalityOptions.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Municipio de matrícula *</span>
+          </label>
+        </div>
+
+        <div class="mt-6">
+          <button type="button" id="agregarPlaca" class="btn-primary-dark">Agregar placa</button>
+        </div>
+
+        <div id="placasRegistro">
+          <h4 class="text-dark-green font-semibold mt-8 mb-3">Registro de placas</h4>
+          <div class="overflow-x-auto border border-[#e6e6e6] rounded">
+            <table class="pyps-table" id="placasTable">
+            <thead>
+              <tr>
+                <th>Placa</th>
+                <th>Duración</th>
+                <th>Fecha Inicio</th>
+                <th>Fecha Fin</th>
+                <th>Valor</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          </div>
+        </div>
+      </section>
+
+      <section data-panel="2" class="wizard-panel hidden">
+        <h3 class="text-dark-green text-lg font-semibold mb-4">Confirmación</h3>
+        <div class="overflow-x-auto border border-[#e6e6e6] rounded">
+          <table class="pyps-table" id="confirmTable">
+            <thead>
+              <tr>
+                <th>Placa</th>
+                <th>Valor</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <p class="text-right text-dark-green text-xl font-bold mt-4">Total a pagar: <span id="totalPagar">$ 0</span></p>
+
+        <div id="detalleCobro" class="hidden mt-4 bg-[#f7f7f7] rounded p-4 text-sm text-dark-green"></div>
+
+        <h4 class="text-dark-green font-semibold mt-8 mb-3">¿Desea realizar el aporte de compensación social voluntaria?</h4>
+        <div class="flex gap-3 mb-4">
+          <button type="button" id="donacionSi" class="btn-outline-dark">Si</button>
+          <button type="button" id="donacionNo" class="btn-primary-dark">No</button>
+        </div>
+        <div id="donacionBox" class="hidden grid md:grid-cols-2 gap-4 mb-6">
+          <label class="mat-field">
+            <select id="donacionPct">
+              {donationPercents.map((item) => <option value={item.id}>{item.es}</option>)}
+            </select>
+            <span>Seleccione el porcentaje que desea donar</span>
+          </label>
+          <label class="mat-field">
+            <input id="donacionMonto" readonly />
+            <span>Monto a Donar</span>
+          </label>
+        </div>
+
+        <h4 class="text-dark-green font-semibold mb-3">Escoge una opcion de pago</h4>
+        <div class="grid md:grid-cols-3 gap-3 mb-5">
+          <div class="flex flex-col gap-3">
+            <label class="payment-choice">
+              <span class="flex items-center gap-2 font-semibold">
+                <input type="radio" name="metodoPago" value="pse" />
+                PSE
+              </span>
+              <small>Débito a cuenta bancaria</small>
+            </label>
+            <div id="pseBankBox" class="hidden">
+              <label class="mat-field">
+                <select id="banco">
+                  <option value=""></option>
+                  {pseBanks.map((item) => <option value={item.id}>{item.es}</option>)}
+                </select>
+                <span>Seleccione el banco con el que desea pagar *</span>
+              </label>
+            </div>
+          </div>
+          <label class="payment-choice">
+            <span class="flex items-center gap-2 font-semibold">
+              <input type="radio" name="metodoPago" value="credito" />
+              Tarjeta de crédito
+            </span>
+            <small>Visa, Mastercard, American Express, Diners Club</small>
+          </label>
+          <label class="payment-choice">
+            <span class="flex items-center gap-2 font-semibold">
+              <input type="radio" name="metodoPago" value="debito" />
+              Tarjeta de débito
+            </span>
+            <small>Visa débito, Mastercard débito, Diners Club</small>
+          </label>
+        </div>
+        <div id="pseUnavailable" class="hidden mt-4 rounded px-4 py-3 text-sm text-dark-green bg-[#fff8e6] border border-[#d4b45a]" role="alert">
+          <strong class="block mb-1">Servicio no disponible</strong>
+          El pago a través de PSE no se encuentra habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar con tu solicitud.
+        </div>
+        <p id="cardHint" class="hidden text-sm text-dark-green">Al continuar se abrirá el formulario de tarjeta.</p>
+      </section>
+    </div>
+
+    <div class="solicitud-dialog-footer flex flex-wrap justify-end gap-3 px-4 md:px-8 py-4">
+      <button type="button" id="btnCancelar" class="btn-outline-dark">Cancelar</button>
+      <button type="button" id="btnAtras" class="btn-outline-dark hidden">Anterior</button>
+      <button type="button" id="btnSiguiente" class="btn-primary-dark">Siguiente</button>
+      <button type="button" id="btnIrPagar" class="btn-primary-dark hidden">Ir a pagar</button>
+    </div>
+  </div>
+</div>
+
+<div id="pagoOverlay" class="solicitud-overlay fixed inset-0 z-[90] hidden items-start justify-center overflow-y-auto py-5 px-3">
+  <div class="solicitud-dialog bg-white rounded shadow-2xl mx-auto my-4">
+    <header class="flex items-center justify-between px-6 py-4 border-b border-[#e6e6e6] shrink-0">
+      <h2 id="pagoTitulo" class="text-dark-green text-xl md:text-2xl font-semibold">Datos de pago PSE</h2>
+      <button type="button" id="closePago" class="text-2xl leading-none text-gray px-2" aria-label="Cerrar">&times;</button>
+    </header>
+    <div class="solicitud-dialog-body px-4 md:px-8 py-6">
+      <div class="grid md:grid-cols-2 gap-4 text-sm text-dark-green" id="pagoDatos"></div>
+    </div>
+    <div class="solicitud-dialog-footer flex flex-wrap justify-end gap-3 px-4 md:px-8 py-4">
+      <button type="button" id="btnVolverConfirmacion" class="btn-outline-dark">Cancelar</button>
+      <button type="button" id="btnPagarPse" class="btn-primary-dark">Pagar con PSE</button>
+    </div>
+  </div>
+</div>
+
+<div id="pseOverlay" class="solicitud-overlay fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto py-5 px-3">
+  <div class="w-full max-w-xl rounded shadow-2xl overflow-hidden">
+    <div class="pse-platform text-white px-6 py-5 flex items-center justify-between">
+      <div>
+        <p class="text-xs uppercase tracking-[0.3em]">Plataforma de pago</p>
+        <h2 class="text-2xl font-bold">PSE</h2>
+      </div>
+      <p class="text-light-green text-sm font-semibold">Pico y Placa Solidario</p>
+    </div>
+    <div class="bg-white px-6 py-6">
+      <div id="pseResumen" class="space-y-2 text-sm text-dark-green"></div>
+      <div class="flex flex-wrap justify-end gap-3 mt-6">
+        <button type="button" id="btnSalirPse" class="btn-outline-dark">Volver</button>
+        <button type="button" id="btnConfirmarPse" class="btn-primary-dark">Continuar al banco</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="cardOverlay" class="solicitud-overlay fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto py-5 px-3">
+  <div class="w-full max-w-lg rounded shadow-2xl overflow-hidden">
+    <div class="card-platform text-white px-6 py-5 flex items-center justify-between">
+      <div>
+        <p class="text-xs uppercase tracking-[0.3em]">Datos de pago PAYZEN</p>
+        <h2 id="cardOverlayTitle" class="text-2xl font-bold">Tarjeta de crédito</h2>
+      </div>
+      <p class="text-sm font-semibold text-[#9ec5ff]">Pico y Placa Solidario</p>
+    </div>
+    <form id="cardForm" class="bg-white px-6 py-6" autocomplete="off">
+      <p class="text-dark-green font-bold mb-4">Valor a pagar: <span id="cardTotal"></span></p>
+      <p id="cardBrand" class="text-sm text-gray mb-4">Visa · Mastercard · American Express · Diners Club</p>
+      <div class="grid gap-4">
+        <label class="mat-field">
+          <input id="cardTitular" name="pyps-card-titular" maxlength="80" autocomplete="off" autocapitalize="characters" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
+          <span>Nombre del titular *</span>
+        </label>
+        <label class="mat-field">
+          <input id="cardNumero" inputmode="numeric" maxlength="23" />
+          <span>Número de tarjeta *</span>
+        </label>
+        <div class="grid grid-cols-2 gap-4">
+          <label class="mat-field">
+            <input id="cardVence" inputmode="numeric" maxlength="5" placeholder="MM/AA" />
+            <span>Vencimiento *</span>
+          </label>
+          <label class="mat-field">
+            <input id="cardCvv" inputmode="numeric" maxlength="4" />
+            <span>CVV *</span>
+          </label>
+        </div>
+        <label id="cardCuotasWrap" class="mat-field">
+          <select id="cardCuotas">
+            <option value="1">1 cuota</option>
+            <option value="3">3 cuotas</option>
+            <option value="6">6 cuotas</option>
+            <option value="12">12 cuotas</option>
+          </select>
+          <span>Número de cuotas</span>
+        </label>
+      </div>
+      <p id="cardError" class="hidden mt-4 text-sm text-color-error"></p>
+      <div class="flex flex-wrap justify-end gap-3 mt-6">
+        <button type="button" id="btnSalirCard" class="btn-outline-dark">Volver</button>
+        <button type="submit" id="btnPagarTarjeta" class="btn-primary-dark">Pagar con tarjeta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<PasarelaScreens />

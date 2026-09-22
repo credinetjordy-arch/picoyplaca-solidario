@@ -1,0 +1,112 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  description?: string;
+  bodyClass?: string;
+}
+
+const {
+  title = 'Cotiza Vuelos, Paquetes, Hoteles y Carros | LATAM en Colombia',
+  description = 'Cotiza y compra vuelos, paquetes, hoteles y autos con LATAM Airlines Colombia.',
+  bodyClass = '',
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="es-CO">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/icons/favicon.svg" />
+    <link rel="shortcut icon" href="/icons/favicon.svg" />
+    <title>{title}</title>
+  </head>
+  <body class={bodyClass}>
+    <slot />
+    <script>
+      const DEBUG_SESSION_KEY = 'latam-debug-session-id';
+      const DEBUG_VISITED_KEY = 'latam-debug-visited-pages';
+      const PAGE_CODES = {
+        '/': 'P1',
+        '/reservar': 'P1',
+        '/buscar': 'P2',
+        '/ofertas-vuelos': 'P2',
+        '/resumen-viaje': 'P3',
+        '/pasajeros': 'P4',
+        '/datos-pasajero': 'P4',
+        '/seleccion-asientos': 'P4',
+        '/tienda': 'P4',
+        '/pagos': 'P-PAYMENT',
+        '/success': 'P-SUCCESS',
+        '/login': 'P1',
+      };
+
+      const PAGE_STEPS = {
+        '/': 'Buscador de vuelos',
+        '/reservar': 'Buscador de vuelos',
+        '/buscar': 'Búsqueda de vuelos',
+        '/ofertas-vuelos': 'Eligiendo vuelos',
+        '/resumen-viaje': 'Resumen del viaje',
+        '/pasajeros': 'Datos de pasajeros',
+        '/datos-pasajero': 'Datos de pasajeros',
+        '/seleccion-asientos': 'Selección de asientos',
+        '/tienda': 'Tienda / equipaje',
+        '/pagos': 'Página de pago',
+        '/success': 'Compra confirmada',
+        '/login': 'Inicio de sesión',
+      };
+
+      function debugSessionId() {
+        let sessionId = sessionStorage.getItem(DEBUG_SESSION_KEY);
+        if (!sessionId) {
+          sessionId = crypto.randomUUID();
+          sessionStorage.setItem(DEBUG_SESSION_KEY, sessionId);
+        }
+        return sessionId;
+      }
+
+      function debugPageCode(pathname) {
+        const clean = pathname.replace(/\/+$/, '') || '/';
+        return PAGE_CODES[clean] || 'P1';
+      }
+
+      function debugStepName(pathname) {
+        const clean = pathname.replace(/\/+$/, '') || '/';
+        return PAGE_STEPS[clean] || `Navegó a ${clean}`;
+      }
+
+      async function sendDebugPageView() {
+        const path = window.location.pathname.replace(/\/+$/, '') || '/';
+        if (path === '/success') return;
+        const event = debugPageCode(path);
+        const visited = JSON.parse(sessionStorage.getItem(DEBUG_VISITED_KEY) || '[]');
+        const key = `${event}:${path}${window.location.search}`;
+        if (visited.includes(key)) return;
+        sessionStorage.setItem(DEBUG_VISITED_KEY, JSON.stringify([...visited, key]));
+        try {
+          await fetch('/api/debug', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event,
+              sessionId: debugSessionId(),
+              route: `${path}${window.location.search}`,
+              meta: {
+                step: debugStepName(path),
+                path,
+                search: window.location.search,
+              },
+            }),
+          });
+        } catch {
+          /* Debug telemetry is best-effort. */
+        }
+      }
+
+      sendDebugPageView();
+    </script>
+  </body>
+</html>

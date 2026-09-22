@@ -1,0 +1,209 @@
+---
+const PORCENTAJE_DESCUENTO = 0;
+---
+
+<section class="trip-summary-board">
+  <p class="checkout-lead hidden" id="trip-summary-error" hidden></p>
+
+  <header class="trip-summary-title">
+    <h1>Resumen de tu viaje</h1>
+    <span class="trip-summary-title__badge" id="trip-summary-badge">Ida y vuelta</span>
+  </header>
+
+  <div id="trip-summary-content" aria-live="polite"></div>
+</section>
+
+<script define:vars={{ PORCENTAJE_DESCUENTO }}>
+  const STORAGE_KEY = 'latam-checkout-selection';
+  const contentRoot = document.getElementById('trip-summary-content');
+  const errorBox = document.getElementById('trip-summary-error');
+  const badgeEl = document.getElementById('trip-summary-badge');
+  const DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+  const discountPct = Number(PORCENTAJE_DESCUENTO) || 0;
+
+  function showError(message) {
+    if (!errorBox) return;
+    errorBox.textContent = message;
+    errorBox.classList.toggle('hidden', !message);
+    if (message) errorBox.removeAttribute('hidden');
+    else errorBox.setAttribute('hidden', '');
+  }
+
+  function money(value) {
+    return `COP ${Math.round(Number(value) || 0).toLocaleString('es-CO')}`;
+  }
+
+  function ticketAfterDiscount(original) {
+    const base = Number(original) || 0;
+    if (!(discountPct > 0)) return Math.round(base * 100) / 100;
+    return Math.round(base * (1 - Math.min(100, discountPct) / 100) * 100) / 100;
+  }
+
+  function ticketMoney(original) {
+    const before = Number(original) || 0;
+    if (!(discountPct > 0)) return money(before);
+    return `<span class="ticket-price"><span class="ticket-price__was">${money(before)}</span><span class="ticket-price__now">${money(ticketAfterDiscount(before))}</span></span>`;
+  }
+
+  function readSelection() {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function formatCardDate(iso) {
+    if (!iso) return '';
+    const d = new Date(`${iso}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return iso;
+    return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  }
+
+  function fareTone(fareId, fareName) {
+    const key = String(fareId || fareName || '').toLowerCase();
+    if (key.includes('full')) return 'full';
+    if (key.includes('light')) return 'light';
+    if (key.includes('basic')) return 'basic';
+    if (key.includes('premium') || key === 'pe') return 'pe';
+    return 'light';
+  }
+
+  function isNonRefundable(fareId, fareName) {
+    const tone = fareTone(fareId, fareName);
+    return tone === 'basic' || tone === 'light';
+  }
+
+  function operatorName(flight) {
+    const raw = flight?.operators || [];
+    if (raw.length) {
+      const first = typeof raw[0] === 'string' ? raw[0] : raw[0].name;
+      if (first) return first;
+    }
+    return flight?.airline || 'LATAM Airlines Colombia';
+  }
+
+  function checkIcon() {
+    return `<span class="trip-summary-check" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" width="12" height="12"><path fill="currentColor" d="M12.57 21.62 4.38 13.22 2 15.72 12.57 26.38 30 8.75 27.53 6.37 12.57 21.62Z"/></svg></span>`;
+  }
+
+  function externalIcon() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 32" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M18 6h8v8h-2V9.4L16.6 16.8l-1.4-1.4L22.6 8H18V6ZM8 8h8v2H10v12h12v-6h2v8H8V8Z"/></svg>`;
+  }
+
+  function splitPrice(total) {
+    const taxes = Math.round(total * 0.2768 * 100) / 100;
+    const flights = Math.round((total - taxes) * 100) / 100;
+    return { flights, taxes, total };
+  }
+
+  function offersHref(selection) {
+    const qs = selection.search?.startsWith('?') ? selection.search : `?${selection.search || ''}`;
+    return `/ofertas-vuelos${qs}`;
+  }
+
+  function seatsHref(selection) {
+    const qs = selection.search?.startsWith('?') ? selection.search : `?${selection.search || ''}`;
+    return `/seleccion-asientos${qs}`;
+  }
+
+  function legBlock(fromCity, toCity, dateIso, leg, fromCode, toCode, offersUrl) {
+    if (!leg?.flight) return '';
+    const next = leg.flight.arriveNextDay ? '<sup class="checkout-leg__next">+1</sup>' : '';
+    const tone = fareTone(leg.fareId, leg.fareName);
+    const ribbon = isNonRefundable(leg.fareId, leg.fareName)
+      ? '<span class="trip-summary-ribbon">Tarifa sin reembolso</span>'
+      : '';
+    const stops = /directo/i.test(leg.flight.stops || '') || !leg.flight.stopCount ? 'Directo' : (leg.flight.stops || 'Directo');
+
+    return `
+      <section class="trip-summary-block">
+        <h2 class="trip-summary-block__title">
+          ${checkIcon()}
+          <span>${fromCity} a ${toCity} ${formatCardDate(dateIso)}</span>
+        </h2>
+        <article class="trip-summary-card">
+          ${ribbon}
+          <div class="trip-summary-card__grid">
+            <div class="trip-summary-card__flight">
+              <div class="trip-summary-card__times">
+                <p class="trip-summary-card__clock"><span>${leg.flight.depart}</span> ${fromCode}</p>
+                <div class="trip-summary-card__path">
+                  <span>${stops}</span>
+                  <i></i>
+                  <span>${leg.flight.duration}</span>
+                </div>
+                <p class="trip-summary-card__clock trip-summary-card__clock--in"><span>${leg.flight.arrive}${next}</span> ${toCode}</p>
+              </div>
+              <p class="trip-summary-card__op">
+                Operado por
+                <img src="/images/latam-symbol.svg" alt="" width="8" height="13">
+                ${operatorName(leg.flight)}
+              </p>
+              <a class="trip-summary-card__conds" href="https://www.latamairlines.com/ec/es/experiencia-de-viaje/equipaje" target="_blank" rel="noopener noreferrer">
+                Revisa las condiciones
+                ${externalIcon()}
+              </a>
+            </div>
+            <div class="trip-summary-card__fare">
+              <span class="trip-summary-fare trip-summary-fare--${tone}">${leg.fareName || 'Tarifa'}</span>
+              <p>Precio por pasajero <strong>${ticketMoney(leg.price)}</strong></p>
+            </div>
+            <div class="trip-summary-card__change">
+              <a href="${offersUrl}">Cambiar tu selección</a>
+            </div>
+          </div>
+        </article>
+      </section>
+    `;
+  }
+
+  function render(selection) {
+    const trip = selection.trip === 'oneway' ? 'Solo ida' : 'Ida y vuelta';
+    if (badgeEl) badgeEl.textContent = trip;
+
+    const perPersonBefore =
+      Number(selection.outbound?.price || 0) + Number(selection.inbound?.price || 0);
+    const partsBefore = splitPrice(perPersonBefore);
+    const offersUrl = offersHref(selection);
+    const nextUrl = seatsHref(selection);
+
+    contentRoot.innerHTML = `
+      ${legBlock(selection.from.city, selection.to.city, selection.depart, selection.outbound, selection.from.code, selection.to.code, offersUrl)}
+      ${selection.trip === 'roundtrip' && selection.inbound
+        ? legBlock(selection.to.city, selection.from.city, selection.returnDate, selection.inbound, selection.to.code, selection.from.code, offersUrl)
+        : ''}
+      <section class="trip-summary-price">
+        <div class="trip-summary-price__row">
+          <span>Vuelos</span>
+          <strong>${ticketMoney(partsBefore.flights)}</strong>
+        </div>
+        <div class="trip-summary-price__row">
+          <span>Tasas, cargos e impuestos</span>
+          <strong>${ticketMoney(partsBefore.taxes)}</strong>
+        </div>
+        <div class="trip-summary-price__total">
+          <div>
+            <p>Subtotal</p>
+            <p class="trip-summary-price__hint">Por persona. Incluye tasas, cargos e impuestos.</p>
+            <p class="trip-summary-price__note">Los precios podrían variar según disponibilidad de la tarifa al momento de comprar. El precio se confirmará al llegar al paso de pago.</p>
+          </div>
+          <strong>${ticketMoney(partsBefore.total)}</strong>
+        </div>
+      </section>
+      <div class="trip-summary-cta">
+        <a class="checkout-continue" href="${nextUrl}">Ir a asientos</a>
+        <p>Protegido por reCAPTCHA.</p>
+      </div>
+    `;
+  }
+
+  const selection = readSelection();
+  if (!selection?.outbound) {
+    showError('No encontramos tu selección de vuelos. Realiza una búsqueda y elige tus tarifas nuevamente.');
+  } else {
+    render(selection);
+  }
+</script>

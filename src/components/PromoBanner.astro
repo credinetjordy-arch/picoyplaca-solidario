@@ -1,0 +1,34 @@
+---
+interface Props {
+  badge: string;
+  title: string;
+  text: string;
+  cta: string;
+  href: string;
+  image: string;
+}
+const { badge, title, text, cta, href, image } = Astro.props;
+---
+
+<section class="promo">
+  <div class="container-latam">
+    <article class="promo-card">
+      <div class="promo-card__copy">
+        <div class="promo-card__text">
+          <span class="badge-cyber">{badge}</span>
+          <h1>{title}</h1>
+          <p>{text}</p>
+        </div>
+        <a class="link-blue" href="#compra" data-open-search>
+          {cta}
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 32 32" fill="none">
+            <path d="M29.334 2.375v11.2h-2.667V7.107L13.84 20.575l-1.84-1.932L24.827 5.175H18.667v-2.8h10.667ZM13.334 2.375v2.8H5.334v22.4h21.333v-8.4h2.667v11.2H2.667V2.375h10.667Z" fill="currentColor"></path>
+          </svg>
+        </a>
+      </div>
+      <div class="promo-card__media">
+        <img src={image} alt="Vuelos baratos LATAM Airlines Colombia" />
+      </div>
+    </article>
+  </div>
+</section>

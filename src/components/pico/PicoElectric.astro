@@ -1,0 +1,76 @@
+<img class="pico-break" src="/pico/descanso.jpg" alt="descanso visual" />
+
+<section class="pico-electric">
+  <div class="pico-electric__left">
+    <h2>Vehículos<br />Eléctricos<br />o Híbridos</h2>
+  </div>
+  <span class="pico-electric__line" aria-hidden="true"></span>
+  <div class="pico-electric__right">
+    <p>
+      Otra forma de contribuir a la calidad del aire y el medio ambiente de Bogotá es movilizarse en un vehículo eléctrico o híbrido. Para la circulación de estos vehículos no se requieren contribuciones económicas por Pico y Placa Solidario, ya que no tienen restricción de circulación después de realizado el trámite de exención. Si posees un vehículo híbrido, esto corresponderá a la trata de hojas anteriores fijada por la ciudad para el 2026, donde cada vehículo nuevo matriculado en Bogotá debe ser ...
+    </p>
+    <a class="pico-electric__btn" href="/Simulador">Ver Exceptuados</a>
+  </div>
+</section>
+
+<style>
+  .pico-break {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .pico-electric {
+    display: grid;
+    grid-template-columns: 1fr 4px 1.2fr;
+    gap: 40px;
+    align-items: center;
+    background: #000;
+    color: #00271c;
+    padding: 56px 8%;
+  }
+
+  .pico-electric h2 {
+    margin: 0;
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1.05;
+    color: #00271c;
+  }
+
+  .pico-electric__line {
+    width: 4px;
+    height: 180px;
+    background: #88f456;
+    justify-self: center;
+  }
+
+  .pico-electric p {
+    margin: 0 0 24px;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .pico-electric__btn {
+    display: inline-block;
+    padding: 4px 24px;
+    border: 2px solid #00271c;
+    border-radius: 9999px;
+    background: #fff;
+    color: #00271c;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  @media (max-width: 800px) {
+    .pico-electric {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+
+    .pico-electric__line {
+      width: 80px;
+      height: 4px;
+    }
+  }
+</style>

@@ -1,0 +1,48 @@
+---
+interface Props {
+  title: string;
+  items: string[];
+  loginHref: string;
+}
+const { title, items, loginHref } = Astro.props;
+---
+
+<aside class="invite-card hidden" id="login-invite" hidden>
+  <button class="invite-card__close" type="button" id="close-invite" aria-label="Cerrar invitación a iniciar sesión.">×</button>
+  <h2>{title}</h2>
+  <ul>
+    {items.map((item) => <li>{item}</li>)}
+  </ul>
+  <div class="invite-card__actions">
+    <a class="btn-outline" href="/login" style="width:auto;margin:0">Crear cuenta</a>
+    <a class="btn-primary" href={loginHref} style="width:auto">Iniciar sesión</a>
+  </div>
+</aside>
+<script>
+  const KEY = '_xp_show_login_incentive';
+  const invite = document.getElementById('login-invite');
+
+  function readCookie(name) {
+    const match = document.cookie.split(';').map((s) => s.trim()).find((s) => s.startsWith(name + '='));
+    return match ? decodeURIComponent(match.split('=').slice(1).join('=')) : null;
+  }
+
+  function dismissInvite() {
+    try { localStorage.setItem(KEY, 'false'); } catch {}
+    document.cookie = `${KEY}=false; path=/; max-age=31536000; SameSite=Lax`;
+    invite?.classList.add('hidden');
+    invite?.setAttribute('hidden', '');
+  }
+
+  const alreadyDismissed = (() => {
+    try { if (localStorage.getItem(KEY) === 'false') return true; } catch {}
+    return readCookie(KEY) === 'false';
+  })();
+
+  if (!alreadyDismissed && invite) {
+    invite.classList.remove('hidden');
+    invite.removeAttribute('hidden');
+  }
+
+  document.getElementById('close-invite')?.addEventListener('click', dismissInvite);
+</script>

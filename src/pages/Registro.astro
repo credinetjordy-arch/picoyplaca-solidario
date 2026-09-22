@@ -1,0 +1,93 @@
+---
+import PicoLayout from "../layouts/PicoLayout.astro";
+import RecaptchaBox from "../components/RecaptchaBox.astro";
+import SolicitudWizard from "../components/registro/SolicitudWizard.astro";
+import { documentTypes } from "../data/picoMock";
+import { translations } from "../data/picoI18n";
+
+const es = translations.es.registro;
+const en = translations.en.registro;
+---
+
+<PicoLayout current="Registro">
+  <section class="page-shell pt-16 pb-24">
+    <div class="max-w-5xl mx-auto px-6">
+      <h1 class="text-dark-green text-4xl md:text-5xl font-medium mb-6" data-i18n={JSON.stringify({ es: es.title, en: en.title })}>{es.title}</h1>
+      <p class="text-dark-green mb-4" data-i18n={JSON.stringify({ es: es.intro, en: en.intro })}>{es.intro}</p>
+      <p class="text-dark-green mb-4" data-i18n={JSON.stringify({ es: es.intro2, en: en.intro2 })}>{es.intro2}</p>
+      <ul class="list-disc pl-6 text-dark-green mb-8 space-y-2">
+        <li data-i18n={JSON.stringify({ es: es.naturalBullet, en: en.naturalBullet })}>{es.naturalBullet}</li>
+        <li data-i18n={JSON.stringify({ es: es.legalBullet, en: en.legalBullet })}>{es.legalBullet}</li>
+      </ul>
+
+      <form id="regForm" class="bg-white rounded-2xl p-6 md:p-8 shadow-sm">
+        <div class="grid md:grid-cols-2 gap-4">
+          <label class="mat-field">
+            <select name="tipoDocumento" id="regTipo" required>
+              <option value=""></option>
+              {documentTypes.map((t) => <option value={t.id}>{t.es}</option>)}
+            </select>
+            <span data-i18n={JSON.stringify({ es: es.docType + "*", en: en.docType + "*" })}>{es.docType}*</span>
+          </label>
+          <label class="mat-field">
+            <input name="numeroDocumento" id="regNumero" required maxlength="20" />
+            <span data-i18n={JSON.stringify({ es: es.docNumber + "*", en: en.docNumber + "*" })}>{es.docNumber}*</span>
+          </label>
+        </div>
+        <div class="flex justify-center mt-8">
+          <RecaptchaBox />
+        </div>
+        <div class="flex justify-center mt-6">
+          <button type="submit" id="regBtn" disabled class="btn-primary-dark" data-i18n={JSON.stringify({ es: es.search, en: en.search })}>
+            {es.search}
+          </button>
+        </div>
+      </form>
+    </div>
+  </section>
+  <SolicitudWizard />
+</PicoLayout>
+
+<script>
+  import { api } from "../services/picoApi";
+  import { bindSolicitudWizard, openSolicitudWizard } from "../scripts/solicitud-wizard";
+
+  bindSolicitudWizard();
+
+  const form = document.getElementById("regForm") as HTMLFormElement | null;
+  const btn = document.getElementById("regBtn") as HTMLButtonElement | null;
+
+  try {
+    const stored = JSON.parse(sessionStorage.getItem("pyps-doc") || "null");
+    if (stored) {
+      (document.getElementById("regTipo") as HTMLSelectElement).value = stored.tipoDocumento;
+      (document.getElementById("regNumero") as HTMLInputElement).value = stored.numeroDocumento;
+    }
+  } catch {}
+
+  function sync() {
+    const ok = Boolean(
+      (document.getElementById("regTipo") as HTMLSelectElement).value &&
+        (document.getElementById("regNumero") as HTMLInputElement).value.trim() &&
+        (form?.querySelector(".js-captcha") as HTMLInputElement | null)?.checked
+    );
+    if (btn) btn.disabled = !ok;
+  }
+  form?.addEventListener("input", sync);
+  form?.addEventListener("change", sync);
+  sync();
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const tipoDocumento = (document.getElementById("regTipo") as HTMLSelectElement).value;
+    const numeroDocumento = (document.getElementById("regNumero") as HTMLInputElement).value.trim();
+    sessionStorage.setItem("pyps-doc", JSON.stringify({ tipoDocumento, numeroDocumento }));
+    const data = await api.searchPerson({ tipoDocumento, numeroDocumento });
+    openSolicitudWizard({
+      tipoDocumento,
+      numeroDocumento,
+      found: data.found,
+      person: data.person,
+    });
+  });
+</script>

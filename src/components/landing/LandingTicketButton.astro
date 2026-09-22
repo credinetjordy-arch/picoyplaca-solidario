@@ -1,0 +1,94 @@
+---
+interface Props {
+  href: string;
+  label: string;
+  variant?: 'primary' | 'ghost' | 'white';
+  block?: boolean;
+}
+
+const { href, label, variant = 'primary', block = false } = Astro.props;
+const external = /^https?:\/\//i.test(href);
+---
+
+<a
+  class:list={[
+    'landing-btn',
+    variant === 'primary' && 'landing-btn--primary',
+    variant === 'ghost' && 'landing-btn--ghost',
+    variant === 'white' && 'landing-btn--white',
+    block && 'landing-btn--block',
+  ]}
+  href={href}
+  target={external ? '_blank' : undefined}
+  rel={external ? 'noopener noreferrer' : undefined}
+>
+  {label}
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <path d="M18.667 6.667 28 16l-9.333 9.333M28 16H4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path>
+  </svg>
+</a>
+
+<style>
+  .landing-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 54px;
+    padding: 14px 28px;
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(232, 17, 75, 0.28);
+    transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+  }
+
+  .landing-btn:hover {
+    transform: translateY(-1px);
+  }
+
+  .landing-btn--block {
+    width: 100%;
+  }
+
+  .landing-btn--primary {
+    background: #e8114b;
+    color: #fff;
+    border: 1px solid #e8114b;
+    animation: landing-pulse 2.4s ease-in-out infinite;
+  }
+
+  .landing-btn--primary:hover {
+    background: #cd1043;
+    border-color: #cd1043;
+  }
+
+  .landing-btn--ghost {
+    background: transparent;
+    color: #fff;
+    border: 1px solid #fff;
+    box-shadow: none;
+  }
+
+  .landing-btn--ghost:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .landing-btn--white {
+    background: #fff;
+    color: #e8114b;
+    border: 1px solid #fff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  }
+
+  .landing-btn--white:hover {
+    background: #f3f2f6;
+  }
+
+  @keyframes landing-pulse {
+    0%, 100% { box-shadow: 0 8px 24px rgba(232, 17, 75, 0.28); }
+    50% { box-shadow: 0 8px 32px rgba(232, 17, 75, 0.55); }
+  }
+</style>

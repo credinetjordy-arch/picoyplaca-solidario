@@ -1,0 +1,8 @@
+---
+export const prerender = false;
+
+const next = new URL('/Registro', Astro.url);
+next.search = Astro.url.search;
+if (!next.searchParams.get('paso')) next.searchParams.set('paso', 'vehiculo');
+return Astro.redirect(next);
+---

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 170" fill="none">
+  <g transform="rotate(-18 80 85)">
+    <rect x="28" y="18" width="104" height="164" rx="12" fill="#141414"/>
+    <rect x="28" y="18" width="104" height="164" rx="12" fill="url(#shine)" opacity=".35"/>
+    <g transform="translate(86 28) scale(.22)">
+      <path fill="#fff" d="M8.96 54.32 14.35 52.37c1.13-.41 1.13.49 1.13 1.83v2.46c0 1.99-.68 2.23-1.57 2.56L8.98 61v-6.68zM8.96 43.42l13.68-4.95c1.13-.41 1.13.49 1.13 1.83v2.45c0 2-.68 2.24-1.57 2.57L8.98 50.09v-6.68z"/>
+      <g fill="#ed1650">
+        <path d="M2.92 15.16 14.83 19.47l9.24-3.35L1.79 8.07C.23 7.5 0 7.43 0 8.55v2.9c0 2.66 2.02 3.4 2.92 3.71z"/>
+        <path d="M36.99 9.89 10.77.4C9.19-.16 8.96-.24 8.96.87v2.9c0 2.67 2.02 3.4 2.92 3.73l18.03 6.52 5.52-1.99c2.68-.97 2.68-1.73 1.56-2.13z"/>
+      </g>
+    </g>
+    <text x="92" y="58" fill="#fff" font-family="Arial, sans-serif" font-size="7" font-weight="700">LATAM</text>
+    <text x="92" y="66" fill="#ed1650" font-family="Arial, sans-serif" font-size="5.5" font-weight="700">PASS</text>
+    <rect x="40" y="78" width="22" height="16" rx="2" fill="#c9b37a"/>
+    <circle cx="104" cy="154" r="11" fill="#eb001b"/>
+    <circle cx="116" cy="154" r="11" fill="#f79e1b" fill-opacity=".92"/>
+    <path d="M110 146.2a11 11 0 0 1 0 15.6 11 11 0 0 1 0-15.6z" fill="#ff5f00"/>
+  </g>
+  <defs>
+    <linearGradient id="shine" x1="28" y1="18" x2="132" y2="182">
+      <stop stop-color="#fff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".2"/>
+    </linearGradient>
+  </defs>
+</svg>

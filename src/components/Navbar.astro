@@ -1,0 +1,99 @@
+---
+import { navItems, footerLinks } from "../data/picoMock";
+import { translations } from "../data/picoI18n";
+
+interface Props {
+  active: "inicio" | "simulador" | "registro" | "consulta" | "faq";
+}
+
+const { active } = Astro.props;
+const es = translations.es.nav;
+const en = translations.en.nav;
+---
+
+<header>
+  <nav class="bg-dark-green shadow-md w-full relative top-0 left-0 z-50 h-20 overflow-visible">
+    <div class="container mx-auto px-4 h-full">
+      <div class="flex justify-between items-center h-full">
+        <div class="flex items-center w-full xl:w-auto">
+          <a href="/Inicio" class="pl-5 flex items-center w-[12rem] h-auto">
+            <img src="/images/logo-pico-y-placa.png" alt="Logo" class="w-full max-h-16 object-contain" />
+          </a>
+        </div>
+
+        <div class="navbar-desktop flex items-center space-x-8">
+          <ul class="list-none flex items-center justify-center">
+            {
+              navItems.map((item) => (
+                <li class:list={["inline-flex px-3", active === item.key && "border-b border-light-green"]}>
+                  <a
+                    href={item.href}
+                    class="block py-2.5 capitalize font-heebo text-sm font-semibold text-white"
+                    data-i18n={JSON.stringify({ es: es[item.key], en: en[item.key] })}
+                  >
+                    {es[item.key]}
+                  </a>
+                </li>
+              ))
+            }
+            <div class="px-3 py-3 flex items-center">
+              <div class="h-5 w-[1px] bg-white"></div>
+              <div class="relative lang-wrap">
+                <button type="button" class="capitalize text-white font-semibold ml-2 cursor-pointer flex items-center lang-toggle">
+                  <span data-lang-label>Esp</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="#88F456" height="1em" viewBox="0 0 512 512" class="self-center ml-2">
+                    <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+                  </svg>
+                </button>
+                <ul class="absolute rounded-lg top-7 left-0 hidden bg-white py-2 px-4 mt-2 z-10 lang-menu shadow">
+                  <li>
+                    <button type="button" class="my-1 block text-dark-green" onclick="window.__setLang('es')">Esp</button>
+                  </li>
+                  <li>
+                    <button type="button" class="my-1 block text-dark-green" onclick="window.__setLang('en')">En</button>
+                  </li>
+                </ul>
+              </div>
+              <a
+                href={footerLinks.support}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="text-dark-green font-semibold rounded-full border-2 border-dark-green py-1 px-6 ml-8 bg-white hover:bg-[#edfde5] duration-300"
+                data-i18n={JSON.stringify({ es: es.soporte, en: en.soporte })}
+              >
+                {es.soporte}
+              </a>
+            </div>
+          </ul>
+        </div>
+
+        <button type="button" class="navbar-mobil flex items-center xl:hidden text-white" aria-label="Menú" id="menuBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M2.5 12.5a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div id="mobileMenu" class="hidden xl:hidden bg-dark-green px-6 pb-6">
+      {
+        navItems.map((item) => (
+          <a href={item.href} class="block py-3 text-white font-semibold border-b border-white/10" data-i18n={JSON.stringify({ es: es[item.key], en: en[item.key] })}>
+            {es[item.key]}
+          </a>
+        ))
+      }
+      <a href={footerLinks.support} target="_blank" class="block py-3 text-light-green font-semibold" data-i18n={JSON.stringify({ es: es.soporte, en: en.soporte })}>
+        {es.soporte}
+      </a>
+    </div>
+  </nav>
+</header>
+
+<script is:inline>
+  document.querySelector(".lang-toggle")?.addEventListener("click", () => {
+    document.querySelector(".lang-menu")?.classList.toggle("hidden");
+  });
+  document.getElementById("menuBtn")?.addEventListener("click", () => {
+    document.getElementById("mobileMenu")?.classList.toggle("hidden");
+  });
+</script>

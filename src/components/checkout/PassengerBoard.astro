@@ -1,0 +1,842 @@
+---
+import {
+  airlineOptions,
+  assistProduct,
+  documentTypes,
+  genderOptions,
+} from '../../data/passengerData';
+import { allCountries } from '../../data/countries';
+
+const PORCENTAJE_DESCUENTO = 0;
+
+const assistJson = JSON.stringify(assistProduct);
+---
+
+<section class="pax-board" id="pax-board">
+  <div class="pax-layout">
+    <div class="pax-layout__main">
+      <h1 class="pax-title">Pasajeros</h1>
+      <p class="pax-error hidden" id="pax-error" hidden></p>
+      <div id="pax-forms"></div>
+
+      <aside class="pax-assist-banner" id="pax-assist-banner">
+        <div class="pax-assist-banner__icon" aria-hidden="true">
+          <svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1B0088"/><path d="M20 28s-7.5-4.4-7.5-10a4.2 4.2 0 0 1 7.5-2.5A4.2 4.2 0 0 1 27.5 18C27.5 23.6 20 28 20 28Z" fill="#fff"/></svg>
+        </div>
+        <div class="pax-assist-banner__copy">
+          <strong>¿Necesitas asistencia especial?</strong>
+          <p>Si tienes movilidad reducida, discapacidad sensorial, autismo, viajas con animal de servicio o eres de la tercera edad, puedes solicitar asistencia para tu viaje después de comprar tu pasaje.</p>
+          <a href={assistProduct.specialAssistHref} target="_blank" rel="noopener">Solicitar asistencia especial</a>
+        </div>
+        <button type="button" class="pax-assist-banner__close" id="pax-assist-banner-close" aria-label="Cerrar mensaje">×</button>
+      </aside>
+
+      <section class="pax-insurance" id="pax-insurance" aria-labelledby="pax-insurance-title">
+        <header class="pax-insurance__head">
+          <img src={assistProduct.brandLogo} alt="ASSIST CARD" width="48" height="16" />
+          <h2 id="pax-insurance-title">Agrega tu asistencia de viaje y viaja con tranquilidad</h2>
+        </header>
+
+        <div class="pax-insurance__meta">
+          <div>
+            <span>Cantidad de personas</span>
+            <strong id="pax-insurance-people">1 persona</strong>
+          </div>
+          <div>
+            <span>Cobertura por</span>
+            <strong id="pax-insurance-days">{assistProduct.coverageDaysDefault} días</strong>
+          </div>
+        </div>
+
+        <article class="pax-insurance__card" data-assist-id={assistProduct.id}>
+          <div class="pax-insurance__info">
+            <h3>{assistProduct.title}</h3>
+            <p class="pax-insurance__sub">{assistProduct.subtitle}</p>
+            <ul class="pax-insurance__benefits">
+              {assistProduct.benefits.map((b) => (
+                <li>
+                  <strong>{b.title}</strong>
+                  <span>{b.text}</span>
+                </li>
+              ))}
+            </ul>
+            <a class="pax-insurance__more" href={assistProduct.detailsHref} target="_blank" rel="noopener">Más detalles de cobertura</a>
+          </div>
+          <div class="pax-insurance__buy">
+            <span class="pax-insurance__miles">Acumula millas</span>
+            <span class="pax-insurance__total-label" id="pax-insurance-total-label">Total para 1 persona</span>
+            <strong class="pax-insurance__price" id="pax-insurance-price">COP {Math.round(assistProduct.pricePerPerson).toLocaleString('es-CO')}</strong>
+            <button type="button" class="pax-insurance__add" id="pax-insurance-add" aria-pressed="false">Agregar</button>
+          </div>
+        </article>
+        <p class="pax-insurance__terms">
+          Al agregar estás aceptando los
+          <a href={assistProduct.termsHref} target="_blank" rel="noopener">términos y condiciones</a>
+        </p>
+      </section>
+    </div>
+
+    <aside class="pax-aside" aria-label="Detalle de viaje">
+      <div class="pax-aside__grow">
+        <div class="pax-aside__content">
+          <h2 class="pax-aside__title">Detalle de viaje</h2>
+          <div class="pax-aside__card" id="pax-summary"></div>
+        </div>
+      </div>
+      <div class="pax-aside__sticky">
+        <button type="button" class="checkout-continue pax-aside__cta" id="pax-continue">Continuar al pago</button>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<div class="pax-mobile-sheet" id="pax-mobile-sheet" hidden>
+  <div class="pax-mobile-sheet__backdrop" data-pax-sheet-close></div>
+  <div class="pax-mobile-sheet__panel" role="dialog" aria-modal="true" aria-labelledby="pax-sheet-title">
+    <header class="pax-mobile-sheet__head">
+      <h3 id="pax-sheet-title">Detalle de viaje</h3>
+      <button type="button" class="pax-mobile-sheet__close" data-pax-sheet-close aria-label="Cerrar">×</button>
+    </header>
+    <div class="pax-mobile-sheet__body" id="pax-mobile-summary"></div>
+  </div>
+</div>
+
+<div class="pax-mobile-bar" id="pax-mobile-bar">
+  <div class="pax-mobile-bar__panel">
+    <button type="button" class="pax-mobile-bar__price" id="pax-mobile-price-toggle" aria-expanded="false">
+      <span>Precio final <svg viewBox="0 0 32 32" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M4.45 24.23 16 12.64 27.55 24.23 30 21.78 16 7.78 2 21.78 4.45 24.23Z"/></svg></span>
+      <strong id="pax-mobile-total">COP 0</strong>
+    </button>
+    <div class="pax-mobile-bar__stretch" id="pax-mobile-stretch" aria-hidden="true"></div>
+    <button type="button" class="checkout-continue pax-mobile-bar__cta" id="pax-continue-mobile">Continuar al pago</button>
+  </div>
+</div>
+
+<script
+  define:vars={{
+    countries: allCountries,
+    assistJson,
+    genderOptions,
+    documentTypes,
+    airlineOptions,
+    PORCENTAJE_DESCUENTO,
+  }}
+>
+  const STORAGE_KEY = 'latam-checkout-selection';
+  const SEATS_KEY = 'latam-seat-selection';
+  const STORE_KEY = 'latam-store-selection';
+  const PAX_KEY = 'latam-passenger-draft';
+  const assist = JSON.parse(assistJson);
+
+  const formsRoot = document.getElementById('pax-forms');
+  const summaryRoot = document.getElementById('pax-summary');
+  const mobileSummary = document.getElementById('pax-mobile-summary');
+  const errorBox = document.getElementById('pax-error');
+  const mobileTotal = document.getElementById('pax-mobile-total');
+  const mobileSheet = document.getElementById('pax-mobile-sheet');
+
+  const state = {
+    assistAdded: false,
+    openSummary: '',
+  };
+  const discountPct = Number(PORCENTAJE_DESCUENTO) || 0;
+
+  function money(value) {
+    return `COP\u00a0${Math.round(Number(value || 0)).toLocaleString('es-CO')}`;
+  }
+
+  function ticketAfterDiscount(original) {
+    const base = Number(original) || 0;
+    if (!(discountPct > 0)) return Math.round(base * 100) / 100;
+    return Math.round(base * (1 - Math.min(100, discountPct) / 100) * 100) / 100;
+  }
+
+  function ticketMoney(original) {
+    const before = Number(original) || 0;
+    if (!(discountPct > 0)) return money(before);
+    return `<span class="ticket-price"><span class="ticket-price__was">${money(before)}</span><span class="ticket-price__now">${money(ticketAfterDiscount(before))}</span></span>`;
+  }
+
+  function totalMoney(before, after) {
+    if (!(discountPct > 0) || Math.abs(before - after) < 0.005) return money(after);
+    return `<span class="ticket-price"><span class="ticket-price__was">${money(before)}</span><span class="ticket-price__now">${money(after)}</span></span>`;
+  }
+
+  function readJson(key, fallback) {
+    try {
+      return JSON.parse(sessionStorage.getItem(key) || 'null') ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  function showError(message) {
+    if (!errorBox) return;
+    errorBox.textContent = message;
+    errorBox.classList.toggle('hidden', !message);
+    if (message) errorBox.removeAttribute('hidden');
+    else errorBox.setAttribute('hidden', '');
+  }
+
+  function passengerGroups(selection) {
+    const groups = [];
+    for (let i = 0; i < (selection.adults || 1); i += 1) groups.push({ type: 'Adulto', label: `Adulto ${i + 1}` });
+    for (let i = 0; i < (selection.children || 0); i += 1) groups.push({ type: 'Niño', label: `Niño ${i + 1}` });
+    for (let i = 0; i < (selection.infants || 0); i += 1) groups.push({ type: 'Bebé', label: `Bebé ${i + 1}` });
+    if (!groups.length) groups.push({ type: 'Adulto', label: 'Adulto 1' });
+    return groups;
+  }
+
+  function tripBase(selection, discounted = true) {
+    const outRaw = Number(selection?.outbound?.price || 0);
+    const backRaw = Number(selection?.inbound?.price || 0);
+    const out = discounted ? ticketAfterDiscount(outRaw) : outRaw;
+    const back = discounted ? ticketAfterDiscount(backRaw) : backRaw;
+    const pax = Math.max(1, (selection?.adults || 0) + (selection?.children || 0) + (selection?.infants || 0));
+    return (out + back) * pax;
+  }
+
+  function seatExtras(seats, selection) {
+    let total = 0;
+    if (seats?.outbound?.price) total += Number(seats.outbound.price);
+    if (selection?.trip === 'roundtrip' && seats?.inbound?.price) total += Number(seats.inbound.price);
+    return total;
+  }
+
+  function bagExtras(store) {
+    const cabinPrice = store?.cabin === 'cabin-plus' ? 28 : 0;
+    const hold = Number(store?.holdCount || 0) * 35;
+    const special = Number(store?.specialCount || 0) * 40;
+    return cabinPrice + hold + special;
+  }
+
+  function coverageDays(selection) {
+    if (!selection?.depart) return assist.coverageDaysDefault;
+    const start = new Date(`${selection.depart}T12:00:00`);
+    const endRaw = selection.returnDate || selection.depart;
+    const end = new Date(`${endRaw}T12:00:00`);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return assist.coverageDaysDefault;
+    const diff = Math.max(1, Math.round((end - start) / 86400000) + 1);
+    return diff;
+  }
+
+  function optionsHtml(list, selected) {
+    return list.map((o) => `<option value="${o.value}" ${o.value === selected ? 'selected' : ''}>${o.label}</option>`).join('');
+  }
+
+  function flagSrc(code) {
+    const lower = String(code || 'pe').toLowerCase();
+    if (lower === 'pe') return '/images/pax-assets/flag-pe.svg';
+    if (lower === 'ec') return '/images/pax-assets/flag-ec.svg';
+    return `https://flagcdn.com/w80/${lower}.png`;
+  }
+
+  function flagImg(code) {
+    const src = flagSrc(code);
+    return `<img class="pax-flag" src="${src}" alt="" width="24" height="24" loading="lazy" />`;
+  }
+
+  function countryPicker(name, selectedCode, mode) {
+    const list = Array.isArray(countries) ? countries : [];
+    const selected = list.find((c) => c.code === selectedCode) || list.find((c) => c.code === 'CO') || list[0];
+    if (!selected) return `<input type="hidden" name="${name}" value="CO" />`;
+    const label = mode === 'dial' ? selected.dial : selected.name;
+    const options = list
+      .map((c) => {
+        const text = mode === 'dial' ? `${c.name} ${c.dial}` : c.name;
+        return `<li role="option" class="pax-select__option${c.code === selected.code ? ' is-selected' : ''}" data-code="${c.code}" data-dial="${c.dial}" data-name="${c.name}" tabindex="-1">${flagImg(c.code)}<span>${text}</span></li>`;
+      })
+      .join('');
+    return `
+      <div class="pax-select" data-pax-select data-mode="${mode}">
+        <button type="button" class="pax-select__btn" aria-haspopup="listbox" aria-expanded="false">
+          ${flagImg(selected.code)}
+          <span class="pax-select__value">${label}</span>
+          <svg viewBox="0 0 32 32" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M27.55 7.77 16 19.36 4.45 7.77 2 10.22 16 24.22 30 10.22 27.55 7.77Z"/></svg>
+        </button>
+        <div class="pax-select__menu" data-pax-select-menu hidden>
+          <ul class="pax-select__list" role="listbox">${options}</ul>
+        </div>
+        <input type="hidden" name="${name}" value="${selected.code}" required autocomplete="off" />
+      </div>
+    `;
+  }
+
+  const docTypeShort = {
+    DNI: 'DNI',
+    PP: 'Pasaporte',
+    CE: 'C. Extranjería',
+  };
+
+  function renderForms(selection) {
+    const groups = passengerGroups(selection);
+    formsRoot.innerHTML = groups
+      .map((group, index) => {
+        const open = index === 0;
+        return `
+      <article class="pax-card${open ? ' is-open' : ''}" data-pax-card="${index}">
+        <button type="button" class="pax-card__head" data-pax-toggle="${index}" aria-expanded="${open ? 'true' : 'false'}">
+          <span class="pax-card__label">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 12Zm0 2.25c-4.2 0-7.5 2.1-7.5 4.5V21h15v-2.25c0-2.4-3.3-4.5-7.5-4.5Z"/></svg>
+            <span class="pax-card__meta">
+              <span class="pax-card__name-row">
+                <span class="pax-card__name" data-pax-head-name>${group.type}</span>
+                <span class="pax-card__check" data-pax-head-check hidden aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="12" fill="#1a1a1a"/><path fill="#fff" d="M10.1 15.7 6.8 12.4l1.2-1.2 2.1 2.1 5-5 1.2 1.2-6.2 6.2Z"/></svg>
+                </span>
+              </span>
+              <span class="pax-card__doc" data-pax-head-doc hidden></span>
+            </span>
+          </span>
+          <svg class="pax-card__chev" viewBox="0 0 32 32" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M27.55 7.77 16 19.36 4.45 7.77 2 10.22 16 24.22 30 10.22 27.55 7.77Z"/></svg>
+        </button>
+        <div class="pax-card__body" ${open ? '' : 'hidden'}>
+          <div class="pax-fields">
+            <label class="pax-field"><span>Nombre</span><input type="text" name="p${index}-first" data-pax-sync="first" autocomplete="given-name" required /></label>
+            <label class="pax-field"><span>Apellido</span><input type="text" name="p${index}-last" data-pax-sync="last" autocomplete="family-name" required /></label>
+            <label class="pax-field"><span>Fecha de nacimiento</span><input type="text" name="p${index}-birth" inputmode="numeric" placeholder="DD/MM/AAAA" maxlength="10" required /></label>
+            <label class="pax-field"><span>Género</span><select name="p${index}-gender" required>${optionsHtml(genderOptions, 'Male')}</select></label>
+            <div class="pax-field"><span>País de emisión del documento</span>${countryPicker(`p${index}-doc-country`, 'CO', 'country')}</div>
+            <div class="pax-field pax-field--empty" aria-hidden="true"></div>
+            <label class="pax-field"><span>Tipo de documento</span><select name="p${index}-doc-type" data-pax-sync="doc-type" required>${optionsHtml(documentTypes, 'DNI')}</select></label>
+            <label class="pax-field"><span>Número de documento</span><input type="text" name="p${index}-doc-number" data-pax-sync="doc-number" required /></label>
+            <label class="pax-field">
+              <span>Nº de pasajero frecuente (opcional)</span>
+              <input type="text" name="p${index}-ff" />
+              <small>Para que esta persona disfrute sus beneficios</small>
+            </label>
+            <label class="pax-field"><span>Aerolínea</span><select name="p${index}-airline">${optionsHtml(airlineOptions, 'LA')}</select></label>
+          </div>
+          ${
+            index === 0
+              ? `
+          <h3 class="pax-contact-title">Información de contacto</h3>
+          <div class="pax-fields pax-fields--contact">
+            <label class="pax-field"><span>Email</span><input type="email" name="contact-email" autocomplete="email" required /></label>
+            <div class="pax-phone">
+              <div class="pax-field"><span>Código</span>${countryPicker('contact-code', 'CO', 'dial')}</div>
+              <label class="pax-field pax-field--grow"><span>Número</span><input type="tel" name="contact-phone" autocomplete="tel-national" required /></label>
+            </div>
+          </div>`
+              : ''
+          }
+        </div>
+      </article>`;
+      })
+      .join('');
+  }
+
+  function formatBirthDate(value) {
+    const digits = String(value || '').replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  }
+
+  function setFormattedInput(input, formatted) {
+    if (!input) return;
+    const start = input.selectionStart;
+    const prev = input.value;
+    input.value = formatted;
+    if (typeof start === 'number' && document.activeElement === input) {
+      const diff = formatted.length - prev.length;
+      const next = Math.max(0, start + diff);
+      try {
+        input.setSelectionRange(next, next);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  function syncPassengerHeads() {
+    document.querySelectorAll('[data-pax-card]').forEach((card) => {
+      const idx = card.dataset.paxCard;
+      const fallback = card.querySelector('.pax-card__name')?.dataset.fallback || 'Adulto';
+      const first = (card.querySelector(`[name="p${idx}-first"]`)?.value || '').trim();
+      const last = (card.querySelector(`[name="p${idx}-last"]`)?.value || '').trim();
+      const docType = card.querySelector(`[name="p${idx}-doc-type"]`)?.value || 'DNI';
+      const docNumber = (card.querySelector(`[name="p${idx}-doc-number"]`)?.value || '').trim();
+      const nameEl = card.querySelector('[data-pax-head-name]');
+      const docEl = card.querySelector('[data-pax-head-doc]');
+      const checkEl = card.querySelector('[data-pax-head-check]');
+      const fullName = [first, last].filter(Boolean).join(' ');
+      if (nameEl) nameEl.textContent = fullName || fallback;
+      if (docEl) {
+        if (docNumber) {
+          docEl.textContent = `${docTypeShort[docType] || docType} - ${docNumber}`;
+          docEl.hidden = false;
+        } else {
+          docEl.textContent = '';
+          docEl.hidden = true;
+        }
+      }
+      if (checkEl) {
+        const complete = Boolean(first && last && docNumber);
+        checkEl.hidden = !complete;
+      }
+    });
+  }
+
+  function initPassengerHeadSync(selection) {
+    const groups = passengerGroups(selection);
+    document.querySelectorAll('[data-pax-card]').forEach((card, i) => {
+      const nameEl = card.querySelector('[data-pax-head-name]');
+      if (nameEl) nameEl.dataset.fallback = groups[i]?.type || 'Adulto';
+    });
+    formsRoot?.addEventListener('input', (e) => {
+      const target = e.target;
+      if (target?.matches?.('input[name$="-birth"]')) {
+        setFormattedInput(target, formatBirthDate(target.value));
+      }
+      if (!target?.closest?.('[data-pax-sync]')) return;
+      syncPassengerHeads();
+    });
+    formsRoot?.addEventListener('change', (e) => {
+      if (!e.target.closest('[data-pax-sync]')) return;
+      syncPassengerHeads();
+    });
+    syncPassengerHeads();
+  }
+
+  function destroySelectSearch(scope) {
+    (scope || document).querySelectorAll('.pax-select__search').forEach((el) => el.remove());
+  }
+
+  function getSelectMenu(root) {
+    const id = root.dataset.selectId;
+    if (id) {
+      const portaled = document.querySelector(`[data-pax-select-menu][data-owner="${id}"]`);
+      if (portaled) return portaled;
+    }
+    return root.querySelector('[data-pax-select-menu]');
+  }
+
+  function closeAllSelects(except) {
+    document.querySelectorAll('[data-pax-select]').forEach((el) => {
+      if (except && el === except) return;
+      el.classList.remove('is-open');
+      el.querySelector('.pax-select__btn')?.setAttribute('aria-expanded', 'false');
+      const menu = getSelectMenu(el);
+      if (menu) {
+        destroySelectSearch(menu);
+        menu.hidden = true;
+        menu.setAttribute('hidden', '');
+        menu.style.cssText = '';
+        menu.removeAttribute('data-owner');
+        const list = menu.querySelector('.pax-select__list');
+        if (list) list.style.cssText = '';
+        if (menu.parentElement !== el) {
+          el.querySelector('.pax-select__btn')?.after(menu);
+        }
+      }
+      el.closest('.pax-card')?.classList.remove('has-select-open');
+    });
+    destroySelectSearch(document);
+  }
+
+  function positionSelectMenu(root, menu) {
+    const btn = root.querySelector('.pax-select__btn');
+    if (!btn || !menu) return;
+    if (!root.dataset.selectId) root.dataset.selectId = `paxsel-${Math.random().toString(36).slice(2, 9)}`;
+    menu.dataset.owner = root.dataset.selectId;
+    const rect = btn.getBoundingClientRect();
+    const maxH = Math.min(320, Math.floor(window.innerHeight * 0.7));
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+    const openUp = spaceBelow < 200 && spaceAbove > spaceBelow;
+    const available = Math.max(160, Math.min(maxH, openUp ? spaceAbove : spaceBelow));
+    menu.hidden = false;
+    menu.removeAttribute('hidden');
+    document.body.appendChild(menu);
+    menu.style.position = 'fixed';
+    menu.style.left = `${Math.round(rect.left)}px`;
+    menu.style.width = `${Math.max(rect.width, 220)}px`;
+    menu.style.zIndex = '80';
+    menu.style.maxHeight = `${available}px`;
+    menu.style.display = 'flex';
+    menu.style.flexDirection = 'column';
+    menu.style.overflow = 'hidden';
+    if (openUp) {
+      menu.style.bottom = `${Math.round(window.innerHeight - rect.top + 4)}px`;
+      menu.style.top = 'auto';
+    } else {
+      menu.style.top = `${Math.round(rect.bottom + 4)}px`;
+      menu.style.bottom = 'auto';
+    }
+    const list = menu.querySelector('.pax-select__list');
+    if (list) {
+      list.style.minHeight = '0';
+      list.style.flex = '1 1 auto';
+      list.style.overflowY = 'auto';
+      list.style.webkitOverflowScrolling = 'touch';
+    }
+  }
+
+  function initCountrySelects() {
+    document.querySelectorAll('[data-pax-select]').forEach((root, index) => {
+      root.dataset.selectId = `paxsel-${index}`;
+      const btn = root.querySelector('.pax-select__btn');
+      const menu = root.querySelector('[data-pax-select-menu]');
+      const hidden = root.querySelector('input[type="hidden"]');
+      const valueEl = root.querySelector('.pax-select__value');
+      const mode = root.dataset.mode;
+      const list = menu?.querySelector('.pax-select__list');
+
+      if (menu && !menu.dataset.boundStop) {
+        menu.dataset.boundStop = '1';
+        menu.addEventListener('mousedown', (ev) => ev.stopPropagation());
+        menu.addEventListener('wheel', (ev) => ev.stopPropagation(), { passive: true });
+        menu.addEventListener('touchmove', (ev) => ev.stopPropagation(), { passive: true });
+      }
+
+      btn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const willOpen = !root.classList.contains('is-open');
+        closeAllSelects();
+        if (!willOpen || !menu || !list) return;
+
+        root.classList.add('is-open');
+        root.closest('.pax-card')?.classList.add('has-select-open');
+        btn.setAttribute('aria-expanded', 'true');
+        positionSelectMenu(root, menu);
+
+        destroySelectSearch(menu);
+        const search = document.createElement('input');
+        search.type = 'text';
+        search.className = 'pax-select__search';
+        search.placeholder = 'Buscar país';
+        search.setAttribute('aria-label', 'Buscar país');
+        search.setAttribute('autocomplete', 'off');
+        search.setAttribute('autocapitalize', 'off');
+        search.setAttribute('autocorrect', 'off');
+        search.setAttribute('spellcheck', 'false');
+        search.setAttribute('inputmode', 'search');
+        search.setAttribute('data-lpignore', 'true');
+        search.setAttribute('data-1p-ignore', 'true');
+        search.setAttribute('data-form-type', 'other');
+        search.setAttribute('role', 'searchbox');
+        // Unique name so browsers never autofill from Nombre/Apellido
+        search.name = `pax_filter_${root.dataset.selectId}_${Date.now()}`;
+        list.before(search);
+
+        list.querySelectorAll('.pax-select__option').forEach((opt) => {
+          opt.hidden = false;
+        });
+
+        search.addEventListener('input', () => {
+          const q = search.value.trim().toLowerCase();
+          list.querySelectorAll('.pax-select__option').forEach((opt) => {
+            const hay = `${opt.dataset.name || ''} ${opt.dataset.dial || ''} ${opt.dataset.code || ''}`.toLowerCase();
+            opt.hidden = q ? !hay.includes(q) : false;
+          });
+        });
+
+        search.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Escape') {
+            ev.preventDefault();
+            closeAllSelects();
+            btn.focus();
+          }
+        });
+
+        requestAnimationFrame(() => {
+          positionSelectMenu(root, menu);
+          search.focus();
+        });
+      });
+
+      menu?.querySelectorAll('.pax-select__option').forEach((opt) => {
+        opt.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const code = opt.dataset.code;
+          const label = mode === 'dial' ? opt.dataset.dial : opt.dataset.name;
+          if (hidden) hidden.value = code;
+          if (valueEl) valueEl.textContent = label;
+          const flag = root.querySelector('.pax-select__btn .pax-flag');
+          if (flag) flag.src = flagSrc(code);
+          menu.querySelectorAll('.pax-select__option').forEach((o) => o.classList.toggle('is-selected', o === opt));
+          closeAllSelects();
+          btn?.focus();
+        });
+      });
+    });
+
+    document.addEventListener('mousedown', (e) => {
+      if (e.target.closest('[data-pax-select], [data-pax-select-menu]')) return;
+      closeAllSelects();
+    });
+
+    document.addEventListener('focusin', (e) => {
+      if (e.target.closest('[data-pax-select].is-open, [data-pax-select-menu]')) return;
+      if (e.target.matches('input, select, textarea, button') && !e.target.classList.contains('pax-select__search')) {
+        closeAllSelects();
+      }
+    });
+
+    window.addEventListener(
+      'scroll',
+      (e) => {
+        const t = e.target;
+        if (t && t.nodeType === 1 && t.closest?.('[data-pax-select-menu], .pax-select__list')) return;
+        const open = document.querySelector('[data-pax-select].is-open');
+        if (!open) return;
+        const menu = getSelectMenu(open);
+        if (menu && !menu.hidden) positionSelectMenu(open, menu);
+      },
+      true,
+    );
+
+    window.addEventListener('resize', () => closeAllSelects());
+  }
+
+  function initMobileBarStretch() {
+    const scroll = document.querySelector('.pax-scroll');
+    const bar = document.getElementById('pax-mobile-bar');
+    const stretch = document.getElementById('pax-mobile-stretch');
+    if (!scroll || !bar || !stretch) return;
+
+    function update() {
+      if (window.innerWidth > 960) {
+        stretch.style.height = '0px';
+        return;
+      }
+      const max = Math.max(0, scroll.scrollHeight - scroll.clientHeight);
+      const progress = max > 0 ? Math.min(1, Math.max(0, scroll.scrollTop / max)) : 0;
+      // White gap between Precio final and Continuar grows while scrolling
+      stretch.style.height = `${Math.round(progress * 56)}px`;
+    }
+
+    scroll.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    requestAnimationFrame(update);
+  }
+
+  function setSheetOpen(open) {
+    if (!mobileSheet) return;
+    mobileSheet.hidden = !open;
+    mobileSheet.classList.toggle('is-open', open);
+    document.getElementById('pax-mobile-price-toggle')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+    document.body.classList.toggle('pax-sheet-open', open);
+  }
+
+  const SUM_ICONS = {
+    flights: `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M15.0369 17.8496C15.2231 17.7789 15.4235 17.8284 15.624 17.9839C15.7672 18.1182 15.8029 18.3019 15.7313 18.5352L13.7912 23.907L15.9389 23.3911C16.1251 23.3204 16.2397 23.2567 16.2826 23.1861L20.6497 15.9977C20.7428 15.8563 20.8358 15.7786 20.9289 15.7574L27.1717 13.5309C27.816 13.3047 28.2957 12.9796 28.6107 12.5555C28.9257 12.1314 28.9829 11.6719 28.804 11.1701C28.7539 11.0358 28.6823 10.8874 28.5749 10.7248C28.4675 10.5623 28.3028 10.4279 28.0737 10.3149C27.8446 10.2018 27.5153 10.1523 27.1001 10.1594C26.6849 10.1735 26.1336 10.2937 25.4392 10.5198L20.8287 12.1597C20.6926 12.2021 20.5494 12.2021 20.4134 12.1455C20.2774 12.089 20.1844 11.99 20.1342 11.8557C20.0841 11.7002 20.0984 11.5518 20.17 11.4246C20.2416 11.2973 20.3419 11.2125 20.485 11.1701L25.0955 9.53029C27.6156 8.6609 29.1834 9.09913 29.8134 10.8308C30.021 11.4034 30.0568 11.9193 29.9136 12.3858C29.7776 12.8523 29.4984 13.2694 29.0832 13.6369C28.668 14.0045 28.1453 14.3013 27.5225 14.5275L21.4873 16.6833L17.1847 23.7727C17.0487 24.0201 16.7193 24.2392 16.211 24.423L13.4046 25.0733C13.0753 25.144 12.839 25.0733 12.6744 24.8683C12.5097 24.6633 12.4811 24.423 12.567 24.1474L14.3353 19.2208L10.14 20.6627C8.98743 21.0515 7.90642 21.0868 6.89698 20.7617C5.88753 20.4436 5.11433 19.8004 4.55592 18.8462L2.16474 14.6689C1.84258 14.0751 1.99292 13.6652 2.61577 13.439L4.45568 12.7887C4.82795 12.6544 5.1716 12.711 5.49377 12.9584L8.78696 15.3898L12.9106 13.8843L7.67013 8.8164C7.51263 8.61142 7.44105 8.39229 7.46253 8.16611C7.53412 7.93993 7.68447 7.77736 7.91356 7.68548H7.94935L10.5839 6.96453C10.9061 6.85144 11.2283 6.88677 11.5504 7.07055L16.9985 10.018C17.1346 10.0887 17.2205 10.1947 17.2563 10.3431C17.292 10.4916 17.2706 10.6259 17.2061 10.739C17.1345 10.8732 17.0343 10.9651 16.8983 11.0146C16.7623 11.0641 16.6191 11.0499 16.483 10.9793L11.0349 8.00356C11.0135 7.98235 10.9705 7.98235 10.8989 8.00356L8.92298 8.5478L14.2923 13.7147C14.3425 13.7853 14.3783 13.8631 14.4141 13.955C14.4499 14.0469 14.457 14.1388 14.4355 14.2307C14.3854 14.4144 14.2781 14.5417 14.0919 14.6053L8.8872 16.4854C8.67958 16.5349 8.51493 16.5066 8.40038 16.4147L4.7993 13.7783L3.20283 14.3579L5.45798 18.2949C5.87321 19.0512 6.46024 19.5459 7.22627 19.7863C7.9923 20.0266 8.85856 19.9771 9.82504 19.6308L15.0369 17.8496Z"/></svg>`,
+    seats: `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M2.44139 5.10565C2.60441 5.04844 2.75117 5.06478 2.89789 5.14651C3.04461 5.22824 3.14212 5.34266 3.19917 5.50611L8.79105 23.805C9.02743 24.6305 9.34524 25.3088 9.72834 25.8237C10.1114 26.3468 10.5599 26.739 11.0652 27.0088C11.2771 27.115 11.5216 27.2049 11.7824 27.2703C12.0514 27.3357 12.3284 27.3684 12.6218 27.3684C13.2087 27.3684 13.9179 27.2213 14.7575 26.927C15.597 26.6328 16.2656 26.3958 16.7709 26.2078C17.2763 26.0199 17.5694 25.9136 17.6509 25.8891C17.7324 25.8646 17.8469 25.8728 18.0099 25.93C18.1729 26.0117 18.2788 26.1261 18.3522 26.2895C18.4174 26.453 18.4255 26.6083 18.3685 26.7718C18.344 26.8535 18.2952 26.9189 18.23 26.9679C18.1648 27.0251 18.0914 27.0578 18.0099 27.0905C17.7735 27.1722 17.5207 27.2621 17.2517 27.3684C16.7463 27.5563 16.0371 27.8097 15.116 28.1284C14.195 28.4472 13.3801 28.6106 12.6628 28.6106C12.2634 28.6106 11.8804 28.5698 11.5217 28.488C11.1631 28.4063 10.8207 28.2919 10.5028 28.1284C9.83446 27.7852 9.25544 27.2785 8.76638 26.6246C8.27732 25.9708 7.87816 25.1535 7.58472 24.1646L2.03383 5.86572C1.97678 5.70226 1.99292 5.55515 2.07443 5.40804C2.16409 5.26093 2.28652 5.16286 2.44139 5.10565ZM12.9887 6.11092C12.9887 6.85464 12.7198 7.50845 12.19 8.05602C11.6601 8.6036 11.0081 8.8733 10.2338 8.8733C9.45945 8.8733 8.79908 8.6036 8.25296 8.05602C7.70684 7.50845 7.43786 6.86282 7.43786 6.11092C7.43786 5.3345 7.70684 4.67249 8.25296 4.12491C8.79908 3.57733 9.45945 3.30763 10.2338 3.30763C11.0081 3.30763 11.6601 3.5855 12.19 4.12491C12.7198 4.67249 12.9887 5.3345 12.9887 6.11092ZM11.7498 6.11092C11.7498 5.68593 11.603 5.31815 11.3096 5.00758C11.0162 4.69702 10.6577 4.54991 10.2338 4.54991C9.80995 4.54991 9.45105 4.70519 9.15761 5.00758C8.86417 5.31815 8.71742 5.68593 8.71742 6.11092C8.71742 6.5359 8.86417 6.89549 9.15761 7.18971C9.45105 7.48393 9.80995 7.63105 10.2338 7.63105C10.6577 7.63105 11.0162 7.48393 11.3096 7.18971C11.603 6.89549 11.7498 6.5359 11.7498 6.11092ZM24.5713 20.3234C24.3349 19.6532 23.9764 19.1629 23.5118 18.8441C23.0472 18.5254 22.4766 18.3619 21.8164 18.3619H16.2655C16.1024 18.3619 15.9718 18.3211 15.8659 18.2394C15.7599 18.1576 15.6947 18.0514 15.6621 17.9206L14.2683 12.9188C14.1053 12.3876 13.7793 11.9708 13.2658 11.6766C12.7604 11.3824 12.1979 11.3415 11.5866 11.554L10.2254 11.9545L12.8256 20.4051L18.776 21.3287C18.9635 21.3532 19.1019 21.4349 19.1916 21.5657C19.2812 21.6964 19.3139 21.8435 19.2895 22.007C19.265 22.195 19.1835 22.3339 19.053 22.4238C18.9226 22.5137 18.7597 22.5546 18.5723 22.5219L12.2632 21.5575C12.1572 21.5575 12.0593 21.5166 11.9615 21.4349C11.8719 21.3532 11.8069 21.2633 11.7824 21.157L8.86429 11.742C8.83983 11.554 8.84783 11.3905 8.90488 11.2434C8.95379 11.0963 9.0764 10.9982 9.26388 10.941L11.22 10.3362C12.1819 10.042 13.054 10.1074 13.8528 10.5324C14.6516 10.9574 15.1814 11.6275 15.4504 12.5347L16.7299 17.1033H21.8C22.7048 17.1033 23.4954 17.3403 24.1801 17.8062C24.8566 18.272 25.3864 18.9585 25.7613 19.8657L29.0786 29.1582C29.1275 29.3217 29.1275 29.4769 29.0623 29.6404C28.9971 29.8039 28.8831 29.9101 28.72 29.9591C28.6956 29.9837 28.6713 30 28.6631 30C28.6468 30 28.6307 30 28.6062 30H28.5246C28.3616 30 28.231 29.9673 28.125 29.9019C28.0191 29.8365 27.9539 29.7385 27.9213 29.5995L24.5713 20.3234ZM30 10.5569C30 11.415 29.7633 12.0689 29.2987 12.5429C28.8341 13.0088 28.1741 13.2458 27.3183 13.2458H21.3272C21.1397 13.2458 20.9848 13.1885 20.8707 13.066C20.7484 12.9434 20.6916 12.8044 20.6916 12.6492V4.72153C20.6916 3.86339 20.9279 3.20138 21.4088 2.71919C21.8897 2.23699 22.5497 2 23.4056 2H29.356C29.5435 2 29.6984 2.05719 29.8125 2.17978C29.9348 2.30237 29.9916 2.44132 29.9916 2.5966V10.5569H30ZM23.4139 3.22592C22.9086 3.22592 22.5417 3.34849 22.3135 3.5855C22.0852 3.82251 21.9712 4.19848 21.9712 4.7052V11.9953H27.3262C27.8316 11.9953 28.1985 11.8809 28.4267 11.6521C28.6549 11.4232 28.769 11.0555 28.769 10.5487V3.21774H23.4139V3.22592Z"/></svg>`,
+    bags: `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M18.1939 6.59004H22.4224V3.51326L18.1939 5.0309V6.59004ZM9.0007 10.3433H13.5171V7.26649L9.0007 8.74286V10.3433ZM15.9326 30C15.7716 30 15.6271 29.9423 15.5254 29.8186C15.4153 29.6948 15.3558 29.5628 15.3558 29.3979V27.3191H7.02715V29.3979C7.02715 29.5546 6.96724 29.6948 6.84013 29.8186C6.72151 29.9423 6.56087 30 6.36598 30C6.19652 30 6.05266 29.9423 5.93404 29.8186C5.80693 29.6948 5.74702 29.5628 5.74702 29.3979V27.3191H3.52789C3.36689 27.3191 3.21414 27.2614 3.07856 27.1377C2.94299 27.0222 2.875 26.882 2.875 26.717V12.5374C2.875 11.8692 3.07876 11.3414 3.49396 10.9372C3.90069 10.5412 4.45183 10.335 5.13818 10.335H7.72968V8.33868C7.72968 8.01697 7.86546 7.81903 8.14508 7.74479L13.9747 5.82296C14.1696 5.74047 14.3566 5.77334 14.5515 5.90532C14.7464 6.0373 14.8394 6.20234 14.8394 6.38382V10.9784C14.8394 11.1434 14.7715 11.2835 14.6359 11.4155C14.5003 11.5474 14.3476 11.6136 14.1866 11.6136H5.15473C4.79884 11.6136 4.55301 11.6877 4.41744 11.8362C4.28186 11.9846 4.21387 12.2157 4.21387 12.5374V26.0818H17.2704C17.6263 26.0818 17.8721 26.0158 18.0077 25.8839C18.1433 25.7519 18.2113 25.5293 18.2113 25.2076V11.6217H16.8128C16.6179 11.6217 16.4658 11.5557 16.3387 11.4237C16.2116 11.2917 16.1517 11.1434 16.1517 10.9867C16.1517 10.8052 16.2116 10.6485 16.3387 10.5247C16.4573 10.401 16.6179 10.3433 16.8128 10.3433H18.8211C19.0075 10.3433 19.1682 10.401 19.2953 10.5247C19.4139 10.6485 19.4823 10.797 19.4823 10.9867V21.0584H26.9893C27.5655 21.0584 27.854 20.7532 27.854 20.1427V7.80259H17.5162C17.3467 7.80259 17.2029 7.74487 17.0842 7.62114C16.9571 7.4974 16.8981 7.35717 16.8981 7.20044V4.56087C16.8981 4.29691 17.0332 4.09895 17.3044 3.95872L22.88 2.04495C23.0748 1.96246 23.261 1.99554 23.4559 2.12752C23.6254 2.23475 23.7017 2.39134 23.7017 2.60581V6.59829H28.506C28.667 6.59829 28.8117 6.65599 28.9388 6.75497C29.0659 6.86221 29.125 7.01072 29.125 7.20044V20.1427C29.125 20.8356 28.9383 21.3718 28.5739 21.7595C28.2011 22.1472 27.6762 22.337 26.9984 22.337H25.9731V24.0527C25.9731 24.2341 25.9132 24.3826 25.7861 24.4899C25.659 24.5971 25.5068 24.6548 25.3119 24.6548C25.1171 24.6548 24.9728 24.6053 24.8626 24.4899C24.7525 24.3826 24.693 24.2341 24.693 24.0527V22.337H19.4823V25.2159C19.4823 25.884 19.2788 26.4036 18.889 26.7748C18.4907 27.146 17.9483 27.3357 17.2704 27.3357H16.6103V29.4144C16.6103 29.5711 16.5512 29.7113 16.4241 29.8351C16.28 29.9423 16.1274 30 15.9326 30Z"/></svg>`,
+    final: `<svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M6.47954 2.94215C6.6135 2.94215 6.73862 2.99632 6.84746 3.09576C6.95629 3.19519 7.04005 3.32167 7.09028 3.47535L7.5841 5.91621H29.1176C29.4693 5.91621 29.7203 5.98852 29.8543 6.13315C29.9882 6.27778 30.0296 6.50376 29.9794 6.80207L28.2968 13.8439C28.2717 13.9614 28.2049 14.0607 28.1128 14.1511C28.0123 14.2415 27.9118 14.2957 27.803 14.3319L14.6758 17.08C14.4581 17.1071 14.2818 17.0801 14.1395 16.9897C14.0055 16.8993 13.9218 16.7547 13.8967 16.5468C13.8715 16.3388 13.9051 16.167 13.9972 16.0133C14.0893 15.8687 14.2398 15.7783 14.424 15.7512L27.1415 13.0483L28.5396 7.29024H7.86044L9.99515 17.3874C10.1626 18.1557 10.4811 18.7161 10.9583 19.0686C11.4355 19.4212 12.1301 19.602 13.0259 19.602H26.2373C26.4298 19.602 26.5885 19.6653 26.7058 19.8009C26.8313 19.9365 26.8905 20.1083 26.8905 20.3071C26.8905 20.4879 26.8313 20.6416 26.7058 20.7682C26.5802 20.9038 26.4215 20.967 26.2373 20.967H13.0259C11.7952 20.967 10.8157 20.6778 10.0957 20.0993C9.36735 19.5207 8.92376 18.6891 8.76469 17.5953C8.70609 17.3602 8.64771 17.071 8.58073 16.7275C8.51376 16.384 8.4214 15.9862 8.31257 15.5071C8.12001 14.6212 7.9109 13.6359 7.67649 12.5421C7.44207 11.4483 7.21638 10.3546 6.99871 9.26081C6.88987 8.72747 6.78051 8.22131 6.67167 7.73317C6.56284 7.24504 6.4625 6.78398 6.38716 6.34104C6.27832 5.8981 6.18596 5.50936 6.11899 5.16585C6.05201 4.82235 5.98526 4.54216 5.93503 4.29809H2.65325C2.46069 4.29809 2.30198 4.23484 2.18477 4.09925C2.05919 3.96365 2 3.80089 2 3.59298C2 3.41219 2.05919 3.2585 2.18477 3.13195C2.31035 2.99636 2.46069 2.93311 2.65325 2.93311H6.47954V2.94215ZM17.3044 25.7942C17.3044 26.7072 17.0115 27.4845 16.4255 28.1172C15.8394 28.75 15.1191 29.0664 14.2736 29.0664C13.4531 29.0664 12.7416 28.75 12.1389 28.1172C11.5361 27.4845 11.2346 26.7072 11.2346 25.7942C11.2346 24.9083 11.5361 24.149 12.1389 23.5162C12.7416 22.8835 13.4531 22.567 14.2736 22.567C15.1191 22.567 15.8394 22.8835 16.4255 23.5162C17.0115 24.149 17.3044 24.9083 17.3044 25.7942ZM16.0404 25.7942C16.0404 25.288 15.8643 24.8539 15.5294 24.4833C15.1861 24.1127 14.7675 23.932 14.2736 23.932C13.8047 23.932 13.4027 24.1127 13.0595 24.4833C12.7162 24.8539 12.5493 25.288 12.5493 25.7942C12.5493 26.3276 12.7162 26.7795 13.0595 27.1411C13.4027 27.5117 13.8047 27.6924 14.2736 27.6924C14.7675 27.6924 15.1861 27.5117 15.5294 27.1411C15.8643 26.7795 16.0404 26.3276 16.0404 25.7942ZM26.9069 25.7942C26.9069 26.7072 26.614 27.4845 26.028 28.1172C25.4419 28.75 24.7217 29.0664 23.8761 29.0664C23.0305 29.0664 22.3111 28.75 21.725 28.1172C21.139 27.4845 20.8453 26.7072 20.8453 25.7942C20.8453 24.9083 21.139 24.149 21.725 23.5162C22.3111 22.8835 23.0305 22.567 23.8761 22.567C24.7217 22.567 25.4419 22.8835 26.028 23.5162C26.614 24.149 26.9069 24.9083 26.9069 25.7942ZM25.6347 25.7942C25.6347 25.288 25.467 24.8539 25.1237 24.4833C24.7805 24.1127 24.3617 23.932 23.8761 23.932C23.4073 23.932 22.9973 24.1127 22.6456 24.4833C22.294 24.8539 22.1101 25.288 22.1101 25.7942C22.1101 26.3276 22.2856 26.7795 22.6456 27.1411C22.9973 27.5117 23.4073 27.6924 23.8761 27.6924C24.37 27.6924 24.7805 27.5117 25.1237 27.1411C25.467 26.7795 25.6347 26.3276 25.6347 25.7942Z"/></svg>`,
+  };
+
+  function summaryRow(id, label, value, detailHtml, iconKey, opts = {}) {
+    const open = state.openSummary === id;
+    const isFinal = Boolean(opts.final);
+    return `
+      <div class="pax-sum-row${open ? ' is-open' : ''}${isFinal ? ' is-final' : ''}" data-sum="${id}">
+        <button type="button" class="pax-sum-row__btn" data-sum-toggle="${id}" aria-expanded="${open ? 'true' : 'false'}">
+          <span class="pax-sum-row__ico" aria-hidden="true">${SUM_ICONS[iconKey] || ''}</span>
+          <span class="pax-sum-row__copy">
+            <span class="pax-sum-row__label">${label}</span>
+            <span class="pax-sum-row__amount">${value}</span>
+            ${isFinal ? '<span class="pax-sum-row__taxes">Incluye tasas, cargos e impuestos</span>' : ''}
+          </span>
+          <span class="pax-sum-row__chev" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="24" height="24"><path fill="currentColor" d="M27.5509 7.7749L16.001 19.3599L4.45097 7.7749L2.00098 10.2249L16.001 24.2249L30.001 10.2249L27.5509 7.7749Z"/></svg>
+          </span>
+        </button>
+        <div class="pax-sum-row__detail" ${open ? '' : 'hidden'}>${detailHtml || '<p>Sin detalle adicional.</p>'}</div>
+      </div>
+    `;
+  }
+
+  function flightDetail(selection) {
+    const out = selection.outbound?.flight;
+    const back = selection.inbound?.flight;
+    if (!out) return '<p>Sin vuelos seleccionados.</p>';
+    let html = `<p><strong>${selection.from?.city || ''} → ${selection.to?.city || ''}</strong></p>
+      <p>${out.depart || ''} – ${out.arrive || ''} · ${out.duration || ''} · ${out.stops || 'Directo'}</p>
+      <p>${ticketMoney(selection.outbound?.price || 0)} por pasajero</p>`;
+    if (selection.trip === 'roundtrip' && back) {
+      html += `<p class="pax-sum-gap"><strong>${selection.to?.city || ''} → ${selection.from?.city || ''}</strong></p>
+        <p>${back.depart || ''} – ${back.arrive || ''} · ${back.duration || ''} · ${back.stops || 'Directo'}</p>
+        <p>${ticketMoney(selection.inbound?.price || 0)} por pasajero</p>`;
+    }
+    return html;
+  }
+
+  function seatDetail(seats) {
+    const parts = [];
+    if (seats?.outbound?.id) parts.push(`Ida: asiento ${seats.outbound.id} (${money(seats.outbound.price || 0)})`);
+    if (seats?.inbound?.id) parts.push(`Vuelta: asiento ${seats.inbound.id} (${money(seats.inbound.price || 0)})`);
+    return parts.length ? parts.map((p) => `<p>${p}</p>`).join('') : '<p>Sin asientos seleccionados.</p>';
+  }
+
+  function bagDetail(store) {
+    const cabin = store?.cabin === 'cabin-plus' ? 'Bolso + maleta cabina' : 'Bolso o mochila incluida';
+    return `<p>${cabin}</p>
+      <p>Bodega 23 kg × ${Number(store?.holdCount || 0)}</p>
+      <p>Equipaje especial × ${Number(store?.specialCount || 0)}</p>`;
+  }
+
+  function summaryHtml(selection, seats, store, totals) {
+    return `
+      ${summaryRow('flights', 'Vuelos', ticketMoney(totals.flightsBefore), flightDetail(selection), 'flights')}
+      ${summaryRow('seats', 'Asientos', money(totals.seats), seatDetail(seats), 'seats')}
+      ${summaryRow('bags', 'Equipaje', money(totals.bags), bagDetail(store), 'bags')}
+      ${summaryRow('final', 'Precio final', totalMoney(totals.finalBefore, totals.final), '<p>Incluye tasas, cargos e impuestos.</p>', 'final', { final: true })}
+    `;
+  }
+
+  function renderSummary(selection, seats, store, totals) {
+    const html = summaryHtml(selection, seats, store, totals);
+    if (summaryRoot) summaryRoot.innerHTML = html;
+    if (mobileSummary) mobileSummary.innerHTML = html;
+    if (mobileTotal) mobileTotal.innerHTML = totalMoney(totals.finalBefore, totals.final);
+  }
+
+  function syncInsurance(selection) {
+    const people = Math.max(1, (selection.adults || 0) + (selection.children || 0) + (selection.infants || 0));
+    const days = coverageDays(selection);
+    const price = assist.pricePerPerson * people;
+    const peopleEl = document.getElementById('pax-insurance-people');
+    const daysEl = document.getElementById('pax-insurance-days');
+    const labelEl = document.getElementById('pax-insurance-total-label');
+    const priceEl = document.getElementById('pax-insurance-price');
+    const addBtn = document.getElementById('pax-insurance-add');
+    if (peopleEl) peopleEl.textContent = `${people} persona${people === 1 ? '' : 's'}`;
+    if (daysEl) daysEl.textContent = `${days} días`;
+    if (labelEl) labelEl.textContent = `Total para ${people} persona${people === 1 ? '' : 's'}`;
+    if (priceEl) priceEl.textContent = money(price);
+    if (addBtn) {
+      addBtn.classList.toggle('is-added', state.assistAdded);
+      addBtn.setAttribute('aria-pressed', state.assistAdded ? 'true' : 'false');
+      addBtn.textContent = state.assistAdded ? 'Agregado' : 'Agregar';
+    }
+    return price;
+  }
+
+  function computeTotals(selection, seats, store) {
+    const people = Math.max(1, (selection.adults || 0) + (selection.children || 0) + (selection.infants || 0));
+    const flightsBefore = tripBase(selection, false);
+    const flights = tripBase(selection, true);
+    const seatsTotal = seatExtras(seats, selection);
+    const bags = bagExtras(store);
+    const assistTotal = state.assistAdded ? assist.pricePerPerson * people : 0;
+    const car = store?.selectedCarId ? Number(store.selectedCarPrice || 0) : 0;
+    const extras = seatsTotal + bags + assistTotal + car;
+    return {
+      flights,
+      flightsBefore,
+      seats: seatsTotal,
+      bags,
+      assist: assistTotal,
+      car,
+      finalBefore: flightsBefore + extras,
+      final: flights + extras,
+    };
+  }
+
+  function refresh(selection, seats, store) {
+    syncInsurance(selection);
+    const totals = computeTotals(selection, seats, store);
+    renderSummary(selection, seats, store, totals);
+  }
+
+  function validate() {
+    const required = [...document.querySelectorAll('#pax-board input[required], #pax-board select[required]')];
+    for (const input of required) {
+      if (!String(input.value || '').trim()) {
+        showError('Completa todos los campos obligatorios de pasajeros y contacto.');
+        input.focus();
+        return false;
+      }
+    }
+    showError('');
+    return true;
+  }
+
+  function continueCheckout(selection) {
+    if (!validate()) return;
+    const people = Math.max(1, (selection.adults || 0) + (selection.children || 0) + (selection.infants || 0));
+    const emailInput = document.querySelector('input[name="contact-email"]');
+    sessionStorage.setItem(
+      PAX_KEY,
+      JSON.stringify({
+        savedAt: new Date().toISOString(),
+        assistAdded: state.assistAdded,
+        assistPrice: state.assistAdded ? assist.pricePerPerson * people : 0,
+        email: emailInput?.value || '',
+      }),
+    );
+    const search = selection.search || '';
+    const qs = search.startsWith('?') ? search : search ? `?${search}` : '';
+    window.location.href = `/pagos${qs}`;
+  }
+
+  const selection = readJson(STORAGE_KEY, null);
+  const seats = readJson(SEATS_KEY, { outbound: null, inbound: null });
+  const store = readJson(STORE_KEY, {});
+
+  if (!selection?.outbound) {
+    showError('No encontramos tu selección de vuelos. Vuelve a elegir tus tarifas.');
+    document.getElementById('pax-insurance')?.remove();
+    document.getElementById('pax-assist-banner')?.remove();
+  } else {
+    if (store?.selectedCarId && !store.selectedCarPrice) {
+      const known = { spark: 651.84, picanto: 671.92, i10: 681.36 };
+      store.selectedCarPrice = known[store.selectedCarId] || 0;
+    }
+
+    renderForms(selection);
+    initCountrySelects();
+    initPassengerHeadSync(selection);
+    initMobileBarStretch();
+    refresh(selection, seats, store);
+
+    formsRoot?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-pax-toggle]');
+      if (!btn) return;
+      const idx = btn.dataset.paxToggle;
+      const card = document.querySelector(`[data-pax-card="${idx}"]`);
+      if (!card) return;
+      const open = !card.classList.contains('is-open');
+      card.classList.toggle('is-open', open);
+      const body = card.querySelector('.pax-card__body');
+      if (body) {
+        if (open) body.removeAttribute('hidden');
+        else body.setAttribute('hidden', '');
+      }
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    const onSumToggle = (e) => {
+      const btn = e.target.closest('[data-sum-toggle]');
+      if (!btn) return;
+      const id = btn.dataset.sumToggle;
+      state.openSummary = state.openSummary === id ? '' : id;
+      refresh(selection, seats, store);
+    };
+    summaryRoot?.addEventListener('click', onSumToggle);
+    mobileSummary?.addEventListener('click', onSumToggle);
+
+    document.getElementById('pax-assist-banner-close')?.addEventListener('click', () => {
+      document.getElementById('pax-assist-banner')?.remove();
+    });
+
+    document.getElementById('pax-insurance-add')?.addEventListener('click', () => {
+      state.assistAdded = !state.assistAdded;
+      refresh(selection, seats, store);
+    });
+
+    document.getElementById('pax-mobile-price-toggle')?.addEventListener('click', () => {
+      setSheetOpen(!!mobileSheet?.hidden);
+    });
+    mobileSheet?.querySelectorAll('[data-pax-sheet-close]').forEach((el) => {
+      el.addEventListener('click', () => setSheetOpen(false));
+    });
+
+    document.getElementById('pax-continue')?.addEventListener('click', () => continueCheckout(selection));
+    document.getElementById('pax-continue-mobile')?.addEventListener('click', () => continueCheckout(selection));
+  }
+</script>
