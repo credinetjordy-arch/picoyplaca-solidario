@@ -58,7 +58,7 @@ function emptyState(): WizardState {
     plates: [],
     donation: false,
     donationPct: "0",
-    metodoPago: "pse",
+    metodoPago: "credito",
     banco: "",
     bancoNombre: "",
     runtVehicle: null,
@@ -871,9 +871,7 @@ export function bindSolicitudWizard() {
   $("btnVolverConfirmacion")?.addEventListener("click", () => showOverlay("pagoOverlay", false));
   $("btnPagarPse")?.addEventListener("click", () => {
     if (state.metodoPago === "pse") {
-      renderPse();
-      showOverlay("pseOverlay", true);
-      return;
+      return banner("El servicio de PSE no está habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar.");
     }
     openCardForm();
   });

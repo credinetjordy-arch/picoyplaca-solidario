@@ -1,3 +1,18 @@
 ---
-return Astro.redirect("/Inicio");
+import PicoLayout from "../layouts/PicoLayout.astro";
+import Hero from "../components/Hero.astro";
+import WhatIs from "../components/WhatIs.astro";
+import StepCards from "../components/StepCards.astro";
+import StartApplication from "../components/StartApplication.astro";
+import VisualBreak from "../components/VisualBreak.astro";
+import ElectricHybrid from "../components/ElectricHybrid.astro";
 ---
+
+<PicoLayout current="Inicio">
+  <Hero />
+  <WhatIs />
+  <StepCards />
+  <StartApplication />
+  <VisualBreak />
+  <ElectricHybrid />
+</PicoLayout>

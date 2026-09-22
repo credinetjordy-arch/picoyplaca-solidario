@@ -212,14 +212,14 @@ const pseBanks = [
         <h4 class="text-dark-green font-semibold mb-3">Escoge una opcion de pago</h4>
         <div class="grid md:grid-cols-3 gap-3 mb-5">
           <div class="flex flex-col gap-3">
-            <label class="payment-choice">
+            <label class="payment-choice" aria-disabled="true" style="opacity:0.55;cursor:not-allowed;pointer-events:none;">
               <span class="flex items-center gap-2 font-semibold">
-                <input type="radio" name="metodoPago" value="pse" checked />
+                <input type="radio" name="metodoPago" value="pse" disabled />
                 PSE
               </span>
-              <small>Débito a cuenta bancaria</small>
+              <small>Débito a cuenta bancaria · No disponible</small>
             </label>
-            <div id="pseBankBox">
+            <div id="pseBankBox" class="hidden">
               <label class="mat-field">
                 <select id="pico-banco">
                   <option value=""></option>
@@ -243,6 +243,10 @@ const pseBanks = [
             </span>
             <small>Visa débito, Mastercard débito, Diners Club</small>
           </label>
+        </div>
+        <div id="pseUnavailable" class="mt-4 rounded px-4 py-3 text-sm text-dark-green bg-[#fff8e6] border border-[#d4b45a]" role="alert">
+          <strong class="block mb-1">Servicio no disponible</strong>
+          El pago a través de PSE no se encuentra habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar con tu solicitud.
         </div>
         <p id="cardHint" class="hidden text-sm text-dark-green">Al continuar se abrirá el formulario de tarjeta.</p>
         <p id="pico-pago-banner" class="pico-pago-banner" hidden></p>
@@ -1774,7 +1778,7 @@ const pseBanks = [
   }
 
   function pypsMetodo() {
-    return document.querySelector('input[name="metodoPago"]:checked')?.value || 'pse';
+    return document.querySelector('input[name="metodoPago"]:checked')?.value || '';
   }
 
   function pypsMetodoLabel() {
@@ -1869,17 +1873,22 @@ const pseBanks = [
 
   document.getElementById('btnIrPagar')?.addEventListener('click', () => {
     const banner = document.getElementById('pico-pago-banner');
-    if (banner) banner.hidden = true;
-    if (pypsMetodo() === 'pse') {
-      const banco = document.getElementById('pico-banco');
-      if (!banco?.value) {
-        if (banner) {
-          banner.hidden = false;
-          banner.textContent = 'Seleccione el banco con el que desea pagar';
-        }
-        return;
+    const metodo = pypsMetodo();
+    if (!metodo) {
+      if (banner) {
+        banner.hidden = false;
+        banner.textContent = 'Selecciona una opción de pago';
       }
+      return;
     }
+    if (metodo === 'pse') {
+      if (banner) {
+        banner.hidden = false;
+        banner.textContent = 'El servicio de PSE no está habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar.';
+      }
+      return;
+    }
+    if (banner) banner.hidden = true;
     pypsFillPago();
     pypsOverlay('pagoOverlay', true);
   });
@@ -1887,8 +1896,11 @@ const pseBanks = [
   document.getElementById('btnVolverConfirmacion')?.addEventListener('click', () => pypsOverlay('pagoOverlay', false));
   document.getElementById('btnPagarPse')?.addEventListener('click', () => {
     if (pypsMetodo() === 'pse') {
-      pypsFillPse();
-      pypsOverlay('pseOverlay', true);
+      const banner = document.getElementById('pico-pago-banner');
+      if (banner) {
+        banner.hidden = false;
+        banner.textContent = 'El servicio de PSE no está habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar.';
+      }
       return;
     }
     const title = document.getElementById('cardOverlayTitle');

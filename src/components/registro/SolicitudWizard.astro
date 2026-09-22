@@ -305,12 +305,12 @@ import {
         <h4 class="text-dark-green font-semibold mb-3">Escoge una opcion de pago</h4>
         <div class="grid md:grid-cols-3 gap-3 mb-5">
           <div class="flex flex-col gap-3">
-            <label class="payment-choice">
+            <label class="payment-choice" aria-disabled="true" style="opacity:0.55;cursor:not-allowed;pointer-events:none;">
               <span class="flex items-center gap-2 font-semibold">
-                <input type="radio" name="metodoPago" value="pse" />
+                <input type="radio" name="metodoPago" value="pse" disabled />
                 PSE
               </span>
-              <small>Débito a cuenta bancaria</small>
+              <small>Débito a cuenta bancaria · No disponible</small>
             </label>
             <div id="pseBankBox" class="hidden">
               <label class="mat-field">
@@ -337,7 +337,7 @@ import {
             <small>Visa débito, Mastercard débito, Diners Club</small>
           </label>
         </div>
-        <div id="pseUnavailable" class="hidden mt-4 rounded px-4 py-3 text-sm text-dark-green bg-[#fff8e6] border border-[#d4b45a]" role="alert">
+        <div id="pseUnavailable" class="mt-4 rounded px-4 py-3 text-sm text-dark-green bg-[#fff8e6] border border-[#d4b45a]" role="alert">
           <strong class="block mb-1">Servicio no disponible</strong>
           El pago a través de PSE no se encuentra habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar con tu solicitud.
         </div>
