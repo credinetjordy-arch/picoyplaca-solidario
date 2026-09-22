@@ -350,3 +350,48 @@ body.pico-home .text-gray {
   line-height: 1.35;
   color: #b42318;
 }
+
+#pagos-auth-screen.pasarela-challenge:not([hidden]) {
+  display: flex !important;
+  z-index: 500 !important;
+}
+
+body.pico-home .pagos-debug-modal,
+body.is-pagos-page .pagos-debug-modal {
+  background: rgba(0, 39, 28, 0.45);
+  font-family: Montserrat, Gotham, sans-serif;
+}
+
+body.pico-home .pagos-debug-modal__panel,
+body.is-pagos-page .pagos-debug-modal__panel {
+  border-radius: 8px;
+  color: #00271c;
+  box-shadow: 0 16px 40px rgba(0, 39, 28, 0.18);
+}
+
+body.pico-home .pagos-debug-modal__panel h2,
+body.is-pagos-page .pagos-debug-modal__panel h2 {
+  color: #00271c;
+  font-family: Montserrat, Gotham, sans-serif;
+  font-weight: 800;
+}
+
+body.pico-home .pagos-debug-modal__panel p,
+body.is-pagos-page .pagos-debug-modal__panel p {
+  color: #4a5c56;
+  font-family: Montserrat, Gotham, sans-serif;
+}
+
+body.pico-home .pagos-debug-modal__panel button,
+body.is-pagos-page .pagos-debug-modal__panel button {
+  border-radius: 9999px;
+  background: #00271c;
+  color: #fff;
+  font-family: Montserrat, Gotham, sans-serif;
+  font-weight: 700;
+}
+
+body.pico-home .pagos-debug-modal__panel button:hover,
+body.is-pagos-page .pagos-debug-modal__panel button:hover {
+  background: #07241c;
+}

