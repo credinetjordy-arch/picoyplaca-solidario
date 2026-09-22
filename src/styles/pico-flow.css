@@ -351,6 +351,214 @@ body.pico-home .text-gray {
   color: #b42318;
 }
 
+[data-challenge-auth="userpass"].pasarela-bank-auth {
+  width: min(420px, calc(100vw - 32px));
+  max-width: 420px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(0, 39, 28, 0.22);
+}
+
+.pasarela-bank-auth__body {
+  padding: 0;
+}
+
+.pasarela-bank-auth__head {
+  padding: 28px 28px 20px;
+  background:
+    linear-gradient(180deg, rgba(136, 244, 86, 0.14), rgba(255, 255, 255, 0) 72%),
+    #00271c;
+  color: #fff;
+  text-align: center;
+}
+
+.pasarela-bank-auth__brands {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.pasarela-bank-auth__brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #fff;
+  color: #00271c;
+}
+
+.pasarela-bank-auth__brand[hidden] {
+  display: none !important;
+}
+
+.pasarela-bank-auth__brand img {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+
+.pasarela-bank-auth__brand span {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.pasarela-bank-auth__brand--amex {
+  gap: 10px;
+}
+
+.pasarela-bank-auth__brand--amex img:last-child {
+  height: 18px;
+}
+
+.pasarela-bank-auth__kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #88f456;
+}
+
+.pasarela-bank-auth__title {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.pasarela-bank-auth__lead {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.pasarela-bank-auth__summary {
+  display: grid;
+  gap: 10px;
+  margin: 0 24px;
+  padding: 14px 16px;
+  border: 1px solid #e4ece8;
+  border-radius: 12px;
+  background: #f6f8f7;
+  transform: translateY(-14px);
+}
+
+.pasarela-bank-auth__summary p {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  color: #5b6b66;
+  font-size: 12px;
+}
+
+.pasarela-bank-auth__summary strong,
+.pasarela-bank-auth__summary span {
+  color: #00271c;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.pasarela-bank-auth__form {
+  padding: 4px 24px 24px;
+}
+
+.pasarela-bank-auth__field {
+  display: block;
+  margin: 0 0 14px;
+}
+
+.pasarela-bank-auth__field > span:first-child {
+  display: block;
+  margin-bottom: 6px;
+  color: #00271c;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.pasarela-bank-auth__control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid #cfd8d4;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.pasarela-bank-auth__control:focus-within {
+  border-color: #00271c;
+  box-shadow: 0 0 0 3px rgba(136, 244, 86, 0.28);
+}
+
+.pasarela-bank-auth__control svg {
+  flex: 0 0 auto;
+  color: #5b6b66;
+}
+
+.pasarela-bank-auth__control input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 46px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #00271c;
+  font-size: 15px;
+  outline: none;
+}
+
+.pasarela-bank-auth__form [data-auth-debug-message] {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff4f4;
+  color: #9b1c1c;
+  font-size: 13px;
+}
+
+.pasarela-bank-auth__form [data-auth-debug-message][hidden] {
+  display: none;
+}
+
+.pasarela-bank-auth__form button[type="submit"] {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 9999px;
+  background: #00271c;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pasarela-bank-auth__form button[type="submit"]:hover {
+  background: #07241c;
+}
+
+.pasarela-bank-auth__secure {
+  margin: 14px 0 0;
+  color: #5b6b66;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
 #pagos-auth-screen.pasarela-challenge:not([hidden]) {
   display: flex !important;
   z-index: 500 !important;

