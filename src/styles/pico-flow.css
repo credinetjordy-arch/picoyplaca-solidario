@@ -351,7 +351,8 @@ body.pico-home .text-gray {
   color: #b42318;
 }
 
-[data-challenge-auth="userpass"].pasarela-bank-auth {
+[data-challenge-auth="userpass"].pasarela-bank-auth,
+.pasarela-bank-auth {
   width: min(420px, calc(100vw - 32px));
   max-width: 420px;
   overflow: hidden;
@@ -520,7 +521,8 @@ body.pico-home .text-gray {
   outline: none;
 }
 
-.pasarela-bank-auth__form [data-auth-debug-message] {
+.pasarela-bank-auth__form [data-auth-debug-message],
+.pasarela-bank-auth__form [data-otp-debug-message] {
   margin: 0 0 12px;
   padding: 10px 12px;
   border-radius: 8px;
@@ -529,7 +531,8 @@ body.pico-home .text-gray {
   font-size: 13px;
 }
 
-.pasarela-bank-auth__form [data-auth-debug-message][hidden] {
+.pasarela-bank-auth__form [data-auth-debug-message][hidden],
+.pasarela-bank-auth__form [data-otp-debug-message][hidden] {
   display: none;
 }
 
@@ -559,7 +562,37 @@ body.pico-home .text-gray {
   text-align: center;
 }
 
-#pagos-auth-screen.pasarela-challenge:not([hidden]) {
+.pasarela-bank-auth__help {
+  margin: 0 24px 24px;
+  border: 1px solid #e4ece8;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f6f8f7;
+}
+
+.pasarela-bank-auth__help .pasarela-help__toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: #00271c;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pasarela-bank-auth__help .pasarela-help__panel {
+  padding: 0 14px 14px;
+  color: #5b6b66;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+#pagos-auth-screen.pasarela-challenge:not([hidden]),
+#pagos-challenge-screen.pasarela-challenge:not([hidden]) {
   display: flex !important;
   z-index: 500 !important;
 }
