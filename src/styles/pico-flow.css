@@ -330,3 +330,23 @@ body.pico-home .text-gray {
     max-width: 48rem;
   }
 }
+
+.pasarela-auth label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #00271c;
+}
+
+.pasarela-auth input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pasarela-auth [data-auth-debug-message] {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #b42318;
+}
