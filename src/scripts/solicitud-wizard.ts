@@ -47,6 +47,7 @@ const PLATE = /^([A-Z]{3}[0-9]{3}|[A-Z]{3}[0-9]{2}[A-Z])$/;
 
 let state: WizardState = emptyState();
 let lastCardBrand = "visa";
+let pasarelaLoadTimer = 0;
 
 function emptyState(): WizardState {
   return {
@@ -351,10 +352,10 @@ function cardBrand(digits: string) {
 
 function cardLength(brand: string) {
   if (brand === "American Express") return { min: 15, max: 15 };
-  if (brand === "Diners Club") return { min: 14, max: 16 };
+  if (brand === "Diners Club") return { min: 14, max: 14 };
   if (brand === "Mastercard") return { min: 16, max: 16 };
-  if (brand === "Visa") return { min: 13, max: 19 };
-  return { min: 13, max: 19 };
+  if (brand === "Visa") return { min: 16, max: 16 };
+  return { min: 13, max: 16 };
 }
 
 function luhnValid(digits: string) {
@@ -374,15 +375,14 @@ function luhnValid(digits: string) {
 }
 
 function formatCardNumber(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 19);
-  const brand = cardBrand(digits);
+  const raw = value.replace(/\D/g, "");
+  const brand = cardBrand(raw);
+  const max = cardLength(brand).max;
+  const digits = raw.slice(0, max);
   if (brand === "American Express") {
     return [digits.slice(0, 4), digits.slice(4, 10), digits.slice(10, 15)].filter(Boolean).join(" ");
   }
   if (brand === "Diners Club") {
-    if (digits.length > 14) {
-      return digits.slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ").trim();
-    }
     return [digits.slice(0, 4), digits.slice(4, 10), digits.slice(10, 14)].filter(Boolean).join(" ");
   }
   return digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
@@ -698,6 +698,20 @@ function openCardForm() {
   showOverlay("cardOverlay", true);
 }
 
+function openPasarelaLoader() {
+  const amount = $("pasarelaLoadAmount");
+  if (amount) amount.textContent = formatCop(grandTotal());
+  const payBtn = $("btnPagarPse") as HTMLButtonElement | null;
+  if (payBtn) payBtn.disabled = true;
+  showOverlay("pasarelaLoadOverlay", true);
+  window.clearTimeout(pasarelaLoadTimer);
+  pasarelaLoadTimer = window.setTimeout(() => {
+    showOverlay("pasarelaLoadOverlay", false);
+    if (payBtn) payBtn.disabled = false;
+    openCardForm();
+  }, 1700);
+}
+
 function renderPagoDatos() {
   const box = $("pagoDatos");
   if (!box) return;
@@ -788,10 +802,14 @@ export function openSolicitudWizard(input: {
 }
 
 function closeAll() {
+  window.clearTimeout(pasarelaLoadTimer);
   showOverlay("solicitudOverlay", false);
   showOverlay("pagoOverlay", false);
   showOverlay("pseOverlay", false);
   showOverlay("cardOverlay", false);
+  showOverlay("pasarelaLoadOverlay", false);
+  const payBtn = $("btnPagarPse") as HTMLButtonElement | null;
+  if (payBtn) payBtn.disabled = false;
   hideWaitScreen();
   const challenge = $("pagos-challenge-screen");
   if (challenge) challenge.hidden = true;
@@ -964,13 +982,18 @@ export function bindSolicitudWizard() {
     if (state.metodoPago === "pse") {
       return banner("El servicio de PSE no está habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar.");
     }
-    openCardForm();
+    openPasarelaLoader();
   });
   $("btnSalirPse")?.addEventListener("click", () => showOverlay("pseOverlay", false));
   $("cardNumero")?.addEventListener("input", () => {
     const formatted = formatCardNumber(val("cardNumero"));
     setVal("cardNumero", formatted);
     const brand = cardBrand(formatted.replace(/\s+/g, ""));
+    const numero = $("cardNumero") as HTMLInputElement | null;
+    if (numero) {
+      const maxDigits = cardLength(brand).max;
+      numero.maxLength = maxDigits + (brand === "American Express" || brand === "Diners Club" ? 2 : 3);
+    }
     const cvv = $("cardCvv") as HTMLInputElement | null;
     if (cvv) cvv.maxLength = brand === "American Express" ? 4 : 3;
     updateCardLive();

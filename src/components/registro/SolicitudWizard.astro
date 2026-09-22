@@ -370,6 +370,22 @@ import {
   </div>
 </div>
 
+<div id="pasarelaLoadOverlay" class="solicitud-overlay pasarela-load fixed inset-0 z-[105] hidden items-center justify-center p-4">
+  <div class="pasarela-load__card" role="status" aria-live="polite" aria-busy="true">
+    <div class="pasarela-load__mark" aria-hidden="true">
+      <span class="pasarela-load__spin"></span>
+      <svg viewBox="0 0 24 24" width="26" height="26">
+        <path fill="currentColor" d="M12 2 4.5 5.2v6.3c0 4.7 3.2 9 7.5 10.5 4.3-1.5 7.5-5.8 7.5-10.5V5.2L12 2Z" />
+      </svg>
+    </div>
+    <p class="pasarela-load__kicker">Pasarela de pago segura</p>
+    <h2 class="pasarela-load__title">Conectando con Payzen</h2>
+    <p class="pasarela-load__text">Estamos preparando un entorno cifrado para tu transacción. No cierres esta ventana.</p>
+    <p class="pasarela-load__amount">Valor a pagar <strong id="pasarelaLoadAmount">$ 0</strong></p>
+    <p class="pasarela-load__secure">Conexión protegida · Pico y Placa Solidario</p>
+  </div>
+</div>
+
 <div id="pseOverlay" class="solicitud-overlay fixed inset-0 z-[100] hidden items-center justify-center overflow-y-auto py-5 px-3">
   <div class="w-full max-w-xl rounded shadow-2xl overflow-hidden">
     <div class="pse-platform text-white px-6 py-5 flex items-center justify-between">
@@ -407,7 +423,7 @@ import {
           <span>Nombre del titular *</span>
         </label>
         <label class="mat-field">
-          <input id="cardNumero" inputmode="numeric" maxlength="23" />
+          <input id="cardNumero" inputmode="numeric" maxlength="19" />
           <span>Número de tarjeta *</span>
         </label>
         <div class="grid grid-cols-2 gap-4">

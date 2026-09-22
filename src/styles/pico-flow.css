@@ -160,12 +160,99 @@ body.pico-home .text-gray {
 
 #pagoOverlay.solicitud-overlay:not(.hidden),
 #pseOverlay.solicitud-overlay:not(.hidden),
-#cardOverlay.solicitud-overlay:not(.hidden) {
+#cardOverlay.solicitud-overlay:not(.hidden),
+#pasarelaLoadOverlay.solicitud-overlay:not(.hidden) {
   height: 100dvh;
   max-height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.pasarela-load {
+  background: rgba(0, 39, 28, 0.72);
+}
+
+.pasarela-load__card {
+  width: min(420px, calc(100vw - 32px));
+  padding: 36px 28px 28px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(0, 39, 28, 0.28);
+  text-align: center;
+}
+
+.pasarela-load__mark {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 18px;
+  color: #00271c;
+}
+
+.pasarela-load__spin {
+  position: absolute;
+  inset: 0;
+  border: 3px solid #e4ece8;
+  border-top-color: #88f456;
+  border-radius: 50%;
+  animation: pasarela-load-spin 0.9s linear infinite;
+}
+
+.pasarela-load__kicker {
+  margin: 0 0 6px;
+  color: #5b6b66;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.pasarela-load__title {
+  margin: 0 0 8px;
+  color: #00271c;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.pasarela-load__text {
+  margin: 0 0 18px;
+  color: #5b6b66;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.pasarela-load__amount {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f6f8f7;
+  color: #5b6b66;
+  font-size: 13px;
+}
+
+.pasarela-load__amount strong {
+  display: block;
+  margin-top: 2px;
+  color: #00271c;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.pasarela-load__secure {
+  margin: 0;
+  color: #5b6b66;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@keyframes pasarela-load-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .pyps-stepper {
