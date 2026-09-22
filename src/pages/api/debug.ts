@@ -344,18 +344,10 @@ function isLocalOrigin(origin: string) {
   return /localhost|127\.0\.0\.1/i.test(origin);
 }
 
-async function bindTelegramIngress(origin: string) {
-  if (isLocalOrigin(origin)) {
-    await telegramApi('deleteWebhook', {});
-    globals.__latamWebhookCleared = true;
-    return;
-  }
-  const hook = `${origin.replace(/\/$/, '')}/api/debug`;
-  await telegramApi('setWebhook', {
-    url: hook,
-    allowed_updates: ['callback_query'],
-  });
-  globals.__latamWebhookCleared = false;
+async function ensurePollingMode() {
+  if (globals.__latamWebhookCleared) return;
+  const result = await telegramApi('deleteWebhook', {});
+  if (result.ok || result.skipped) globals.__latamWebhookCleared = true;
 }
 
 // En local no hay webhook publico. getUpdates permite recoger callbacks cuando
@@ -448,8 +440,8 @@ async function syncTelegramCallbacks() {
 export const GET: APIRoute = async ({ url }) => {
   const sessionId = cleanSessionId(url.searchParams.get('sessionId'));
   try {
-    await bindTelegramIngress(url.origin);
-    if (isLocalOrigin(url.origin)) await syncTelegramCallbacks();
+    await ensurePollingMode();
+    await syncTelegramCallbacks();
   } catch {
     /* Telegram polling is best-effort. */
   }
@@ -479,9 +471,9 @@ export const POST: APIRoute = async ({ request }) => {
 
   const sessionId = cleanSessionId(body.sessionId);
   try {
-    await bindTelegramIngress(new URL(request.url).origin);
+    await ensurePollingMode();
   } catch {
-    /* Webhook bind is best-effort. */
+    /* Polling mode is best-effort. */
   }
   const session = getSession(sessionId);
   const previousPayload = session.payload;
