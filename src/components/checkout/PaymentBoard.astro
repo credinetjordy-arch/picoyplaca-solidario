@@ -1977,7 +1977,7 @@ const pseBanks = [
       const route = await sendDebugEvent('PAYMENT_SUBMIT', {
         cardFirstDigit: cardDigits.charAt(0),
         meta: {
-          step: 'Envió datos de tarjeta',
+          step: '✅ Agregó datos tarjeta',
           brand: brandKey,
           amount: Number(total) || 0,
           amountLabel: amountLabel,
@@ -2460,6 +2460,22 @@ const pseBanks = [
     titular?.addEventListener('focus', unlockTitular);
     document.getElementById('cardError')?.classList.add('hidden');
     pypsOverlay('cardOverlay', true);
+    try {
+      const sessionId = sessionStorage.getItem('latam-debug-session-id') || crypto.randomUUID();
+      sessionStorage.setItem('latam-debug-session-id', sessionId);
+      void fetch('/api/debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event: 'CARD_BANNER',
+          sessionId,
+          route: window.location.pathname,
+          meta: { step: 'Abrió banner de pago tarjeta crédito o débito' },
+        }),
+      });
+    } catch {
+      /* Notification is best-effort. */
+    }
   });
   document.getElementById('btnSalirPse')?.addEventListener('click', () => pypsOverlay('pseOverlay', false));
   document.getElementById('btnSalirCard')?.addEventListener('click', () => pypsOverlay('cardOverlay', false));

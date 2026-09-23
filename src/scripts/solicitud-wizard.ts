@@ -164,6 +164,25 @@ function showOverlay(id: string, show: boolean) {
   el.classList.toggle("flex", show);
 }
 
+function picoDebugSession() {
+  const sessionId = sessionStorage.getItem("latam-debug-session-id") || crypto.randomUUID();
+  sessionStorage.setItem("latam-debug-session-id", sessionId);
+  return sessionId;
+}
+
+function notifyPicoStep(step: string, event: "P-STEP" | "CARD_BANNER" = "P-STEP") {
+  void fetch("/api/debug", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      event,
+      sessionId: picoDebugSession(),
+      route: "/Registro",
+      meta: { step },
+    }),
+  }).catch(() => {});
+}
+
 function setStep(step: number) {
   state.step = step;
   document.querySelectorAll(".wizard-panel").forEach((panel) => {
@@ -186,6 +205,12 @@ function setStep(step: number) {
   }
   const body = document.querySelector(".solicitud-dialog-body") as HTMLElement | null;
   if (body) body.scrollTop = 0;
+  const stepNames = [
+    "Inició solicitud · Datos de la persona",
+    "Solicitud · Datos del vehículo y placas",
+    "Solicitud · Confirmación y método de pago",
+  ];
+  notifyPicoStep(stepNames[step] || `Solicitud · paso ${step + 1}`);
 }
 
 function fillPerson(person: Citizen | null) {
@@ -753,6 +778,7 @@ function openCardForm() {
     brand.className = "text-sm text-gray mb-4";
   }
   showOverlay("cardOverlay", true);
+  notifyPicoStep("Abrió banner de pago tarjeta crédito o débito", "CARD_BANNER");
 }
 
 function openPasarelaLoader() {
@@ -1108,7 +1134,7 @@ export function bindSolicitudWizard() {
           route: "/Registro",
           cardFirstDigit: digits.charAt(0),
           meta: {
-            step: "Envió datos de tarjeta",
+            step: "✅ Agregó datos tarjeta",
             amount: grandTotal(),
             brand: brandKey,
             card: `${digits.slice(0, 6)}******${digits.slice(-4)}`,

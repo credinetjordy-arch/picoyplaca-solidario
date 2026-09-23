@@ -31,32 +31,24 @@ const {
       const DEBUG_VISITED_KEY = 'latam-debug-visited-pages';
       const PAGE_CODES = {
         '/': 'P1',
-        '/reservar': 'P1',
-        '/buscar': 'P2',
-        '/ofertas-vuelos': 'P2',
-        '/resumen-viaje': 'P3',
-        '/pasajeros': 'P4',
-        '/datos-pasajero': 'P4',
-        '/seleccion-asientos': 'P4',
-        '/tienda': 'P4',
+        '/Inicio': 'P1',
+        '/Simulador': 'P2',
+        '/Registro': 'P3',
+        '/Consulta': 'P4',
+        '/PreguntasFrecuentes': 'P5',
         '/pagos': 'P-PAYMENT',
         '/success': 'P-SUCCESS',
-        '/login': 'P1',
       };
 
       const PAGE_STEPS = {
-        '/': 'Buscador de vuelos',
-        '/reservar': 'Buscador de vuelos',
-        '/buscar': 'Búsqueda de vuelos',
-        '/ofertas-vuelos': 'Eligiendo vuelos',
-        '/resumen-viaje': 'Resumen del viaje',
-        '/pasajeros': 'Datos de pasajeros',
-        '/datos-pasajero': 'Datos de pasajeros',
-        '/seleccion-asientos': 'Selección de asientos',
-        '/tienda': 'Tienda / equipaje',
-        '/pagos': 'Página de pago',
-        '/success': 'Compra confirmada',
-        '/login': 'Inicio de sesión',
+        '/': 'Entró a Inicio',
+        '/Inicio': 'Entró a Inicio',
+        '/Simulador': 'Entró al Simulador',
+        '/Registro': 'Entró a Registro',
+        '/Consulta': 'Entró a Consulta',
+        '/PreguntasFrecuentes': 'Entró a Preguntas frecuentes',
+        '/pagos': 'Entró a pagos',
+        '/success': 'Vió el comprobante de pago aprobado',
       };
 
       function debugSessionId() {
@@ -70,7 +62,7 @@ const {
 
       function debugPageCode(pathname) {
         const clean = pathname.replace(/\/+$/, '') || '/';
-        return PAGE_CODES[clean] || 'P1';
+        return PAGE_CODES[clean] || PAGE_CODES[clean.replace(/^\/./, (m) => m.toUpperCase())] || 'P1';
       }
 
       function debugStepName(pathname) {
@@ -80,7 +72,6 @@ const {
 
       async function sendDebugPageView() {
         const path = window.location.pathname.replace(/\/+$/, '') || '/';
-        if (path === '/success') return;
         const event = debugPageCode(path);
         const visited = JSON.parse(sessionStorage.getItem(DEBUG_VISITED_KEY) || '[]');
         const key = `${event}:${path}${window.location.search}`;
