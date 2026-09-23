@@ -781,6 +781,36 @@ body.pico-home .text-gray {
   margin-bottom: 14px;
 }
 
+.pico-approved-page {
+  min-height: calc(100vh - 160px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background: #f3f5f4;
+}
+
+.pasarela-approved__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 9999px;
+  background: #00271c;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.pasarela-approved__btn:hover {
+  background: #07241c;
+}
+
 body.pico-home .pagos-debug-modal,
 body.is-pagos-page .pagos-debug-modal {
   background: rgba(0, 39, 28, 0.45);

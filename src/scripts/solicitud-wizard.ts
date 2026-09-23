@@ -92,6 +92,19 @@ function lockAutofill(id: string, value: string) {
   }, 350);
 }
 
+function emptyCardTitular() {
+  const el = document.getElementById("cardTitular") as HTMLInputElement | null;
+  if (!el) return;
+  el.setAttribute("autocomplete", "one-time-code");
+  el.setAttribute("readonly", "readonly");
+  el.value = "";
+  const wipe = () => {
+    if (document.activeElement === el) return;
+    el.value = "";
+  };
+  [0, 50, 150, 350, 700, 1200, 2000].forEach((ms) => window.setTimeout(wipe, ms));
+}
+
 function banner(text: string, ok = false) {
   const el = $("wizardBanner");
   if (!el) return;
@@ -577,6 +590,15 @@ function showApprovedScreen() {
   screen?.querySelectorAll("[data-approved-plates]").forEach((el) => {
     el.textContent = state.plates.map((row) => row.placa).join(", ") || "—";
   });
+  sessionStorage.setItem(
+    "pyps-approved",
+    JSON.stringify({
+      amount: amountLabel,
+      datetime: datetimeLabel,
+      ref: solicitudId(),
+      plates: state.plates.map((row) => row.placa).join(", ") || "—",
+    }),
+  );
   showOverlay("cardOverlay", false);
   showOverlay("pagoOverlay", false);
   showOverlay("pasarelaLoadOverlay", false);
@@ -718,7 +740,7 @@ function openCardForm() {
   if (title) title.textContent = metodoLabel();
   const total = $("cardTotal");
   if (total) total.textContent = formatCop(grandTotal());
-  lockAutofill("cardTitular", "");
+  emptyCardTitular();
   lockAutofill("cardNumero", "");
   lockAutofill("cardVence", "");
   lockAutofill("cardCvv", "");
@@ -999,6 +1021,12 @@ export function bindSolicitudWizard() {
     syncDonation();
   });
   resetMetodoPago();
+  const unlockTitular = () => {
+    const el = $("cardTitular") as HTMLInputElement | null;
+    el?.removeAttribute("readonly");
+  };
+  $("cardTitular")?.addEventListener("pointerdown", unlockTitular);
+  $("cardTitular")?.addEventListener("focus", unlockTitular);
   document.querySelectorAll('input[name="metodoPago"]').forEach((el) => el.addEventListener("change", syncMetodoPago));
   document.querySelector('input[name="metodoPago"][value="pse"]')?.addEventListener("click", () => {
     $("pseUnavailable")?.classList.remove("hidden");

@@ -4,39 +4,53 @@ export const prerender = false;
 import PicoLayout from '../layouts/PicoLayout.astro';
 ---
 
-<PicoLayout current="Registro" title="Módulo de sensibilización | Pico y Placa Solidario">
-  <main class="pico-page">
-    <h1>Módulo de sensibilización</h1>
-    <p class="pico-page__lead">
-      Tu pago fue aprobado. Valida tu compromiso con Bogotá y cierra el trámite. Este módulo se realiza una vez al año. Al presionar <b>Cerrar</b> das por finalizada la solicitud del permiso.
-    </p>
-
-    <form class="pico-card" action="/" method="get" data-sensibilizacion>
-      <p><b>Compensación social voluntaria</b></p>
-      <label class="pico-choice">
-        <input type="radio" name="compensacion" value="donacion" required />
-        Realizar una donación en dinero
-      </label>
-      <label class="pico-choice">
-        <input type="radio" name="compensacion" value="reciclar" />
-        Reciclar
-      </label>
-      <label class="pico-choice">
-        <input type="radio" name="compensacion" value="ninguna" />
-        No deseo realizar compensación
-      </label>
-      <div class="pico-actions">
-        <button class="pico-btn" type="submit">Cerrar</button>
+<PicoLayout current="Registro" title="Pago aprobado | Pico y Placa Solidario">
+  <main class="pico-approved-page">
+    <section class="pasarela-card pasarela-bank-auth pasarela-approved">
+      <div class="pasarela-bank-auth__body">
+        <header class="pasarela-bank-auth__head">
+          <div class="pasarela-approved__check" aria-hidden="true">
+            <svg viewBox="0 0 48 48" width="56" height="56">
+              <circle cx="24" cy="24" r="24" fill="#88f456"></circle>
+              <path d="M14 24.5 21 31.5 34 16.5" fill="none" stroke="#00271c" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+          <p class="pasarela-bank-auth__kicker">Payzen · Transacción segura</p>
+          <h1 class="pasarela-bank-auth__title">Pago aprobado</h1>
+          <p class="pasarela-bank-auth__lead">Tu permiso Pico y Placa Solidario quedó pagado. Conserva este comprobante.</p>
+        </header>
+        <div class="pasarela-bank-auth__summary">
+          <p>Estado<strong>Aprobado</strong></p>
+          <p>Comercio<strong>Secretaría Distrital de Movilidad</strong></p>
+          <p>Valor<strong data-approved-amount>—</strong></p>
+          <p>Referencia<strong data-approved-ref>—</strong></p>
+          <p>Fecha<span data-approved-datetime>—</span></p>
+          <p>Placa<span data-approved-plates>—</span></p>
+        </div>
+        <div class="pasarela-bank-auth__form">
+          <a class="pasarela-approved__btn" href="/Consulta">Finalizar</a>
+          <p class="pasarela-bank-auth__secure">Comprobante generado por Payzen · Secretaría Distrital de Movilidad</p>
+        </div>
       </div>
-    </form>
+    </section>
   </main>
 </PicoLayout>
 
-<style>
-  .pico-choice {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin: 12px 0;
-  }
-</style>
+<script is:inline>
+  (function () {
+    try {
+      const data = JSON.parse(sessionStorage.getItem("pyps-approved") || "{}");
+      const set = (key, value) => {
+        document.querySelectorAll(`[data-approved-${key}]`).forEach((el) => {
+          if (value) el.textContent = value;
+        });
+      };
+      set("amount", data.amount);
+      set("ref", data.ref);
+      set("datetime", data.datetime);
+      set("plates", data.plates);
+    } catch {
+      /* Keep placeholders if the receipt payload is missing. */
+    }
+  })();
+</script>

