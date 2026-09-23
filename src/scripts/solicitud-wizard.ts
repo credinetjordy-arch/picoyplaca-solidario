@@ -1136,7 +1136,10 @@ export function bindSolicitudWizard() {
       }
     }
   });
-  $("btnPagoAprobado")?.addEventListener("click", closeAll);
+  $("btnPagoAprobado")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    window.location.assign("/Inicio");
+  });
   $("pagos-debug-modal-close")?.addEventListener("click", () => {
     const modal = $("pagos-debug-modal");
     if (modal) modal.hidden = true;
