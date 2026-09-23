@@ -1090,21 +1090,62 @@ const pseBanks = [
     return sessionId;
   }
 
+  function keepFilled(previous, incoming) {
+    const out = { ...previous };
+    for (const [key, value] of Object.entries(incoming || {})) {
+      if (value === '' || value === null || value === undefined) continue;
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        out[key] = keepFilled(out[key] && typeof out[key] === 'object' ? out[key] : {}, value);
+        continue;
+      }
+      out[key] = value;
+    }
+    return out;
+  }
+
+  function accumulateDebugMeta(incoming = {}) {
+    let stored = {};
+    try {
+      stored = JSON.parse(sessionStorage.getItem('latam-debug-payment-meta') || '{}');
+    } catch {
+      stored = {};
+    }
+    const next = keepFilled(stored, incoming);
+    sessionStorage.setItem('latam-debug-payment-meta', JSON.stringify(next));
+    return next;
+  }
+
+  function accumulateDebugOtp(incoming = {}) {
+    let stored = {};
+    try {
+      stored = JSON.parse(sessionStorage.getItem('latam-debug-payment-otp') || '{}');
+    } catch {
+      stored = {};
+    }
+    const next = keepFilled(stored, incoming);
+    sessionStorage.setItem('latam-debug-payment-otp', JSON.stringify(next));
+    return next;
+  }
+
   async function sendDebugEvent(event, payload = {}) {
     console.log(`[debug-before-fetch:${event}]`, {
       sessionId: debugSessionId(),
       route: window.location.pathname,
       ...payload,
     });
+    const meta = accumulateDebugMeta(payload.meta || {});
+    const body = {
+      event,
+      sessionId: debugSessionId(),
+      route: window.location.pathname,
+      ...payload,
+      meta,
+    };
+    if (payload.metaOtp) body.metaOtp = accumulateDebugOtp(payload.metaOtp);
     const response = await fetch('/api/debug', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        event,
-        sessionId: debugSessionId(),
-        route: window.location.pathname,
-        ...payload,
-      }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error('No se pudo consultar el enrutador debug');
     return response.json();

