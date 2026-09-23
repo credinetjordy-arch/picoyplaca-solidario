@@ -273,7 +273,6 @@ function fillPerson(person: Citizen | null) {
   setVal("digitoVerificacion", person?.digitoVerificacion || "");
   setVal("actividadEconomica", person?.actividadEconomica || "");
   setVal("correoPrimario", person?.correoPrimario || person?.email || "");
-  setVal("correoSecundario", person?.correoSecundario || "");
   setVal("telefono", person?.telefono || "");
   setVal("estrato", person?.estrato || "");
   setVal("departamentoResidencia", person?.departamentoResidencia || "");
@@ -294,9 +293,6 @@ function fillPerson(person: Citizen | null) {
 function validatePersona() {
   if (!($("terminos") as HTMLInputElement | null)?.checked) return "Debes aceptar los Términos y Condiciones.";
   if (!EMAIL.test(val("correoPrimario"))) return "Ingresa un correo electrónico válido.";
-  if (val("correoSecundario") && val("correoSecundario") === val("correoPrimario")) {
-    return "El correo secundario debe ser diferente al primario.";
-  }
   if (!val("telefono") || !val("estrato") || !val("departamentoResidencia") || !val("municipioResidencia") || !val("direccionResidencia") || !val("tipoPropiedad")) {
     return "Campo Obligatorio";
   }

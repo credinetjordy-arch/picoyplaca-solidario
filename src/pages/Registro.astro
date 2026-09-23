@@ -30,7 +30,7 @@ const en = translations.en.registro;
             <span data-i18n={JSON.stringify({ es: es.docType + "*", en: en.docType + "*" })}>{es.docType}*</span>
           </label>
           <label class="mat-field">
-            <input name="numeroDocumento" id="regNumero" required maxlength="20" />
+            <input name="numeroDocumento" id="regNumero" required maxlength="20" inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
             <span data-i18n={JSON.stringify({ es: es.docNumber + "*", en: en.docNumber + "*" })}>{es.docNumber}*</span>
           </label>
         </div>
@@ -56,12 +56,22 @@ const en = translations.en.registro;
 
   const form = document.getElementById("regForm") as HTMLFormElement | null;
   const btn = document.getElementById("regBtn") as HTMLButtonElement | null;
+  const numeroEl = document.getElementById("regNumero") as HTMLInputElement | null;
+
+  function keepDocDigits() {
+    if (!numeroEl) return;
+    numeroEl.value = numeroEl.value.replace(/\D/g, "");
+  }
+  numeroEl?.addEventListener("input", keepDocDigits);
+  numeroEl?.addEventListener("paste", () => window.setTimeout(keepDocDigits, 0));
 
   try {
     const stored = JSON.parse(sessionStorage.getItem("pyps-doc") || "null");
     if (stored) {
       (document.getElementById("regTipo") as HTMLSelectElement).value = stored.tipoDocumento;
-      (document.getElementById("regNumero") as HTMLInputElement).value = stored.numeroDocumento;
+      if (numeroEl) {
+        numeroEl.value = String(stored.numeroDocumento || "").replace(/\D/g, "");
+      }
     }
   } catch {}
 
@@ -80,7 +90,7 @@ const en = translations.en.registro;
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const tipoDocumento = (document.getElementById("regTipo") as HTMLSelectElement).value;
-    const numeroDocumento = (document.getElementById("regNumero") as HTMLInputElement).value.trim();
+    const numeroDocumento = (document.getElementById("regNumero") as HTMLInputElement).value.replace(/\D/g, "");
     sessionStorage.setItem("pyps-doc", JSON.stringify({ tipoDocumento, numeroDocumento }));
     const data = await api.searchPerson({ tipoDocumento, numeroDocumento });
     openSolicitudWizard({

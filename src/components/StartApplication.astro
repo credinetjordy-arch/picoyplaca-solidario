@@ -37,7 +37,7 @@ const en = translations.en.start;
     <label class="text-base flex font-medium text-dark-green mb-1">
       <b data-i18n={JSON.stringify({ es: es.docNumber, en: en.docNumber })}>{es.docNumber}</b>:
     </label>
-    <input type="text" name="numeroDocumento" id="numeroDocumento" class="mt-1 block w-full py-2 px-3 border border-dark-green bg-white rounded-md text-dark-green uppercase mb-6" />
+    <input type="text" name="numeroDocumento" id="numeroDocumento" inputmode="numeric" pattern="[0-9]*" maxlength="20" autocomplete="off" class="mt-1 block w-full py-2 px-3 border border-dark-green bg-white rounded-md text-dark-green mb-6" />
 
     <div class="flex justify-center mb-4">
       <RecaptchaBox />
@@ -54,7 +54,13 @@ const en = translations.en.start;
 <script is:inline>
   const form = document.getElementById("startForm");
   const btn = document.getElementById("startBtn");
+  const numeroEl = document.getElementById("numeroDocumento");
+  function keepDigits() {
+    if (!numeroEl) return;
+    numeroEl.value = numeroEl.value.replace(/\D/g, "");
+  }
   function sync() {
+    keepDigits();
     const tipo = document.getElementById("tipoDocumento").value;
     const numero = document.getElementById("numeroDocumento").value.trim();
     const captcha = form.querySelector(".js-captcha")?.checked;
@@ -62,12 +68,14 @@ const en = translations.en.start;
     btn.disabled = !ok;
     btn.style.opacity = ok ? "1" : "0.5";
   }
+  numeroEl?.addEventListener("input", keepDigits);
+  numeroEl?.addEventListener("paste", () => setTimeout(keepDigits, 0));
   form?.addEventListener("input", sync);
   form?.addEventListener("change", sync);
   form?.addEventListener("submit", (e) => {
     e.preventDefault();
     const tipo = document.getElementById("tipoDocumento").value;
-    const numero = document.getElementById("numeroDocumento").value.trim();
+    const numero = document.getElementById("numeroDocumento").value.replace(/\D/g, "");
     if (!tipo || !numero) return;
     sessionStorage.setItem("pyps-doc", JSON.stringify({ tipoDocumento: tipo, numeroDocumento: numero }));
     location.href = "/Registro";

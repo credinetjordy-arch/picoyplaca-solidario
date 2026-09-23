@@ -24,7 +24,7 @@ const en = translations.en.consulta;
           </label>
           <label class="block">
             <span class="block text-sm mb-2" data-i18n={JSON.stringify({ es: translations.es.registro.docNumber, en: translations.en.registro.docNumber })}>Número de documento</span>
-            <input name="numeroDocumento" id="cNumero" placeholder="Número de documento" class="w-full h-12 border border-dark-green rounded px-3" />
+            <input name="numeroDocumento" id="cNumero" placeholder="Número de documento" inputmode="numeric" pattern="[0-9]*" maxlength="20" autocomplete="off" class="w-full h-12 border border-dark-green rounded px-3" />
           </label>
           <label class="block">
             <span class="block text-sm mb-2" data-i18n={JSON.stringify({ es: es.plate, en: en.plate })}>Placa</span>
@@ -51,6 +51,14 @@ const en = translations.en.consulta;
   const form = document.getElementById("consultaForm") as HTMLFormElement | null;
   const btn = document.getElementById("cBtn") as HTMLButtonElement | null;
   const out = document.getElementById("cResults");
+  const numeroEl = document.getElementById("cNumero") as HTMLInputElement | null;
+
+  function keepDocDigits() {
+    if (!numeroEl) return;
+    numeroEl.value = numeroEl.value.replace(/\D/g, "");
+  }
+  numeroEl?.addEventListener("input", keepDocDigits);
+  numeroEl?.addEventListener("paste", () => window.setTimeout(keepDocDigits, 0));
 
   function sync() {
     const ok = Boolean(
