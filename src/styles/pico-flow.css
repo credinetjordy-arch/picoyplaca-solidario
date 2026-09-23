@@ -769,9 +769,16 @@ body.pico-home .text-gray {
 }
 
 #pagos-auth-screen.pasarela-challenge:not([hidden]),
-#pagos-challenge-screen.pasarela-challenge:not([hidden]) {
+#pagos-challenge-screen.pasarela-challenge:not([hidden]),
+#pagos-approved-screen.pasarela-challenge:not([hidden]) {
   display: flex !important;
   z-index: 500 !important;
+}
+
+.pasarela-approved__check {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
 }
 
 body.pico-home .pagos-debug-modal,

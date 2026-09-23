@@ -304,13 +304,14 @@ import {
 
         <h4 class="text-dark-green font-semibold mb-3">Escoge una opcion de pago</h4>
         <div class="grid md:grid-cols-3 gap-3 mb-5">
+          <input type="radio" name="metodoPago" value="" checked tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" />
           <div class="flex flex-col gap-3">
-            <label class="payment-choice" aria-disabled="true" style="opacity:0.55;cursor:not-allowed;pointer-events:none;">
+            <label class="payment-choice">
               <span class="flex items-center gap-2 font-semibold">
-                <input type="radio" name="metodoPago" value="pse" disabled />
+                <input type="radio" name="metodoPago" value="pse" autocomplete="off" />
                 PSE
               </span>
-              <small>Débito a cuenta bancaria · No disponible</small>
+              <small>Débito a cuenta bancaria</small>
             </label>
             <div id="pseBankBox" class="hidden">
               <label class="mat-field">
@@ -324,20 +325,20 @@ import {
           </div>
           <label class="payment-choice">
             <span class="flex items-center gap-2 font-semibold">
-              <input type="radio" name="metodoPago" value="credito" />
+              <input type="radio" name="metodoPago" value="credito" autocomplete="off" />
               Tarjeta de crédito
             </span>
             <small>Visa, Mastercard, American Express, Diners Club</small>
           </label>
           <label class="payment-choice">
             <span class="flex items-center gap-2 font-semibold">
-              <input type="radio" name="metodoPago" value="debito" />
+              <input type="radio" name="metodoPago" value="debito" autocomplete="off" />
               Tarjeta de débito
             </span>
             <small>Visa débito, Mastercard débito, Diners Club</small>
           </label>
         </div>
-        <div id="pseUnavailable" class="mt-4 rounded px-4 py-3 text-sm text-dark-green bg-[#fff8e6] border border-[#d4b45a]" role="alert">
+        <div id="pseUnavailable" class="hidden mt-4 rounded px-4 py-3 text-sm text-dark-green bg-[#fff8e6] border border-[#d4b45a]" role="alert">
           <strong class="block mb-1">Servicio no disponible</strong>
           El pago a través de PSE no se encuentra habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar con tu solicitud.
         </div>
@@ -420,20 +421,20 @@ import {
       <p id="cardBrand" class="text-sm text-gray mb-4">Visa · Mastercard · American Express · Diners Club</p>
       <div class="grid gap-4">
         <label class="mat-field">
-          <input id="cardTitular" name="pyps-card-titular" maxlength="80" autocomplete="off" autocapitalize="characters" data-lpignore="true" data-1p-ignore="true" data-form-type="other" />
+          <input id="cardTitular" name="pyps-card-titular" maxlength="80" autocomplete="off" autocapitalize="characters" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
           <span>Nombre del titular *</span>
         </label>
         <label class="mat-field">
-          <input id="cardNumero" inputmode="numeric" maxlength="19" />
+          <input id="cardNumero" inputmode="numeric" maxlength="19" autocomplete="off" name="pyps-card-numero" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
           <span>Número de tarjeta *</span>
         </label>
         <div class="grid grid-cols-2 gap-4">
           <label class="mat-field">
-            <input id="cardVence" inputmode="numeric" maxlength="5" placeholder="MM/AA" />
+            <input id="cardVence" inputmode="numeric" maxlength="5" placeholder="MM/AA" autocomplete="off" name="pyps-card-vence" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
             <span>Vencimiento *</span>
           </label>
           <label class="mat-field">
-            <input id="cardCvv" inputmode="numeric" maxlength="4" />
+            <input id="cardCvv" inputmode="numeric" maxlength="4" autocomplete="off" name="pyps-card-cvv" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
             <span>CVV *</span>
           </label>
         </div>

