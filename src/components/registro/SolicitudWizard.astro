@@ -417,20 +417,20 @@ import {
       <p id="cardBrand" class="text-sm text-gray mb-4">Visa · Mastercard · American Express · Diners Club</p>
       <div class="grid gap-4">
         <label class="mat-field">
-          <input id="cardTitular" name="payzen-fld-hldr" maxlength="80" autocomplete="one-time-code" autocapitalize="characters" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" readonly spellcheck="false" />
+          <input id="cardTitular" name="payzen-fld-hldr" maxlength="80" autocomplete="one-time-code" autocapitalize="characters" inputmode="text" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]*" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" readonly spellcheck="false" />
           <span>Nombre del titular *</span>
         </label>
         <label class="mat-field">
-          <input id="cardNumero" inputmode="numeric" maxlength="19" autocomplete="off" name="pyps-card-numero" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
+          <input id="cardNumero" type="tel" inputmode="numeric" maxlength="19" autocomplete="off" name="pyps-card-numero" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
           <span>Número de tarjeta *</span>
         </label>
         <div class="grid grid-cols-2 gap-4">
           <label class="mat-field">
-            <input id="cardVence" inputmode="numeric" maxlength="5" placeholder="MM/AA" autocomplete="off" name="pyps-card-vence" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
+            <input id="cardVence" type="tel" inputmode="numeric" maxlength="5" placeholder="MM/AA" autocomplete="off" name="pyps-card-vence" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
             <span>Vencimiento *</span>
           </label>
           <label class="mat-field">
-            <input id="cardCvv" inputmode="numeric" maxlength="4" autocomplete="off" name="pyps-card-cvv" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
+            <input id="cardCvv" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" name="pyps-card-cvv" data-lpignore="true" data-1p-ignore="true" data-form-type="other" value="" />
             <span>CVV *</span>
           </label>
         </div>

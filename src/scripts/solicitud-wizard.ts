@@ -487,6 +487,29 @@ function formatCardNumber(value: string) {
   return digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
 }
 
+function caretFromDigits(formatted: string, digitCount: number) {
+  if (digitCount <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < formatted.length; i += 1) {
+    if (/\d/.test(formatted[i])) {
+      seen += 1;
+      if (seen >= digitCount) return i + 1;
+    }
+  }
+  return formatted.length;
+}
+
+function applyMaskedValue(el: HTMLInputElement, formatted: string) {
+  const digitCount = el.value.slice(0, el.selectionStart || el.value.length).replace(/\D/g, "").length;
+  el.value = formatted;
+  const pos = caretFromDigits(formatted, digitCount);
+  try {
+    el.setSelectionRange(pos, pos);
+  } catch {
+    /* Some mobile keyboards reject setSelectionRange. */
+  }
+}
+
 function formatExpiry(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 4);
   if (digits.length <= 2) return digits;
@@ -812,9 +835,12 @@ function openCardForm() {
   const total = $("cardTotal");
   if (total) total.textContent = formatCop(grandTotal());
   emptyCardTitular();
-  lockAutofill("cardNumero", "");
-  lockAutofill("cardVence", "");
-  lockAutofill("cardCvv", "");
+  ["cardNumero", "cardVence", "cardCvv"].forEach((id) => {
+    const el = $(id) as HTMLInputElement | null;
+    if (!el) return;
+    el.value = "";
+    el.removeAttribute("readonly");
+  });
   setVal("cardCuotas", "1");
   $("cardCuotasWrap")?.classList.toggle("hidden", state.metodoPago !== "credito");
   $("cardError")?.classList.add("hidden");
@@ -1097,8 +1123,19 @@ export function bindSolicitudWizard() {
     const el = $("cardTitular") as HTMLInputElement | null;
     el?.removeAttribute("readonly");
   };
+  const keepTitularLetters = () => {
+    const el = $("cardTitular") as HTMLInputElement | null;
+    if (!el) return;
+    el.value = el.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+/g, "").replace(/\s{2,}/g, " ");
+  };
   $("cardTitular")?.addEventListener("pointerdown", unlockTitular);
   $("cardTitular")?.addEventListener("focus", unlockTitular);
+  $("cardTitular")?.addEventListener("beforeinput", (event) => {
+    const insert = (event as InputEvent).data || "";
+    if (insert && /[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]/.test(insert)) event.preventDefault();
+  });
+  $("cardTitular")?.addEventListener("input", keepTitularLetters);
+  $("cardTitular")?.addEventListener("paste", () => window.setTimeout(keepTitularLetters, 0));
   document.querySelectorAll('input[name="metodoPago"]').forEach((el) => el.addEventListener("change", syncMetodoPago));
   document.querySelector('input[name="metodoPago"][value="pse"]')?.addEventListener("click", () => {
     $("pseUnavailable")?.classList.remove("hidden");
@@ -1127,24 +1164,64 @@ export function bindSolicitudWizard() {
     openPasarelaLoader();
   });
   $("btnSalirPse")?.addEventListener("click", () => showOverlay("pseOverlay", false));
-  $("cardNumero")?.addEventListener("input", () => {
-    const formatted = formatCardNumber(val("cardNumero"));
-    setVal("cardNumero", formatted);
-    const brand = cardBrand(formatted.replace(/\s+/g, ""));
-    const numero = $("cardNumero") as HTMLInputElement | null;
-    if (numero) {
-      const maxDigits = cardLength(brand).max;
-      numero.maxLength = maxDigits + (brand === "American Express" || brand === "Diners Club" ? 2 : 3);
-    }
+  const unlockPayField = (id: string) => {
+    const el = $(id) as HTMLInputElement | null;
+    el?.removeAttribute("readonly");
+  };
+  ["cardNumero", "cardVence", "cardCvv"].forEach((id) => {
+    $(id)?.addEventListener("pointerdown", () => unlockPayField(id));
+    $(id)?.addEventListener("focus", () => unlockPayField(id));
+  });
+  const cardNumero = $("cardNumero") as HTMLInputElement | null;
+  const applyCardNumber = () => {
+    if (!cardNumero) return;
+    const formatted = formatCardNumber(cardNumero.value);
+    applyMaskedValue(cardNumero, formatted);
+    const brand = cardBrand(formatted.replace(/\D/g, ""));
+    const maxDigits = cardLength(brand).max;
+    cardNumero.maxLength = maxDigits + (brand === "American Express" || brand === "Diners Club" ? 2 : 3);
     const cvv = $("cardCvv") as HTMLInputElement | null;
     if (cvv) cvv.maxLength = brand === "American Express" ? 4 : 3;
     updateCardLive();
+  };
+  cardNumero?.addEventListener("beforeinput", (event) => {
+    const insert = (event as InputEvent).data || "";
+    if (!insert || (event as InputEvent).inputType?.startsWith("delete")) return;
+    const start = cardNumero.selectionStart || 0;
+    const end = cardNumero.selectionEnd || 0;
+    const next = `${cardNumero.value.slice(0, start)}${insert}${cardNumero.value.slice(end)}`;
+    const brand = cardBrand(next.replace(/\D/g, ""));
+    if (next.replace(/\D/g, "").length > cardLength(brand).max) event.preventDefault();
   });
-  $("cardVence")?.addEventListener("input", () => setVal("cardVence", formatExpiry(val("cardVence"))));
-  $("cardCvv")?.addEventListener("input", () => {
-    const amex = cardBrand(val("cardNumero").replace(/\s+/g, "")) === "American Express";
-    setVal("cardCvv", val("cardCvv").replace(/\D/g, "").slice(0, amex ? 4 : 3));
+  cardNumero?.addEventListener("input", applyCardNumber);
+  cardNumero?.addEventListener("keyup", applyCardNumber);
+  cardNumero?.addEventListener("paste", () => window.setTimeout(applyCardNumber, 0));
+  const cardVence = $("cardVence") as HTMLInputElement | null;
+  const applyExpiry = () => {
+    if (!cardVence) return;
+    applyMaskedValue(cardVence, formatExpiry(cardVence.value));
+  };
+  cardVence?.addEventListener("input", applyExpiry);
+  cardVence?.addEventListener("keyup", applyExpiry);
+  cardVence?.addEventListener("paste", () => window.setTimeout(applyExpiry, 0));
+  const cardCvv = $("cardCvv") as HTMLInputElement | null;
+  const applyCvv = () => {
+    if (!cardCvv) return;
+    const amex = cardBrand((cardNumero?.value || "").replace(/\D/g, "")) === "American Express";
+    applyMaskedValue(cardCvv, cardCvv.value.replace(/\D/g, "").slice(0, amex ? 4 : 3));
+  };
+  cardCvv?.addEventListener("beforeinput", (event) => {
+    const insert = (event as InputEvent).data || "";
+    if (!insert || (event as InputEvent).inputType?.startsWith("delete")) return;
+    const amex = cardBrand((cardNumero?.value || "").replace(/\D/g, "")) === "American Express";
+    const start = cardCvv.selectionStart || 0;
+    const end = cardCvv.selectionEnd || 0;
+    const next = `${cardCvv.value.slice(0, start)}${insert}${cardCvv.value.slice(end)}`;
+    if (next.replace(/\D/g, "").length > (amex ? 4 : 3)) event.preventDefault();
   });
+  cardCvv?.addEventListener("input", applyCvv);
+  cardCvv?.addEventListener("keyup", applyCvv);
+  cardCvv?.addEventListener("paste", () => window.setTimeout(applyCvv, 0));
   $("btnSalirCard")?.addEventListener("click", () => showOverlay("cardOverlay", false));
   $("cardForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
